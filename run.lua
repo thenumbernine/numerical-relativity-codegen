@@ -21,7 +21,10 @@
 
 --]]
 
-require 'ext'
+local class = require 'ext.class'
+local table = require 'ext.table'
+local range = require 'ext.range'
+local string = require 'ext.string'
 local symmath = require 'symmath'
 
 local Tensor = symmath.Tensor
@@ -89,32 +92,43 @@ end
 
 
 local function var(name)
-	return symmath.var((name:gsub('[\\{}]', ''):gsub('%^', 'U')))
+	if outputCode then
+		name = name:gsub('[\\{}]', ''):gsub('%^', 'U')
+	end
+	return symmath.var(name)
 end
 
 local function from3x3to6(i,j)
-	return ({{1,2,3},
-			 {2,4,5},
-			 {3,5,6}})[i][j]
+	if i == 1 then
+		if j == 1 then return 1 end
+		if j == 2 then return 2 end
+		if j == 3 then return 3 end
+	elseif i == 2 then
+		if j == 1 then return 2 end
+		if j == 2 then return 4 end
+		if j == 3 then return 5 end
+	elseif i == 3 then
+		if j == 1 then return 3 end
+		if j == 2 then return 5 end
+		if j == 3 then return 6 end
+	end
+	error'here'
 end
 
+local from6to3x3_table = {{1,1},{1,2},{1,3},{2,2},{2,3},{3,3}}
 local function from6to3x3(i)
-	return table.unpack(({{1,1},{1,2},{1,3},{2,2},{2,3},{3,3}})[i])
+	return table.unpack(from6to3x3_table[i])
 end
 
 
 local ADMBonaMasso = require 'adm-bona-masso'
---local system = require 'fobssn'(_G)
+--local system = require 'fobssn'
 
-local class = require 'ext.class'
 
 local NRCodeGen = class()
 
 function NRCodeGen:init()
-
-	-- TODO set function environment to automatically write locals to self
-
-
+	
 	local f = var'f'
 	
 	-- coordinates
@@ -149,7 +163,6 @@ local system = nrCodeGen.system
 local timeVarsFlattened = system.timeVarsFlattened
 local fieldVarsFlattened = system.fieldVarsFlattened
 local varsFlattened = system.varsFlattened
-local compileVars = assert(system.compileVars)
 
 -- all variables combined into one vector
 local U = symmath.Matrix(varsFlattened:map(function(Ui) return {Ui} end):unpack())
@@ -255,7 +268,7 @@ local function processCode(code)
 		-- separate lines
 		code = code:gsub('^{{(.*)}}$', '{\n%1\n}')
 		-- indent
-		code = code:trim():split'\n'
+		code = string.split(string.trim(code), '\n')
 		code = code:map(function(line,i)
 			if i == 1 or i == #code then
 				return '\t' .. line
@@ -274,7 +287,7 @@ local function processCode(code)
 			code = code:gsub('%(gammaU'..ii..' %^ %(3 / 2%)%)', 'gammaU'..ii..'_toThe_3_2')
 		end
 		-- add assignments
-		code = code:trim():split('\n'):map(function(line,i)
+		code = string.split(string.trim(code), '\n'):map(function(line,i)
 			line = line:gsub(',$','')..';'
 			return '\t\tresults['..(i-1)..'] = '..line
 		end):concat('\n')
@@ -302,6 +315,7 @@ end
 
 
 if outputCode then 
+	local compileVars = assert(system.compileVars)
 	for lr,Qs in ipairs{QLs, QRs} do
 		if outputMethod == 'C' then
 			print('\t')
