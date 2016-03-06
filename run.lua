@@ -25,7 +25,6 @@ require 'ext'
 local symmath = require 'symmath'
 
 local Tensor = symmath.Tensor
-local var = symmath.var
 
 local outputMethod = ... or 'MathJax'
 --local outputMethod = 'MathJax'		-- HTML
@@ -49,6 +48,8 @@ local ToStringLua
 if outputCode then 
 	ToStringLua = require 'symmath.tostring.Lua'
 end
+
+-- code generation functions
 
 local function comment(s)
 	if outputMethod == 'Lua' then return '-- '..s end
@@ -87,22 +88,27 @@ else
 end
 
 
+local function var(name)
+	return symmath.var((name:gsub('[\\{}]', ''):gsub('%^', 'U')))
+end
+
+local function from3x3to6(i,j)
+	return ({{1,2,3},
+			 {2,4,5},
+			 {3,5,6}})[i][j]
+end
+
+local function from6to3x3(i)
+	return table.unpack(({{1,1},{1,2},{1,3},{2,2},{2,3},{3,3}})[i])
+end
+
+
 local ADMBonaMasso = require 'adm-bona-masso'
 --local system = require 'fobssn'(_G)
 
 local class = require 'ext.class'
 
 local NRCodeGen = class()
-
-function NRCodeGen.from3x3to6(i,j)
-	return ({{1,2,3},
-			 {2,4,5},
-			 {3,5,6}})[i][j]
-end
-
-function NRCodeGen.from6to3x3(i)
-	return table.unpack(({{1,1},{1,2},{1,3},{2,2},{2,3},{3,3}})[i])
-end
 
 function NRCodeGen:init()
 
@@ -129,6 +135,10 @@ function NRCodeGen:init()
 	self.xNames = xNames
 	self.symNames = symNames
 
+	self.var = var
+	self.from3x3to6 = from3x3to6
+	self.from6to3x3 = from6to3x3
+
 	self.system = ADMBonaMasso(self)
 end
 
@@ -136,27 +146,10 @@ local nrCodeGen = NRCodeGen()
 local xNames = nrCodeGen.xNames
 
 local system = nrCodeGen.system
-local timeVars = system.timeVars
-local fieldVars = system.fieldVars
-
-
--- variables flattened and combined into one table
-local timeVarsFlattened = table()
-local fieldVarsFlattened = table()
-for _,info in ipairs{
-	{timeVars, timeVarsFlattened},
-	{fieldVars, fieldVarsFlattened},
-} do
-	local infoVars, infoVarsFlattened = table.unpack(info)
-	infoVarsFlattened:append(table.unpack(infoVars))
-end
-
-local varsFlattened = table():append(timeVarsFlattened, fieldVarsFlattened)
-local expectedNumVars = useBSSN and 42 or (useShift and 49 or 37)
-assert(#varsFlattened == expectedNumVars, "expected "..expectedNumVars.." but found "..#varsFlattened)
-
--- all symbolic variables for use with compiled functions
-local compileVars = table():append(varsFlattened):append{f}:append(gammaUsym)
+local timeVarsFlattened = system.timeVarsFlattened
+local fieldVarsFlattened = system.fieldVarsFlattened
+local varsFlattened = system.varsFlattened
+local compileVars = assert(system.compileVars)
 
 -- all variables combined into one vector
 local U = symmath.Matrix(varsFlattened:map(function(Ui) return {Ui} end):unpack())

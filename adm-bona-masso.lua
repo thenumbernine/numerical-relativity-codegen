@@ -79,7 +79,6 @@ w_+- = sqrt(f) K^m_m +- sqrt(gamma^xx) (A_x + 2 V_m gamma^mx / gamma^xx)
 local class = require 'ext.class'
 
 local symmath = require 'symmath'
-local var = symmath.var
 local Tensor = symmath.Tensor
 
 local ADMBonaMasso = class()
@@ -92,6 +91,7 @@ function ADMBonaMasso:init(nrCodeGen)
 	local xNames = nrCodeGen.xNames
 	local symNames = nrCodeGen.symNames
 	local from3x3to6 = nrCodeGen.from3x3to6
+	local var = nrCodeGen.var
 
 	-- state variables:
 	local alpha = var('\\alpha')
@@ -101,7 +101,7 @@ function ADMBonaMasso:init(nrCodeGen)
 		return xNames:map(function(xj) return var('{B_'..xi..'}^'..xj) end)
 	end)
 	local BFlattened = table():append(table.unpack(Bs))
-	local gammaLsym = symNames:map(function(xij) return var('\\gamma_{'..xij..'}') end)
+	local gammaLSym = symNames:map(function(xij) return var('\\gamma_{'..xij..'}') end)
 		-- DSym[i][jk]	for jk symmetric indexed from 1 thru 6
 	local DSym = xNames:map(function(xi)
 		return symNames:map(function(xjk) return var('D_{'..xi..xjk..'}') end)
@@ -109,21 +109,21 @@ function ADMBonaMasso:init(nrCodeGen)
 
 		-- D_ijk unique symmetric, unraveled
 	local DFlattened = table():append(DSym:unpack())
-	local Ksym = symNames:map(function(xij) return var('K_{'..xij..'}') end)
+	local KSym = symNames:map(function(xij) return var('K_{'..xij..'}') end)
 	local Vs = xNames:map(function(xi) return var('V_'..xi) end)
 
 	-- other vars based on state vars
-	local gammaUsym = symNames:map(function(xij) return var('\\gamma^{'..xij..'}') end)
+	local gammaUSym = symNames:map(function(xij) return var('\\gamma^{'..xij..'}') end)
 
 
 	-- tensors of variables:
 	local beta = Tensor('^i', function(i) return useShift and betas[i] or 0 end)
-	local gammaU = Tensor('^ij', function(i,j) return gammaUsym[from3x3to6(i,j)] end)
-	local gammaL = Tensor('_ij', function(i,j) return gammaLsym[from3x3to6(i,j)] end)
+	local gammaU = Tensor('^ij', function(i,j) return gammaUSym[from3x3to6(i,j)] end)
+	local gammaL = Tensor('_ij', function(i,j) return gammaLSym[from3x3to6(i,j)] end)
 	local A = Tensor('_i', function(i) return As[i] end)
 	local B = Tensor('_i^j', function(i,j) return useShift and Bs[i][j] or 0 end)
 	local D = Tensor('_ijk', function(i,j,k) return DSym[i][from3x3to6(j,k)] end)
-	local K = Tensor('_ij', function(i,j) return Ksym[from3x3to6(i,j)] end)
+	local K = Tensor('_ij', function(i,j) return KSym[from3x3to6(i,j)] end)
 	local V = Tensor('_i', function(i) return Vs[i] end)
 
 	Tensor.metric(gammaL, gammaU)
@@ -131,15 +131,16 @@ function ADMBonaMasso:init(nrCodeGen)
 	local timeVars = table()
 	timeVars:insert({alpha})
 	if useShift then timeVars:insert(betas) end
-	timeVars:insert(gammaLsym)
+	timeVars:insert(gammaLSym)
 
 	local fieldVars = table()
 	fieldVars:insert(A)
 	if useShift then fieldVars:insert(BFlattened) end
-	fieldVars:append{DFlattened, Ksym, Vs}
+	fieldVars:append{DFlattened, KSym, Vs}
 
+	self.gammaLSym = gammaLSym
+	self.gammaUSym = gammaUSym
 	self.gammaU = gammaU
-	self.gammaLsym = gammaLsym
 	self.DSym = DSym
 	self.alpha = alpha
 	self.beta = beta
@@ -150,11 +151,52 @@ function ADMBonaMasso:init(nrCodeGen)
 	self.V = V
 	self.timeVars = timeVars
 	self.fieldVars = fieldVars
+
+	self:getFlattenedVars()
+end
+
+-- make this a parent class function
+function ADMBonaMasso:getFlattenedVars()
+	local timeVars = self.timeVars
+	local fieldVars = self.fieldVars
+
+	-- variables flattened and combined into one table
+	local timeVarsFlattened = table()
+	local fieldVarsFlattened = table()
+	for _,info in ipairs{
+		{timeVars, timeVarsFlattened},
+		{fieldVars, fieldVarsFlattened},
+	} do
+		local infoVars, infoVarsFlattened = table.unpack(info)
+		infoVarsFlattened:append(table.unpack(infoVars))
+	end
+
+	local varsFlattened = table():append(timeVarsFlattened, fieldVarsFlattened)
+	local expectedNumVars = self.useShift and 49 or 37
+	assert(#varsFlattened == expectedNumVars, "expected "..expectedNumVars.." but found "..#varsFlattened)
+
+	self.timeVarsFlattened = timeVarsFlattened
+	self.fieldVarsFlattened = fieldVarsFlattened
+	self.varsFlattened = varsFlattened
+
+	self:getCompileVars()
+end
+
+function ADMBonaMasso:getCompileVars()
+	local nrCodeGen = self.nrCodeGen
+	local f = nrCodeGen.f
+	local gammaUSym = self.gammaUSym
+	local varsFlattened = self.varsFlattened
+	
+	local compileVars = table():append(varsFlattened):append{f}:append(gammaUSym)
+
+	self.compileVars = compileVars
 end
 
 function ADMBonaMasso:getSourceTerms()
 	local nrCodeGen = self.nrCodeGen
 	
+	local var = nrCodeGen.var
 	local xNames = nrCodeGen.xNames
 	local symNames = nrCodeGen.symNames
 	local from3x3to6 = nrCodeGen.from3x3to6
@@ -671,7 +713,7 @@ function ADMBonaMasso:getEigenfields(dir)
 	local f = nrCodeGen.f
 
 	local gammaU = self.gammaU
-	local gammaLsym = self.gammaLsym
+	local gammaLSym = self.gammaLSym
 	local alpha = self.alpha
 	local beta = self.beta
 	local DSym = self.DSym
@@ -715,7 +757,7 @@ function ADMBonaMasso:getEigenfields(dir)
 		eigenfields:append(betas:map(function(betaUi,i) return {w=betaUi, lambda=-beta[dir]} end))
 	end
 		-- gamma_ij
-	eigenfields:append(gammaLsym:map(function(gamma_ij,ij) return {w=gamma_ij, lambda=-beta[dir]} end))
+	eigenfields:append(gammaLSym:map(function(gamma_ij,ij) return {w=gamma_ij, lambda=-beta[dir]} end))
 		-- A_x', x' != dir
 	eigenfields:append(oxIndexes:map(function(p) return {w=A[p], lambda=-beta[dir]} end))
 		-- B_x'^i
