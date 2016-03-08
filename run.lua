@@ -287,6 +287,7 @@ local function processCode(code)
 		code = code:gsub('sqrt%(f%)', 'sqrt_f')
 		for _,ii in ipairs{'xx', 'yy', 'zz'} do
 			code = code:gsub('sqrt%(gammaU'..ii..'%)', 'sqrt_gammaU'..ii)
+			code = code:gsub('%(gammaU'..ii..' %^ 2%)', 'gammaU'..ii..'Sq')
 			code = code:gsub('%(gammaU'..ii..' %^ %(3 / 2%)%)', 'gammaU'..ii..'_toThe_3_2')
 		end
 		-- add assignments
