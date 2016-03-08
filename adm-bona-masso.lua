@@ -85,6 +85,9 @@ local Tensor = symmath.Tensor
 
 local ADMBonaMasso = class()
 
+--ADMBonaMasso.eigenfieldMethod = 'Alcubierre1997'
+ADMBonaMasso.eigenfieldMethod = 'AlcubierreBook'
+
 function ADMBonaMasso:init(nrCodeGen, useShift)
 	self.nrCodeGen = nrCodeGen
 	self.useShift = useShift
@@ -102,7 +105,7 @@ function ADMBonaMasso:init(nrCodeGen, useShift)
 		return xNames:map(function(xj) return var('{B_'..xi..'}^'..xj) end)
 	end)
 	local BFlattened = table():append(table.unpack(Bs))
-	local gammaLSym = symNames:map(function(xij) return var('\\gamma_{'..xij..'}') end)
+	local gammaLLSym = symNames:map(function(xij) return var('\\gamma_{'..xij..'}') end)
 		-- DSym[i][jk]	for jk symmetric indexed from 1 thru 6
 	local DSym = xNames:map(function(xi)
 		return symNames:map(function(xjk) return var('D_{'..xi..xjk..'}') end)
@@ -114,24 +117,24 @@ function ADMBonaMasso:init(nrCodeGen, useShift)
 	local Vs = xNames:map(function(xi) return var('V_'..xi) end)
 
 	-- other vars based on state vars
-	local gammaUSym = symNames:map(function(xij) return var('\\gamma^{'..xij..'}') end)
+	local gammaUUSym = symNames:map(function(xij) return var('\\gamma^{'..xij..'}') end)
 
 
 	-- tensors of variables:
 	local beta = Tensor('^i', function(i) return self.useShift and betas[i] or 0 end)
-	local gammaU = Tensor('^ij', function(i,j) return gammaUSym[from3x3to6(i,j)] end)
-	local gammaL = Tensor('_ij', function(i,j) return gammaLSym[from3x3to6(i,j)] end)
+	local gammaUU = Tensor('^ij', function(i,j) return gammaUUSym[from3x3to6(i,j)] end)
+	local gammaLL = Tensor('_ij', function(i,j) return gammaLLSym[from3x3to6(i,j)] end)
 	local A = Tensor('_i', function(i) return As[i] end)
 	local B = Tensor('_i^j', function(i,j) return self.useShift and Bs[i][j] or 0 end)
 	local D = Tensor('_ijk', function(i,j,k) return DSym[i][from3x3to6(j,k)] end)
 	local K = Tensor('_ij', function(i,j) return KSym[from3x3to6(i,j)] end)
 	local V = Tensor('_i', function(i) return Vs[i] end)
 
-	Tensor.metric(gammaL, gammaU)
+	Tensor.metric(gammaLL, gammaUU)
 
 	local timeVars = table()
 	timeVars:insert({alpha})
-	timeVars:insert(gammaLSym)
+	timeVars:insert(gammaLLSym)
 
 	local fieldVars = table()
 	fieldVars:insert(A)
@@ -139,9 +142,9 @@ function ADMBonaMasso:init(nrCodeGen, useShift)
 
 	self.alpha = alpha
 	self.betas = betas
-	self.gammaLSym = gammaLSym
-	self.gammaUSym = gammaUSym
-	self.gammaU = gammaU
+	self.gammaLLSym = gammaLLSym
+	self.gammaUUSym = gammaUUSym
+	self.gammaUU = gammaUU
 	self.DSym = DSym
 	self.beta = beta
 	self.A = A
@@ -185,10 +188,10 @@ end
 function ADMBonaMasso:getCompileVars()
 	local nrCodeGen = self.nrCodeGen
 	local f = nrCodeGen.f
-	local gammaUSym = self.gammaUSym
+	local gammaUUSym = self.gammaUUSym
 	local varsFlattened = self.varsFlattened
 	
-	local compileVars = table():append(varsFlattened, {f}, gammaUSym)
+	local compileVars = table():append(varsFlattened, {f}, gammaUUSym)
 	if self.useShift then compileVars:append(betas, BFlattened) end
 
 	self.compileVars = compileVars
@@ -245,12 +248,12 @@ function ADMBonaMasso:getSourceTerms()
 		local sum = -R4[i][j] + trK * K[i][j] 
 		for k=1,3 do
 			for l=1,3 do
-				sum = sum - 2 * K[i][k] * gammaU[k][l] * K[l][j]
+				sum = sum - 2 * K[i][k] * gammaUU[k][l] * K[l][j]
 				for m=1,3 do
 					for n=1,3 do
-						sum = sum + 4 * D[k][m][i] * gammaU[k][l] * gammaU[m][n] * D[l][n][j]
-						sum = sum + Gamma[k][l][m] * gammaU[k][l] * gammaU[m][n] * Gamma[n][i][j]
-						sum = sum + Gamma[i][k][m] * gammaU[k][l] * gammaU[m][n] * Gamma[j][l][n]
+						sum = sum + 4 * D[k][m][i] * gammaUU[k][l] * gammaUU[m][n] * D[l][n][j]
+						sum = sum + Gamma[k][l][m] * gammaUU[k][l] * gammaUU[m][n] * Gamma[n][i][j]
+						sum = sum + Gamma[i][k][m] * gammaUU[k][l] * gammaUU[m][n] * Gamma[j][l][n]
 					end
 				end
 			end
@@ -283,7 +286,7 @@ function ADMBonaMasso:getSourceTerms()
 			io.write('{')
 			for j,xj in ipairs(xNames) do
 				print(xNames:map(function(xk,k)
-					return gammaU[i][k].name..' * '..K[k][j].name
+					return gammaUU[i][k].name..' * '..K[k][j].name
 				end):concat(' + ')..',')
 			end
 			io.write('},')
@@ -312,7 +315,7 @@ function ADMBonaMasso:getSourceTerms()
 				io.write('{')
 				for k,xk in ipairs(xNames) do
 					print(xNames:map(function(xl,l)
-						return D[i][l][k].name..' * '..gammaU[l][j].name
+						return D[i][l][k].name..' * '..gammaUU[l][j].name
 					end):concat(' + ')..',')
 				end
 				io.write('},')
@@ -349,7 +352,7 @@ function ADMBonaMasso:getSourceTerms()
 				io.write('{')
 				for k,xk in ipairs(xNames) do
 					print(xNames:map(function(xl,l)
-						return 'DLUL'..I(l,j,k)..' * '..gammaU[l][i].name
+						return 'DLUL'..I(l,j,k)..' * '..gammaUU[l][i].name
 					end):concat(' + ')..',')
 				end
 				io.write('},')
@@ -389,7 +392,7 @@ function ADMBonaMasso:getSourceTerms()
 			io.write('{')
 			for jk,xjk in ipairs(symNames) do
 				print(xNames:map(function(xl,l)
-					return gammaU[i][l].name..' * GammaLSymLL'..I(l,jk)
+					return gammaUU[i][l].name..' * GammaLSymLL'..I(l,jk)
 				end):concat(' + ')..',')
 			end
 			io.write('},')
@@ -422,7 +425,7 @@ function ADMBonaMasso:getSourceTerms()
 				io.write('{')
 				for k,xk in ipairs(xNames) do
 					print(xNames:map(function(xl,l)
-						return gammaU[j][l].name..' * GammaLSymLL'..I(i,from3x3to6(l,k))
+						return gammaUU[j][l].name..' * GammaLSymLL'..I(i,from3x3to6(l,k))
 					end):concat(' + ')..',')
 				end
 				io.write('},')
@@ -438,7 +441,7 @@ function ADMBonaMasso:getSourceTerms()
 			for jk,xjk in ipairs(symNames) do
 				local j,k = from6to3x3(jk)
 				print(xNames:map(function(xl,l)
-					return gammaU[k][l].name..' * GammaLUL'..I(i,j,l)
+					return gammaUU[k][l].name..' * GammaLUL'..I(i,j,l)
 				end):concat(' + ')..',')
 			end
 			io.write('},')
@@ -468,7 +471,7 @@ function ADMBonaMasso:getSourceTerms()
 		print(def('ADU', {3}))
 		for i,xi in ipairs(xNames) do
 			print(xNames:map(function(xj,j)
-				return gammaU[i][j].name..' * ADL'..I(j)
+				return gammaUU[i][j].name..' * ADL'..I(j)
 			end):concat(' + ')..',')
 		end
 		print('};')
@@ -706,9 +709,9 @@ function ADMBonaMasso:getEigenfields(dir)
 	local alpha = self.alpha
 	local betas = self.betas
 	local DSym = self.DSym
-	local gammaLSym = self.gammaLSym
+	local gammaLLSym = self.gammaLLSym
 	local beta = self.beta
-	local gammaU = self.gammaU
+	local gammaUU = self.gammaUU
 	local A = self.A
 	local B = self.B
 	local D = self.D
@@ -725,7 +728,7 @@ function ADMBonaMasso:getEigenfields(dir)
 
 	local LambdaULL = Tensor'^k_ij'
 	LambdaULL['^k_ij'] = (DULL'^k_ij' + (delta3'^k_i' * (A'_j' + 2 * V'_j' - D1L'_j') + delta3'^k_j' * (A'_i' + 2 * V'_i' - D1L'_i')) / 2)()
-	local Lambda1U = (LambdaULL'^k_ij' * gammaU'^ij')()
+	local Lambda1U = (LambdaULL'^k_ij' * gammaUU'^ij')()
 
 	-- x's other than the current dir
 	local oxIndexes = range(3)
@@ -749,7 +752,7 @@ function ADMBonaMasso:getEigenfields(dir)
 		-- alpha
 	eigenfields:insert{w=alpha, lambda=-beta[dir]}
 		-- gamma_ij
-	eigenfields:append(gammaLSym:map(function(gamma_ij,ij) return {w=gamma_ij, lambda=-beta[dir]} end))
+	eigenfields:append(gammaLLSym:map(function(gamma_ij,ij) return {w=gamma_ij, lambda=-beta[dir]} end))
 		-- A_x', x' != dir
 	eigenfields:append(oxIndexes:map(function(p) return {w=A[p], lambda=-beta[dir]} end))
 		-- D_x'ij, x' != dir
@@ -773,31 +776,34 @@ function ADMBonaMasso:getEigenfields(dir)
 			if j == dir then i,j = j,i end
 			assert(j ~= dir)
 			eigenfields:insert(loc, {
+				w = ({
 				-- Bona-Masso paper:
 				-- gamma^xx (K_ix' - s_ix') + delta^x_i s^x_x' -+ sqrt(gamma^xx) lambda^x_ix'
 				-- without shift: gamma^xx K_ix' -+ sqrt(gamma^xx) lambda^x_ix'
 				-- scaled by 1/sqrt(gamma^xx): sqrt(gamma^xx) K_ix' -+ lambda^x_ix'
 				-- this matches Alcubierre's book
-				-- lambda expanded: sqrt(gamma^xx) K_ix' -+ (gamma^xk D_kix' + 1/2 delta^x_i (A_x' + 2 V_x' - D_x'mn gamma^mn))
 				-- ...except I'm changing the sign to match the Alcubierre paper ... otherwise my dalpha's are negative the alpha derivatives
-				w = (sqrt(gammaU[dir][dir]) * K[i][j] + sign * LambdaULL[dir][i][j])(),
+					AlcubierreBook = (sqrt(gammaUU[dir][dir]) * K[i][j] + sign * LambdaULL[dir][i][j])(),
 				-- Alcubierre's 1997 paper:
 				-- K_ix' +- sqrt(gamma^xx) (D_xix' + delta^x_i V_x' / gamma^xx)
-				--w = K[i][j] + sign * sqrt(gammaU[dir][dir]) * (D[dir][i][j] + delta3[dir][i] * V[j] / gammaU[dir][dir]),
-				lambda = -beta[dir] + sign * alpha * sqrt(gammaU[dir][dir]),
+					Alcubierre1997 = K[i][j] + sign * sqrt(gammaUU[dir][dir]) * (D[dir][i][j] + delta3[dir][i] * V[j] / gammaUU[dir][dir]),
+				})[self.eigenfieldMethod],
+				lambda = -beta[dir] + sign * alpha * sqrt(gammaUU[dir][dir]),
 			})
 			loc=loc+1
 		end
 		-- gauge -+
 		local loc = sign == -1 and 1 or #eigenfields+1
 		eigenfields:insert(loc, {
+			w = ({
 			-- f tr K gamma^xx + 2 (s^xx - tr(s) gamma^xx) -+ sqrt(f gamma^xx) lambda^xr_r
 			-- Alcubierre's book:
 			-- ...except I'm changing the sign to match the Alcubierre paper ... otherwise my dalpha's are negative the alpha derivatives
-			w = sqrt(f * gammaU[dir][dir]) * trK + sign * Lambda1U[dir],
+				AlcubierreBook = sqrt(f * gammaUU[dir][dir]) * trK + sign * Lambda1U[dir],
 			-- Alcubierre's 1997 paper:
-			--w = sqrt(f) * trK + sign * sqrt(gammaU[dir][dir]) * (A[dir] + 2 * VU[dir] / gammaU[dir][dir]),
-			lambda = -beta[dir] + sign * alpha * sqrt(f * gammaU[dir][dir]),
+				Alcubierre1997 = sqrt(f) * trK + sign * sqrt(gammaUU[dir][dir]) * (A[dir] + 2 * VU[dir] / gammaUU[dir][dir]),
+			})[self.eigenfieldMethod],
+			lambda = -beta[dir] + sign * alpha * sqrt(f * gammaUU[dir][dir]),
 		})
 	end
 

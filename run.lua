@@ -286,9 +286,9 @@ local function processCode(code)
 		-- add in variables
 		code = code:gsub('sqrt%(f%)', 'sqrt_f')
 		for _,ii in ipairs{'xx', 'yy', 'zz'} do
-			code = code:gsub('sqrt%(gammaU'..ii..'%)', 'sqrt_gammaU'..ii)
-			code = code:gsub('%(gammaU'..ii..' %^ 2%)', 'gammaU'..ii..'Sq')
-			code = code:gsub('%(gammaU'..ii..' %^ %(3 / 2%)%)', 'gammaU'..ii..'_toThe_3_2')
+			code = code:gsub('sqrt%(gammaUU'..ii..'%)', 'sqrt_gammaUU'..ii)
+			code = code:gsub('%(gammaUU'..ii..' %^ %(3 / 2%)%)', 'gammaUU'..ii..'_toThe_3_2')
+			code = code:gsub('%(gammaUU'..ii..' %^ 2%)', 'gammaUU'..ii..'Sq')
 		end
 		-- add assignments
 		code = string.split(string.trim(code), '\n'):map(function(line,i)
@@ -330,8 +330,9 @@ if outputCode then
 			print('\t'..comment((lr==1 and 'left' or 'right')..' eigenvectors in '..xi..':'))
 			if outputMethod == 'C' then
 				print('\t'..(i > 1 and '} else ' or '')..'if (side == '..(i-1)..') {')
-				print('\t\treal sqrt_gammaU'..xi..xi..' = sqrt(gammaU'..xi..xi..');')
-				print('\t\treal gammaU'..xi..xi..'_toThe_3_2 = sqrt_gammaU'..xi..xi..' * gammaU'..xi..xi..';')
+				print('\t\treal sqrt_gammaUU'..xi..xi..' = sqrt(gammaUU'..xi..xi..');')
+				print('\t\treal gammaUU'..xi..xi..'_toThe_3_2 = sqrt_gammaUU'..xi..xi..' * gammaUU'..xi..xi..';')
+				print('\t\treal gammaUU'..xi..xi..'Sq = gammaUU'..xi..xi..' * gammaUU'..xi..xi..';')
 				print('\t\t')
 			end
 			print(processCode(ToStringLua((Qs[i] * U)(), compileVars)))
