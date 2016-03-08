@@ -153,7 +153,8 @@ function NRCodeGen:init()
 	self.from3x3to6 = from3x3to6
 	self.from6to3x3 = from6to3x3
 
-	self.system = ADMBonaMasso(self)
+	--self.system = ADMBonaMasso(self, true)	-- ADM, no shift
+	self.system = ADMBonaMasso(self, true)	-- ADM with shift
 end
 
 local nrCodeGen = NRCodeGen()
@@ -174,8 +175,10 @@ local QRs = table()
 
 for dir=1,3 do
 	local eigenfields = system:getEigenfields(dir)
-	
-	assert(#eigenfields == #varsFlattened, "expected "..#varsFlattened.." eigenfields but found "..#eigenfields)
+
+	if #eigenfields ~= #varsFlattened then
+		error("expected "..#varsFlattened.." eigenfields but found "..#eigenfields.."\ncontents:\n"..eigenfields:map(tostring):concat('\n'))
+	end
 
 	if not outputCode and outputMethod ~= 'GraphViz' then
 		printbr()
