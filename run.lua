@@ -152,9 +152,14 @@ function NRCodeGen:init()
 	self.var = var
 	self.from3x3to6 = from3x3to6
 	self.from6to3x3 = from6to3x3
+	self.comment = comment
+	self.def = def
+	self.I = I
+	self.outputCode = outputCode
+	self.outputMethod = outputMethod
 
-	--self.system = ADMBonaMasso(self, true)	-- ADM, no shift
-	self.system = ADMBonaMasso(self, true)	-- ADM with shift
+	self.system = ADMBonaMasso(self, false)	-- ADM, no shift
+	--self.system = ADMBonaMasso(self, true)	-- ADM with shift
 end
 
 local nrCodeGen = NRCodeGen()
@@ -206,29 +211,33 @@ for dir=1,3 do
 	-- now add in 0's for cols corresponding to the timelike vars (which aren't supposed to be in the linear system)
 	-- [[ this asserts that the time vars go first and the field vars go second in the varsFlattened
 	for i=1,#QL do
-		for j=1,#timeVarsFlattened do
-			table.insert(QL[i], 1, symmath.Constant(0))
+		if system.includeTimeVars then
+			for j=1,#timeVarsFlattened do
+				table.insert(QL[i], 1, symmath.Constant(0))
+			end
 		end
-		assert(#QL[i] == #varsFlattened)
+		assert(#QL[i] == #varsFlattened, "expected "..#varsFlattened.." cols but found "..#QL[i].."\n"..QL)
 	end
-	assert(#QL == #varsFlattened)
+	assert(#QL == #varsFlattened, "expected "..#varsFlattened.." rows but found "..#QL.."\n"..QL)
 	--]]
 
-	-- only for the eigenfields corresponding to the time vars ...
-	-- I have to pick them out of the system
-	-- I *should* be not including them to begin with
-	assert(#b == #eigenfields)
-	for _,var in ipairs(timeVarsFlattened) do
-		local j = varsFlattened:find(var) 
-		for i,field in ipairs(eigenfields) do
-			-- if the eigenfield is the time var then ...
-			if field.w == var then
-				-- ... it shouldn't have been factored out.  and there shouldn't be anything else.
-				assert(b[i][1] == var, "expected "..var.." but got "..b[i].." for row "..i)
-				-- so manually insert it into the eigenvector inverse 
-				QL[i][j] = symmath.Constant(1)
-				-- and manually remove it from the source term
-				b[i][1] = symmath.Constant(0)
+	if system.includeTimeVars then
+		-- only for the eigenfields corresponding to the time vars ...
+		-- I have to pick them out of the system
+		-- I *should* be not including them to begin with
+		assert(#b == #eigenfields)
+		for _,var in ipairs(timeVarsFlattened) do
+			local j = varsFlattened:find(var) 
+			for i,field in ipairs(eigenfields) do
+				-- if the eigenfield is the time var then ...
+				if field.w == var then
+					-- ... it shouldn't have been factored out.  and there shouldn't be anything else.
+					assert(b[i][1] == var, "expected "..var.." but got "..b[i].." for row "..i)
+					-- so manually insert it into the eigenvector inverse 
+					QL[i][j] = symmath.Constant(1)
+					-- and manually remove it from the source term
+					b[i][1] = symmath.Constant(0)
+				end
 			end
 		end
 	end
@@ -286,9 +295,9 @@ local function processCode(code)
 		-- add in variables
 		code = code:gsub('sqrt%(f%)', 'sqrt_f')
 		for _,ii in ipairs{'xx', 'yy', 'zz'} do
-			code = code:gsub('sqrt%(gammaUU'..ii..'%)', 'sqrt_gammaUU'..ii)
-			code = code:gsub('%(gammaUU'..ii..' %^ %(3 / 2%)%)', 'gammaUU'..ii..'_toThe_3_2')
-			code = code:gsub('%(gammaUU'..ii..' %^ 2%)', 'gammaUU'..ii..'Sq')
+			code = code:gsub('sqrt%(gammaU'..ii..'%)', 'sqrt_gammaU'..ii)
+			code = code:gsub('%(gammaU'..ii..' %^ %(3 / 2%)%)', 'gammaU'..ii..'_toThe_3_2')
+			code = code:gsub('%(gammaU'..ii..' %^ 2%)', 'gammaU'..ii..'Sq')
 		end
 		-- add assignments
 		code = string.split(string.trim(code), '\n'):map(function(line,i)

@@ -88,9 +88,12 @@ local ADMBonaMasso = class()
 --ADMBonaMasso.eigenfieldMethod = 'Alcubierre1997'
 ADMBonaMasso.eigenfieldMethod = 'AlcubierreBook'
 
+ADMBonaMasso.includeTimeVars = false	--true
+
 function ADMBonaMasso:init(nrCodeGen, useShift)
 	self.nrCodeGen = nrCodeGen
 	self.useShift = useShift
+	if useShift then assert(self.includeTimeVars, "if you are using shift then you will need the time vars as well.  they aren't only time-dependent when shift is present.") end
 
 	local xNames = nrCodeGen.xNames
 	local symNames = nrCodeGen.symNames
@@ -130,6 +133,7 @@ function ADMBonaMasso:init(nrCodeGen, useShift)
 	local K = Tensor('_ij', function(i,j) return KSym[from3x3to6(i,j)] end)
 	local V = Tensor('_i', function(i) return Vs[i] end)
 
+
 	Tensor.metric(gammaLL, gammaUU)
 
 	local timeVars = table()
@@ -145,7 +149,10 @@ function ADMBonaMasso:init(nrCodeGen, useShift)
 	self.gammaLLSym = gammaLLSym
 	self.gammaUUSym = gammaUUSym
 	self.gammaUU = gammaUU
+	self.As = As
 	self.DSym = DSym
+	self.DFlattened = DFlattened
+	self.Vs = Vs
 	self.beta = beta
 	self.A = A
 	self.B = B
@@ -154,7 +161,7 @@ function ADMBonaMasso:init(nrCodeGen, useShift)
 	self.V = V
 	self.timeVars = timeVars
 	self.fieldVars = fieldVars
-
+	
 	self:getFlattenedVars()
 end
 
@@ -174,8 +181,11 @@ function ADMBonaMasso:getFlattenedVars()
 		infoVarsFlattened:append(table.unpack(infoVars))
 	end
 
-	local varsFlattened = table():append(timeVarsFlattened, fieldVarsFlattened)
-	local expectedNumVars = 37
+	local varsFlattened = table()
+	if self.includeTimeVars then varsFlattened:append(timeVarsFlattened) end
+	varsFlattened:append(fieldVarsFlattened)
+	
+	local expectedNumVars = self.includeTimeVars and 37 or 30
 	assert(#varsFlattened == expectedNumVars, "expected "..expectedNumVars.." but found "..#varsFlattened)
 
 	self.timeVarsFlattened = timeVarsFlattened
@@ -193,6 +203,7 @@ function ADMBonaMasso:getCompileVars()
 	
 	local compileVars = table():append(varsFlattened, {f}, gammaUUSym)
 	if self.useShift then compileVars:append(betas, BFlattened) end
+	if not self.includeTimeVars then compileVars:append(self.timeVarsFlattened) end
 
 	self.compileVars = compileVars
 end
@@ -203,19 +214,75 @@ function ADMBonaMasso:getSourceTerms()
 	local var = nrCodeGen.var
 	local xNames = nrCodeGen.xNames
 	local symNames = nrCodeGen.symNames
-	local from3x3to6 = nrCodeGen.from3x3to6
 	local f = nrCodeGen.f
+	
+	local from3x3to6 = nrCodeGen.from3x3to6
+	local from6to3x3 = nrCodeGen.from6to3x3
+	local comment = nrCodeGen.comment
+	local def = nrCodeGen.def
+	local I = nrCodeGen.I
+	local outputCode = nrCodeGen.outputCode
+	local outputMethod = nrCodeGen.outputMethod
 
+	local gammaUU = self.gammaUU
 	local alpha = self.alpha
+	local As = self.As
+	local DFlattened = self.DFlattened
+	local Vs = self.Vs
 	local beta = self.beta
 	local A = self.A
 	local B = self.B
 	local D = self.D
 	local K = self.K
 	local V = self.V
+	
+	local compileVars = self.compileVars
+	local varsFlattened = self.varsFlattened
+
+	local ToStringLua = require 'symmath.tostring.Lua'
+
+	--[[
+	stress-energy tensor for a perfect fluid:
+	(from Bona & Masso's paper)
+	T_ab = (rho + p) u_a u_b + p g_ab
+	... spatial terms: T_ij = (mu + p) u_i u_j + p gamma_ij
+	... for mu = energy density
+
+	stress-energy of perfect fluid:
+	(from Alcubiere's book)
+	T_ab = (rho + p) u_a u_b + p g_ab
+	rho = rho0 (1 + epsilon)
+	rho0 = rest mass energy density
+	epsilon = specific internal energy
+	h = 1 + epsilon + p / rho0 = enthalpy
+	T_ab = rho0 h u_a u_b + p g_ab
+
+	stress-energy of a viscous fluid with heat conduction:
+	(from Gravitation ch.22, one of the problems)
+	T_ab = rho u_a u_b + (p - zeta theta) (g_ab + u_a u_b) - 2 eta sigma_ab + q_a u_b + u_a q_b
+	...for
+	g_ab = 4D metric
+	p = pressure
+	rho = density
+	u_a = four-velocity of fluid 
+	eta >= 0 = coefficient of dynamic viscosity
+	zeta >= 0 = coefficient of bulk viscosity
+	sigma_ab = shear = 1/2 (u_a;u (g^u_b + u^u u_b) - u_b;u (g^u_a + u^u u_a))
+	theta = expansion = nabla_a u^a
+	q_a = heat flux 4-vector, q^0 = 0, q^J = energy per unit time crossing unit surface perpendicular to e_J
+
+	R4 spatial terms:
+	 G_ij = R4_ij - 1/2 R4 g4_ij = 8 pi T_ij
+	for G_ij = 8 pi T_ij = 8 pi ((mu + p) u_i u_j + p gamma_ij)
+	for u_i = 3-velocity (are you sure it's not the 3-components of the 4-velocity?)
+	for p = pressure
+	for mu = total energy density
+	
+	so R4_ij = 8 pi ((mu + p) u_i u_j + 1/2 (mu - p) gamma_ij)
+	and G_0i = 8 pi T_0i ~ 8 pi ((rho + p) u_0 u_i + p beta_i)
+	--]]
 
 	--[=[ we don't need the source vector ... it's very complex ... should be computed on the spot
-	-- R4 and G0 need to be provided ...
 
 	-- assuming those gammas are of the spatial metric (and not the spacetime metric ...)
 	local Gamma = Tensor('_ijk')
@@ -619,7 +686,7 @@ function ADMBonaMasso:getSourceTerms()
 	-- not much use for this at the moment
 	-- going to display it alongside the matrix
 	local sourceTerms = symmath.Matrix(
-	table():append{
+	table():append(self.includeTimeVars and {
 		-- alpha: -alpha^2 Q + alpha beta^k A_k
 		alphaSource,
 		-- gamma_ij: -2 alpha (K_ij - s_ij) + 2 beta^r D_rij
@@ -629,6 +696,7 @@ function ADMBonaMasso:getSourceTerms()
 		gammaLLSource[2][2],
 		gammaLLSource[2][3],
 		gammaLLSource[3][3],
+	} or nil):append{
 		-- A_k: 1995 says ... (2 B_k^r - alpha s^k_k delta^r_k) A_r ... though 1997 says 0
 		0, 0, 0,
 		-- D_kij: 1995 says a lot ... but 1997 says 0
@@ -663,17 +731,19 @@ function ADMBonaMasso:getSourceTerms()
 			end
 		end
 
+		-- TODO this is wrapped in an 'if outputCode then' block... so move it ...
 		if not outputCode and outputMethod ~= 'GraphViz' then
 			printbr('V and D constraints:')
 			printbr((V'_i':eq(D'_im^m' - D'^m_mi'))())
 			printbr()
 		elseif outputCode then
+			local VDZeros = (V'_i' - (D'_ij^j' - D'^j_ji'))()
 			print(comment('V and D constraint'))
 			local VDs = V'_i':eq(D'_im^m' - D'^m_mi')
 			print(ToStringLua(VDs(), compileVars))
+			--[[
 			print(comment('V and D linear project'))
 			-- linear factor out the V's and D's ... 
-			local VDZeros = (V'_i' - (D'_ij^j' - D'^j_ji'))()
 			for i=1,3 do
 				local a,b = symmath.factorLinearSystem({VDZeros[i]}, varsFlattened)
 				for j=1,#b do
@@ -695,6 +765,68 @@ function ADMBonaMasso:getSourceTerms()
 					end
 				end
 			end
+			--]]
+			print(comment'V and D constraint newton descent step')
+			--[[
+			or do a newton step on the function f_i = V_i - (D_ijk - D_jki) gamma^jk, minimizing the v's and d's ...
+			u_i = u_i - df_m/du_i^-1 f_m, for u = v's and d's
+			consolidate into one function: phi = 1/2 f_i^2
+			u_i = u_i - (d2phi/du_i du_j)^-1 * dphi/du_i
+			
+			dphi/du_i = 2 f_m df_m/du_i
+			d2phi/d(u_i u_j) = 2 df_m/du_i df_m/du_j + 2 f_m d2f_m/d(u_i u_j)
+			--]]
+			local phi = ((VDZeros[1]^2 + VDZeros[2]^2 + VDZeros[3]^2)/2)()
+			local U = table():append(Vs):append(DFlattened:filter(function(D_ijk)
+				return not (D_ijk == D[1][1][1] or D_ijk == D[2][2][2] or D_ijk == D[3][3][3])	-- remove D_xxx D_yyy D_zzz
+			end))
+			for i,xi in ipairs(xNames) do 
+				Vs[i].name = 'V_'..xi
+				for j,xj in ipairs(xNames) do
+					gammaUU[i][j].name = '\\gamma^{'..xi..xj..'}'
+					for k,xk in ipairs(xNames) do
+						D[i][j][k] = 'D_{'..xi..xj..xk..'}'
+					end
+				end
+			end
+			assert(#U == 18)
+			local Matrix = require 'symmath.Matrix'
+			local H = Matrix(U:map(function(ui)
+				return U:map(function(uj)
+					return phi:diff(ui):diff(uj)()
+				end)
+			end):unpack())
+		
+			local HInv
+			do
+				local symmath = require 'symmath'
+				local oldToString = symmath.tostring
+				symmath.tostring = require 'symmath.tostring.MathJax'
+				local s = symmath.tostring.header
+				s=s..tostring(H)..'<br>'
+				pcall(function()
+					HInv = H:inverse(nil, function(AInv, A)
+						s=s..AInv .. A .. '<br>'
+					end)
+					s=s..tostring(HInv)..'<br>'
+				end)
+				s=s:gsub('gammaU(..)', function(ij)
+					return '\\gamma^{'..ij..'}'
+				end)
+				s=s..symmath.tostring.footer
+				local file = require 'ext.file'
+				file['constraints.html'] = s
+				symmath.tostring = oldToString
+			end
+			
+			local rhs = (U - HInv * Matrix(U:map(function(ui)
+				return {phi:diff(ui)()}
+			end):unpack()))
+			assert(#rhs == #U)
+			for i=1,#U do
+				print(U[i]:eq(rhs[i]))
+			end
+			os.exit()
 		end
 	end
 
@@ -749,10 +881,12 @@ function ADMBonaMasso:getEigenfields(dir)
 	however in doing so, it makes factoring the linear system a pain, because you're not supposed to factor out alphas or gammas
 	...except with the alpha and gamma eigenfields when you have to ...
 	--]]
-		-- alpha
-	eigenfields:insert{w=alpha, lambda=-beta[dir]}
-		-- gamma_ij
-	eigenfields:append(gammaLLSym:map(function(gamma_ij,ij) return {w=gamma_ij, lambda=-beta[dir]} end))
+	if self.includeTimeVars then
+			-- alpha
+		eigenfields:insert{w=alpha, lambda=-beta[dir]}
+			-- gamma_ij
+		eigenfields:append(gammaLLSym:map(function(gamma_ij,ij) return {w=gamma_ij, lambda=-beta[dir]} end))
+	end
 		-- A_x', x' != dir
 	eigenfields:append(oxIndexes:map(function(p) return {w=A[p], lambda=-beta[dir]} end))
 		-- D_x'ij, x' != dir
