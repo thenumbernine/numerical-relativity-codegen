@@ -88,6 +88,23 @@ local ADMBonaMasso = class()
 --ADMBonaMasso.eigenfieldMethod = 'Alcubierre1997'
 ADMBonaMasso.eigenfieldMethod = 'AlcubierreBook'
 
+--[[
+set to 'true' to use V_i's, 'false' to use Gamma^i's
+using V_i is the first proposed BM ADM hyperbolic formalism, but requires extra constraints
+using Gamma^i's requires no such constraints (right?)
+--]]
+ADMBonaMasso.useMomentumConstraints = false	
+
+--[[
+use this with useMomentumConstraints==false
+set to 'true' to use Gamma_i (less gamma_ij terms in the eigenvectors), 'false' to use Gamma^i (paper-specified waves)
+using Gamma^i is the default specified in all the papers, however its eigenmodes use gamma_ij coefficients 
+... and become the only terms to use gamma_ij coefficients whereas everything else uses gamma^ij coeffs
+mixing the two can be handled by the symbolic matrix inverse, but gets ugly.
+using Gamma_i simplifies the inverse a lot, and makes the computation much easier.
+--]]
+ADMBonaMasso.useContractedGammaLower = true
+
 ADMBonaMasso.includeTimeVars = false	--true
 
 function ADMBonaMasso:init(nrCodeGen, useShift)
@@ -118,10 +135,11 @@ function ADMBonaMasso:init(nrCodeGen, useShift)
 	local DFlattened = table():append(DSym:unpack())
 	local KSym = symNames:map(function(xij) return var('K_{'..xij..'}') end)
 	local Vs = xNames:map(function(xi) return var('V_'..xi) end)
+	local GammaUs = (not self.useMomentumConstraints and self.useContractedGammaLower) and xNames:map(function(xi) return var('\\Gamma^'..xi) end) or nil
+	local GammaLs = (not self.useMomentumConstraints and self.useContractedGammaLower) and xNames:map(function(xi) return var('\\Gamma_'..xi) end) or nil
 
 	-- other vars based on state vars
 	local gammaUUSym = symNames:map(function(xij) return var('\\gamma^{'..xij..'}') end)
-
 
 	-- tensors of variables:
 	local beta = Tensor('^i', function(i) return self.useShift and betas[i] or 0 end)
@@ -131,8 +149,12 @@ function ADMBonaMasso:init(nrCodeGen, useShift)
 	local B = Tensor('_i^j', function(i,j) return self.useShift and Bs[i][j] or 0 end)
 	local D = Tensor('_ijk', function(i,j,k) return DSym[i][from3x3to6(j,k)] end)
 	local K = Tensor('_ij', function(i,j) return KSym[from3x3to6(i,j)] end)
-	local V = Tensor('_i', function(i) return Vs[i] end)
 
+	-- option #1: use V_i momentum constraints
+	local V = Tensor('_i', function(i) return Vs[i] end)
+	-- option #2: use Gamma^i evolution	
+	local GammaU = (not self.useMomentumConstraints and self.useContractedGammaLower) and Tensor('^i', function(i) return GammaUs[i] end) or nil
+	local GammaL = (not self.useMomentumConstraints and self.useContractedGammaLower) and Tensor('_i', function(i) return GammaLs[i] end) or nil
 
 	Tensor.metric(gammaLL, gammaUU)
 
@@ -142,23 +164,37 @@ function ADMBonaMasso:init(nrCodeGen, useShift)
 
 	local fieldVars = table()
 	fieldVars:insert(A)
-	fieldVars:append{DFlattened, KSym, Vs}
+	fieldVars:append{DFlattened, KSym}
+	if self.useMomentumConstraints then
+		fieldVars:append{Vs}
+	else
+		if self.useContractedGammaLower then
+			fieldVars:append{GammaLs}
+		else
+			fieldVars:append{GammaUs}
+		end
+	end
 
 	self.alpha = alpha
 	self.betas = betas
 	self.gammaLLSym = gammaLLSym
 	self.gammaUUSym = gammaUUSym
 	self.gammaUU = gammaUU
+	self.gammaLL = gammaLL
 	self.As = As
 	self.DSym = DSym
 	self.DFlattened = DFlattened
 	self.Vs = Vs
+	self.GammaUs = GammaUs
+	self.GammaLs = GammaLs
 	self.beta = beta
 	self.A = A
 	self.B = B
 	self.D = D
 	self.K = K
 	self.V = V
+	self.GammaU = GammaU
+	self.GammaL = GammaL
 	self.timeVars = timeVars
 	self.fieldVars = fieldVars
 	
@@ -229,13 +265,17 @@ function ADMBonaMasso:getSourceTerms()
 	local As = self.As
 	local DFlattened = self.DFlattened
 	local Vs = self.Vs
+	local GammaUs = self.GammaUs
+	local GammaLs = self.GammaLs
 	local beta = self.beta
 	local A = self.A
 	local B = self.B
 	local D = self.D
 	local K = self.K
 	local V = self.V
-	
+	local GammaU = self.GammaU
+	local GammaL = self.GammaL
+
 	local compileVars = self.compileVars
 	local varsFlattened = self.varsFlattened
 
@@ -732,101 +772,103 @@ function ADMBonaMasso:getSourceTerms()
 		end
 
 		-- TODO this is wrapped in an 'if outputCode then' block... so move it ...
-		if not outputCode and outputMethod ~= 'GraphViz' then
-			printbr('V and D constraints:')
-			printbr((V'_i':eq(D'_im^m' - D'^m_mi'))())
-			printbr()
-		elseif outputCode then
-			local VDZeros = (V'_i' - (D'_ij^j' - D'^j_ji'))()
-			print(comment('V and D constraint'))
-			local VDs = V'_i':eq(D'_im^m' - D'^m_mi')
-			print(ToStringLua(VDs(), compileVars))
-			--[[
-			print(comment('V and D linear project'))
-			-- linear factor out the V's and D's ... 
-			for i=1,3 do
-				local a,b = symmath.factorLinearSystem({VDZeros[i]}, varsFlattened)
-				for j=1,#b do
-					assert(b[j][1] == symmath.Constant(0))
-				end
-				print('	-- '..xNames[i])
-				--print('local a = '..ToStringLua(a, compileVars))
-				print('local aDotA = '..ToStringLua((a * a:transpose())()[1][1], compileVars))
-				print('local vDotA = '..ToStringLua((a * U)()[1][1], compileVars))
-				print('local v_a = vDotA / aDotA')
-				local v_a = var'v_a'
-				-- because we're doing 3 linear projections of overlapping variables ... i'd say scale back by 1/3rd ... but chances are that won't even work.  newton would be best.
-				local epsilon = var'epsilon'
-				--print('local epsilon = 1/3')
-				print('local epsilon = 1/100')
-				for i=1,#varsFlattened do
-					if a[1][i] ~= symmath.Constant(0) then
-						print('qs[i]['..i..'] = qs[i]['..i..'] + '..ToStringLua((-epsilon * v_a * a[1][i])(), compileVars:append{v_a, epsilon}))
+		if self.useMomentumConstraints then
+			if not outputCode and outputMethod ~= 'GraphViz' then
+				printbr('V and D constraints:')
+				printbr((V'_i':eq(D'_im^m' - D'^m_mi'))())
+				printbr()
+			elseif outputCode then
+				local VDZeros = (V'_i' - (D'_ij^j' - D'^j_ji'))()
+				print(comment('V and D constraint'))
+				local VDs = V'_i':eq(D'_im^m' - D'^m_mi')
+				print(ToStringLua(VDs(), compileVars))
+				--[[
+				print(comment('V and D linear project'))
+				-- linear factor out the V's and D's ... 
+				for i=1,3 do
+					local a,b = symmath.factorLinearSystem({VDZeros[i]}, varsFlattened)
+					for j=1,#b do
+						assert(b[j][1] == symmath.Constant(0))
+					end
+					print('	-- '..xNames[i])
+					--print('local a = '..ToStringLua(a, compileVars))
+					print('local aDotA = '..ToStringLua((a * a:transpose())()[1][1], compileVars))
+					print('local vDotA = '..ToStringLua((a * U)()[1][1], compileVars))
+					print('local v_a = vDotA / aDotA')
+					local v_a = var'v_a'
+					-- because we're doing 3 linear projections of overlapping variables ... i'd say scale back by 1/3rd ... but chances are that won't even work.  newton would be best.
+					local epsilon = var'epsilon'
+					--print('local epsilon = 1/3')
+					print('local epsilon = 1/100')
+					for i=1,#varsFlattened do
+						if a[1][i] ~= symmath.Constant(0) then
+							print('qs[i]['..i..'] = qs[i]['..i..'] + '..ToStringLua((-epsilon * v_a * a[1][i])(), compileVars:append{v_a, epsilon}))
+						end
 					end
 				end
-			end
-			--]]
-			print(comment'V and D constraint newton descent step')
-			--[[
-			or do a newton step on the function f_i = V_i - (D_ijk - D_jki) gamma^jk, minimizing the v's and d's ...
-			u_i = u_i - df_m/du_i^-1 f_m, for u = v's and d's
-			consolidate into one function: phi = 1/2 f_i^2
-			u_i = u_i - (d2phi/du_i du_j)^-1 * dphi/du_i
-			
-			dphi/du_i = 2 f_m df_m/du_i
-			d2phi/d(u_i u_j) = 2 df_m/du_i df_m/du_j + 2 f_m d2f_m/d(u_i u_j)
-			--]]
-			local phi = ((VDZeros[1]^2 + VDZeros[2]^2 + VDZeros[3]^2)/2)()
-			local U = table():append(Vs):append(DFlattened:filter(function(D_ijk)
-				return not (D_ijk == D[1][1][1] or D_ijk == D[2][2][2] or D_ijk == D[3][3][3])	-- remove D_xxx D_yyy D_zzz
-			end))
-			for i,xi in ipairs(xNames) do 
-				Vs[i].name = 'V_'..xi
-				for j,xj in ipairs(xNames) do
-					gammaUU[i][j].name = '\\gamma^{'..xi..xj..'}'
-					for k,xk in ipairs(xNames) do
-						D[i][j][k] = 'D_{'..xi..xj..xk..'}'
+				--]]
+				print(comment'V and D constraint newton descent step')
+				--[[
+				or do a newton step on the function f_i = V_i - (D_ijk - D_jki) gamma^jk, minimizing the v's and d's ...
+				u_i = u_i - df_m/du_i^-1 f_m, for u = v's and d's
+				consolidate into one function: phi = 1/2 f_i^2
+				u_i = u_i - (d2phi/du_i du_j)^-1 * dphi/du_i
+				
+				dphi/du_i = 2 f_m df_m/du_i
+				d2phi/d(u_i u_j) = 2 df_m/du_i df_m/du_j + 2 f_m d2f_m/d(u_i u_j)
+				--]]
+				local phi = ((VDZeros[1]^2 + VDZeros[2]^2 + VDZeros[3]^2)/2)()
+				local U = table():append(Vs):append(DFlattened:filter(function(D_ijk)
+					return not (D_ijk == D[1][1][1] or D_ijk == D[2][2][2] or D_ijk == D[3][3][3])	-- remove D_xxx D_yyy D_zzz
+				end))
+				for i,xi in ipairs(xNames) do 
+					Vs[i].name = 'V_'..xi
+					for j,xj in ipairs(xNames) do
+						gammaUU[i][j].name = '\\gamma^{'..xi..xj..'}'
+						for k,xk in ipairs(xNames) do
+							D[i][j][k] = 'D_{'..xi..xj..xk..'}'
+						end
 					end
 				end
-			end
-			assert(#U == 18)
-			local Matrix = require 'symmath.Matrix'
-			local H = Matrix(U:map(function(ui)
-				return U:map(function(uj)
-					return phi:diff(ui):diff(uj)()
-				end)
-			end):unpack())
-		
-			local HInv
-			do
-				local symmath = require 'symmath'
-				local oldToString = symmath.tostring
-				symmath.tostring = require 'symmath.tostring.MathJax'
-				local s = symmath.tostring.header
-				s=s..tostring(H)..'<br>'
-				pcall(function()
-					HInv = H:inverse(nil, function(AInv, A)
-						s=s..AInv .. A .. '<br>'
+				assert(#U == 18)
+				local Matrix = require 'symmath.Matrix'
+				local H = Matrix(U:map(function(ui)
+					return U:map(function(uj)
+						return phi:diff(ui):diff(uj)()
 					end)
-					s=s..tostring(HInv)..'<br>'
-				end)
-				s=s:gsub('gammaU(..)', function(ij)
-					return '\\gamma^{'..ij..'}'
-				end)
-				s=s..symmath.tostring.footer
-				local file = require 'ext.file'
-				file['constraints.html'] = s
-				symmath.tostring = oldToString
-			end
+				end):unpack())
 			
-			local rhs = (U - HInv * Matrix(U:map(function(ui)
-				return {phi:diff(ui)()}
-			end):unpack()))
-			assert(#rhs == #U)
-			for i=1,#U do
-				print(U[i]:eq(rhs[i]))
+				local HInv
+				do
+					local symmath = require 'symmath'
+					local oldToString = symmath.tostring
+					symmath.tostring = require 'symmath.tostring.MathJax'
+					local s = symmath.tostring.header
+					s=s..tostring(H)..'<br>'
+					pcall(function()
+						HInv = H:inverse(nil, function(AInv, A)
+							s=s..AInv .. A .. '<br>'
+						end)
+						s=s..tostring(HInv)..'<br>'
+					end)
+					s=s:gsub('gammaU(..)', function(ij)
+						return '\\gamma^{'..ij..'}'
+					end)
+					s=s..symmath.tostring.footer
+					local file = require 'ext.file'
+					file['constraints.html'] = s
+					symmath.tostring = oldToString
+				end
+				
+				local rhs = (U - HInv * Matrix(U:map(function(ui)
+					return {phi:diff(ui)()}
+				end):unpack()))
+				assert(#rhs == #U)
+				for i=1,#U do
+					print(U[i]:eq(rhs[i]))
+				end
+				os.exit()
 			end
-			os.exit()
 		end
 	end
 
@@ -844,12 +886,15 @@ function ADMBonaMasso:getEigenfields(dir)
 	local gammaLLSym = self.gammaLLSym
 	local beta = self.beta
 	local gammaUU = self.gammaUU
+	local gammaLL = self.gammaLL
 	local A = self.A
 	local B = self.B
 	local D = self.D
 	local K = self.K
 	local V = self.V
-	
+	local GammaU = self.GammaU
+	local GammaL = self.GammaL
+
 	-- helpful variables
 	local VU = V'^i'()
 	local trK = K'^i_i'()
@@ -857,9 +902,17 @@ function ADMBonaMasso:getEigenfields(dir)
 	local D1L = D'_km^m'()
 	--local delta3 = symmath.Matrix.identity(3)
 	local delta3 = Tensor('^i_j', function(i,j) return i == j and 1 or 0 end)
+	
+	if not self.useMomentumConstraints then
+		if not GammaL then
+			GammaL = (GammaU'^j' * gammaLL'_ij')()
+		end
+		V = ((D'_im^m' - GammaL'_i') / 2)()
+	end
 
 	local LambdaULL = Tensor'^k_ij'
 	LambdaULL['^k_ij'] = (DULL'^k_ij' + (delta3'^k_i' * (A'_j' + 2 * V'_j' - D1L'_j') + delta3'^k_j' * (A'_i' + 2 * V'_i' - D1L'_i')) / 2)()
+	
 	local Lambda1U = (LambdaULL'^k_ij' * gammaUU'^ij')()
 
 	-- x's other than the current dir

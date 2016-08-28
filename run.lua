@@ -87,6 +87,7 @@ else
 	printbr = function(...)
 		print(...)
 		print'<br>'
+		io.stdout:flush()
 	end
 end
 
@@ -202,11 +203,59 @@ for dir=1,3 do
 		printbr()
 	end
 
+	local linearSystems = eigenfields:map(function(field) return field.w end)
+
 	-- now just do a matrix factor of the eigenfields on varsFlattened and viola.
 	-- QL is the left eigenvector matrix
 	local QL, b = symmath.factorLinearSystem(
-		eigenfields:map(function(field) return field.w end),
+		linearSystems,
 		fieldVarsFlattened)
+
+	-- courtesy of !useMomentumConstraints evolving the Gamma^i terms, now gamma_ij and gamma^ij terms can be present, and some simplifications can be made around them ...
+	do
+		-- replace (gamma^ik gamma_kj) with delta^i_j values ...
+		local gammaLL = nrCodeGen.system.gammaLL
+		local gammaUU = nrCodeGen.system.gammaUU
+		local gammaOrtho = (gammaLL'_ik' * gammaUU'^kj')()
+		for i=1,3 do
+			for j=1,3 do
+				QL = QL:replace( gammaOrtho[i][j], symmath.Constant(i==j and 1 or 0) )
+			end
+		end
+		
+		--[[ also represent all gamma_ij values in terms of gamma^ij, for inverse simplification's sake ...
+		-- seems to add too many extra terms, and makes the inverse calculation take too long
+		--[=[
+		local gammaUUInv = symmath.Matrix.inverse(gammaUU)
+		--]=]
+		--[=[
+		local gammaUUInv = symmath.Matrix({1,0,0}, {0,1,0}, {0,0,1})
+		local detGamma = var'\\gamma'
+		for i=1,3 do
+			local i1 = i % 3 + 1
+			local i2 = (i + 1) % 3 + 1
+			for j=1,3 do
+				local j1 = j % 3 + 1
+				local j2 = (j + 1) % 3 + 1
+				gammaUUInv[i][j] = symmath.Matrix.determinant(symmath.Matrix(
+					{ gammaUU[j1][i1], gammaUU[j1][i2] },
+					{ gammaUU[j2][i1], gammaUU[j2][i2] }
+				)) * detGamma	-- divided by det(gamma^ij) means times det(gamma_ij)
+			end
+		end
+		--]=]
+		for i=1,3 do
+			for j=1,3 do
+				QL = QL:replace(gammaLL[i][j], gammaUUInv[i][j])
+			end
+		end
+		--]]
+	end
+
+	if outputMethod == 'MathJax' then
+		printbr('factor of eigenmodes / left eigenvector matrix')
+		printbr((QL * symmath.Matrix.transpose(symmath.Matrix(fieldVarsFlattened))):eq(b))
+	end
 
 	-- now add in 0's for cols corresponding to the timelike vars (which aren't supposed to be in the linear system)
 	-- [[ this asserts that the time vars go first and the field vars go second in the varsFlattened
@@ -249,9 +298,14 @@ for dir=1,3 do
 	end
 
 	-- get the right eigenvectors
+	printbr('inverting...')
 	local QR = QL:inverse()
 
-	-- verify orthogonality
+	printbr('right eigenvector matrix:')
+	printbr(QR)
+
+	--[[ verify orthogonality
+	printbr('verifying orthogonality...')
 	local delta = (QL * QR)()
 	for i=1,delta:dim()[1].value do
 		for j=1,delta:dim()[2].value do
@@ -260,6 +314,9 @@ for dir=1,3 do
 			assert(delta[i][j].value == (i == j and 1 or 0))
 		end
 	end
+	--]]
+
+	printbr('...done!')
 
 	-- save for later
 	QLs:insert(QL)
