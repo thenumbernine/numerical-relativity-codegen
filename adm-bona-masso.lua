@@ -103,9 +103,9 @@ using Gamma^i is the default specified in all the papers, however its eigenmodes
 mixing the two can be handled by the symbolic matrix inverse, but gets ugly.
 using Gamma_i simplifies the inverse a lot, and makes the computation much easier.
 --]]
-ADMBonaMasso.useContractedGammaLower = true
+ADMBonaMasso.useContractedGammaLower = false
 
-ADMBonaMasso.includeTimeVars = false	--true
+ADMBonaMasso.includeTimeVars = true	-- includes alpha and gamma_ij in the left and right eigenvector transform generation
 
 function ADMBonaMasso:init(nrCodeGen, useShift)
 	self.nrCodeGen = nrCodeGen
@@ -135,7 +135,7 @@ function ADMBonaMasso:init(nrCodeGen, useShift)
 	local DFlattened = table():append(DSym:unpack())
 	local KSym = symNames:map(function(xij) return var('K_{'..xij..'}') end)
 	local Vs = xNames:map(function(xi) return var('V_'..xi) end)
-	local GammaUs = (not self.useMomentumConstraints and self.useContractedGammaLower) and xNames:map(function(xi) return var('\\Gamma^'..xi) end) or nil
+	local GammaUs = (not self.useMomentumConstraints and not self.useContractedGammaLower) and xNames:map(function(xi) return var('\\Gamma^'..xi) end) or nil
 	local GammaLs = (not self.useMomentumConstraints and self.useContractedGammaLower) and xNames:map(function(xi) return var('\\Gamma_'..xi) end) or nil
 
 	-- other vars based on state vars
@@ -153,7 +153,7 @@ function ADMBonaMasso:init(nrCodeGen, useShift)
 	-- option #1: use V_i momentum constraints
 	local V = Tensor('_i', function(i) return Vs[i] end)
 	-- option #2: use Gamma^i evolution	
-	local GammaU = (not self.useMomentumConstraints and self.useContractedGammaLower) and Tensor('^i', function(i) return GammaUs[i] end) or nil
+	local GammaU = (not self.useMomentumConstraints and not self.useContractedGammaLower) and Tensor('^i', function(i) return GammaUs[i] end) or nil
 	local GammaL = (not self.useMomentumConstraints and self.useContractedGammaLower) and Tensor('_i', function(i) return GammaLs[i] end) or nil
 
 	Tensor.metric(gammaLL, gammaUU)
@@ -261,6 +261,7 @@ function ADMBonaMasso:getSourceTerms()
 	local outputMethod = nrCodeGen.outputMethod
 
 	local gammaUU = self.gammaUU
+	local gammaLL = self.gammaLL
 	local alpha = self.alpha
 	local As = self.As
 	local DFlattened = self.DFlattened
@@ -280,6 +281,14 @@ function ADMBonaMasso:getSourceTerms()
 	local varsFlattened = self.varsFlattened
 
 	local ToStringLua = require 'symmath.tostring.Lua'
+
+	if not self.useMomentumConstraints then
+		if not GammaL then
+			GammaL = (GammaU'^j' * gammaLL'_ij')()
+		end
+		V = ((D'_im^m' - GammaL'_i') / 2)()
+	end
+
 
 	--[[
 	stress-energy tensor for a perfect fluid:

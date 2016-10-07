@@ -187,6 +187,8 @@ for dir=1,3 do
 	end
 
 	if not outputCode and outputMethod ~= 'GraphViz' then
+		printbr('<h3>' .. ({'x','y','z'})[dir] .. ' direction</h3>')
+		
 		printbr()
 		printbr('eigenvalues')
 		printbr()
