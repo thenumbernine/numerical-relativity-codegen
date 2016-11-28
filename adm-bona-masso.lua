@@ -93,7 +93,7 @@ set to 'true' to use V_i's, 'false' to use Gamma^i's
 using V_i is the first proposed BM ADM hyperbolic formalism, but requires extra constraints
 using Gamma^i's requires no such constraints (right?)
 --]]
-ADMBonaMasso.useMomentumConstraints = false	
+ADMBonaMasso.useMomentumConstraints = true
 
 --[[
 use this with useMomentumConstraints==false
