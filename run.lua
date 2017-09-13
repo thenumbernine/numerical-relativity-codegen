@@ -119,10 +119,10 @@ function NRCodeGen:init()
 	self.outputCode = outputCode
 	self.outputMethod = outputMethod
 
-	--self.system = require 'adm-bona-masso'(self, false)	-- ADM, no shift
+	self.system = require 'adm-bona-masso'(self, false)	-- ADM, no shift
 	--self.system = require 'adm-bona-masso'(self, true)	-- ADM with shift
 	--self.system = require 'fobssn'(self)
-	self.system = require 'z4'(self)
+	--self.system = require 'z4'(self)
 end
 
 local nrCodeGen = NRCodeGen()
@@ -141,7 +141,7 @@ local sourceTerms = system:getSourceTerms()
 local QLs = table()
 local QRs = table()
 
-for dir=2,2 do
+for dir=1,3 do
 	local eigenfields = system:getEigenfields(dir)
 
 	if #eigenfields ~= #varsFlattened then
