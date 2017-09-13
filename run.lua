@@ -77,31 +77,13 @@ local function var(name)
 	return symmath.var(name)
 end
 
-local function from3x3to6(i,j)
-	if i == 1 then
-		if j == 1 then return 1 end
-		if j == 2 then return 2 end
-		if j == 3 then return 3 end
-	elseif i == 2 then
-		if j == 1 then return 2 end
-		if j == 2 then return 4 end
-		if j == 3 then return 5 end
-	elseif i == 3 then
-		if j == 1 then return 3 end
-		if j == 2 then return 5 end
-		if j == 3 then return 6 end
-	end
-	error'here'
-end
+local from3x3to6_table = {{1,2,3},{2,4,5},{3,5,6}}
+local function from3x3to6(i,j) return from3x3to6_table[i][j] end
 
 local from6to3x3_table = {{1,1},{1,2},{1,3},{2,2},{2,3},{3,3}}
 local function from6to3x3(i)
 	return table.unpack(from6to3x3_table[i])
 end
-
-
-local ADMBonaMasso = require 'adm-bona-masso'
---local system = require 'fobssn'
 
 
 local NRCodeGen = class()
@@ -137,8 +119,10 @@ function NRCodeGen:init()
 	self.outputCode = outputCode
 	self.outputMethod = outputMethod
 
-	self.system = ADMBonaMasso(self, false)	-- ADM, no shift
-	--self.system = ADMBonaMasso(self, true)	-- ADM with shift
+	--self.system = require 'adm-bona-masso'(self, false)	-- ADM, no shift
+	--self.system = require 'adm-bona-masso'(self, true)	-- ADM with shift
+	--self.system = require 'fobssn'(self)
+	self.system = require 'z4'(self)
 end
 
 local nrCodeGen = NRCodeGen()
@@ -157,7 +141,7 @@ local sourceTerms = system:getSourceTerms()
 local QLs = table()
 local QRs = table()
 
-for dir=1,3 do
+for dir=2,2 do
 	local eigenfields = system:getEigenfields(dir)
 
 	if #eigenfields ~= #varsFlattened then
