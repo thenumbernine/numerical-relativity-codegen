@@ -5,6 +5,7 @@
 require 'ext'
 require 'symmath'.setup{MathJax={usePartialLHSForDerivative=true}}
 
+
 local alpha = var'\\alpha'
 local beta = var'\\beta'
 local gamma = var'\\gamma'
@@ -13,6 +14,26 @@ local K = var'K'
 local a = var'a'
 local d = var'd'
 local f = var'f'
+
+local x,y,z = vars('x', 'y', 'z')
+local t = var't'
+local xs = table{x,y,z}
+Tensor.coords{
+	{variables=xs},
+	{variables={t}, symbols='t'},
+}
+
+
+local function simplify(expr)
+	expr = expr():factorDivision()
+	if op.add.is(expr) then
+		for i=1,#expr do expr[i] = expr[i]() end
+	end
+	return expr
+end
+
+
+-- TODO start with EFE, apply Gauss-Codazzi-Ricci, then automatically recast all higher order derivatives as new variables of 1st derivatives
 
 local defs = table()
 
@@ -50,7 +71,13 @@ defs:insert( d'_kij,t':eq(
 defs:insert( K'_ij,t':eq(
 	- frac(1,2) * alpha * a'_i,j'
 	- frac(1,2) * alpha * a'_j,i'
-	+ alpha * gamma'^kl' * (d'_ilj,k' - d'_ikl,j' - d'_kij,l' + d'_jik,l')
+	+ alpha * gamma'^kl' * (
+		-- gamma_ij,kl = gamma_ij,lk <=> d_kij,l = d_lij,k ... so symmetrize those ...
+		frac(1,2) * (d'_ilj,k' + d'_klj,i')
+		+ frac(1,2) * (d'_jik,l' + d'_lik,j')
+		- frac(1,2) * (d'_ikl,j' + d'_jkl,i')
+		- frac(1,2) * (d'_kij,l' + d'_lij,k')
+	)
 	+ alpha * (
 		-a'_i' * a'_j' 
 		+ a'_k' * gamma'^kl' * (d'_jli' + d'_ilj' - d'_lij')
@@ -73,43 +100,43 @@ end
 
 local TensorRef = require 'symmath.tensor.TensorRef'
 for i=1,#defs do
-	defs[i] = defs[i]:clone():map(function(expr)
+	local lhs, rhs = table.unpack(defs[i])
+	
+	rhs = rhs:map(function(expr)
 		if TensorRef.is(expr) and expr[1] == beta then return 0 end
 	end)()
+	rhs = simplify(rhs)
+	
+	defs[i] = lhs:eq(rhs)
 end
 printbr('neglecting shift')
 for _,def in ipairs(defs) do
 	printbr(def)
 end
 
--- [[
-local defs = table()
-defs:insert( a'_k,t':eq( 
-	-alpha * f * gamma'^ij' * K'_ij,k' 
-) )
-defs:insert( d'_kij,t':eq( 
-	-alpha * K'_ij,k' 
-) )
-defs:insert( K'_ij,t':eq(
-	- frac(1,2) * alpha * a'_i,j'
-	- frac(1,2) * alpha * a'_j,i'
-	+ alpha * gamma'^kl' * (d'_ilj,k' - d'_ikl,j' - d'_kij,l' + d'_jik,l')
-) )
---]]
---[[ TODO for all summed terms, for all coefficients, if none have derivatives then remove them
---]]
+-- for all summed terms, for all coefficients, 
+--	if none have derivatives then remove them
+-- remove from defs any equations that no longer have any terms
+defs = defs:map(function(def,i,t)
+	local lhs, rhs = table.unpack(defs[i])
+	rhs = (rhs - rhs:map(function(expr)
+		if TensorRef.is(expr) then
+			for j=2,#expr do
+				if expr[j].derivative then return 0 end
+			end
+		end
+	end)())()
+	rhs = simplify(rhs)
+	
+	if rhs ~= Constant(0) then
+		return lhs:eq(rhs), #t+1
+	end
+end)
 printbr('neglecting source terms')
 for _,def in ipairs(defs) do
 	printbr(def)
 end
 
-local x,y,z = vars('x', 'y', 'z')
-local t = var't'
-local xs = table{x,y,z}
-Tensor.coords{
-	{variables=xs},
-	{variables={t}, symbols='t'},
-}
 
 -- looking at all fluxes
 --local depvars = table{t,x,y,z}
@@ -129,6 +156,7 @@ local dVars = Tensor('_kij', function(k,i,j)
 	if i > j then i,j = j,i end 
 	return var('d_{'..xs[k].name..xs[i].name..xs[j].name..'}', depvars)
 end)
+-- TODO reorder from [k][i][j] to [i][j][k]
 
 local KVars = Tensor('_ij', function(i,j)
 	if i > j then i,j = j,i end 
@@ -136,7 +164,9 @@ local KVars = Tensor('_ij', function(i,j)
 end)
 
 printbr('spelled out')
-local defsForLhs = table()	-- key by the lhs
+local allLhs = table()
+local allRhs = table()
+local defsForLhs = table()	-- check to make sure symmetric terms have equal rhs's.  key by the lhs
 for _,def in ipairs(defs) do
 	local def = def
 		:clone()
@@ -159,59 +189,53 @@ for _,def in ipairs(defs) do
 	local dim = lhs:dim()
 	assert(dim[#dim].value == 1)	-- the ,t ...
 
+	-- remove the ,t dimension
 	lhs = Tensor(table.sub(lhs.variance, 1, #dim-1), function(...)
 		return lhs[{...}][1]
 	end)
 
-	rhs = rhs:permute(lhs.variance)
+	for i in lhs:innerIter() do
+		print(tolua(i))
+	end
 
-	for i in lhs:iter() do
-		local lhsstr = tostring(lhs[i])
+	local eqns = lhs:eq(rhs):unravel()
+	for _,eqn in ipairs(eqns) do		
+		local lhs, rhs = table.unpack(eqn)
+		local lhsstr = tostring(lhs)
+		rhs = simplify(rhs)
 		if defsForLhs[lhsstr] then
-			if rhs[i] ~= defsForLhs[lhsstr] then
-				--printbr('expected')
-				--printbr(lhs[i]:eq(defsForLhs[lhsstr]))
-				print('mismatch ')
-				printbr(lhs[i]:eq(rhs[i]))
+			if rhs ~= defsForLhs[lhsstr] then
+				print'mismatch'
+				print(lhs:eq(rhs))
+				print'difference'
+				print(simplify(rhs - defsForLhs[lhsstr]))
+				printbr()
 			end
 		else
-			defsForLhs[lhsstr] = rhs[i]:clone()
+			defsForLhs[lhsstr] = rhs:clone()
 
-			if rhs[i] ~= Constant(0) then
-				printbr(lhs[i]:eq(rhs[i]))
-				-- TODO put into a matrix and factorLinearSystem
+			--[[ exclude dt terms that are zero -- that means these dx terms belong in the source terms 
+			if rhs ~= Constant(0) then
+			--]]
+			-- [[
+			do
+			--]]
+				allLhs:insert(lhs)
+				allRhs:insert(rhs)
+				printbr(lhs:eq(rhs))
 			end
 		end
 	end
 end
 
---[[
-local A = Matrix(
-	{0, 0, alpha * f * gamma'^pq' * delta'^r_k'},
-	{0, 0, alpha * delta'^p_i' * delta'^q_j' * delta'^r_k'},
-	{
-		frac(1,2) * alpha * (delta'^m_i' * delta'^r_j' + delta'^m_j' * delta'^r_i'),
-		frac(1,2) * alpha * (
-			gamma'^pq' * (delta'^m_i' * delta'^r_j' + delta'^m_j' * delta'^r_i')
-			+ gamma'^mr' * (delta'^p_i' * delta'^q_j' + delta'^p_j' * delta'^q_i')
-			- gamma'^rp' * (delta'^q_i' * delta'^m_j' + delta'^q_j' * delta'^m_i')
-			- gamma'^rq' * (delta'^p_i' * delta'^m_j' + delta'^p_j' * delta'^m_i')
-		), 
-		0,
-	}
-)
-printbr(A)
+local allDxs = allLhs:map(function(lhs)
+	assert(diff.is(lhs))
+	assert(lhs[2] == t)
+	assert(#lhs == 2)
+	return diff(lhs[1], x)
+end)
+local A, b = factorLinearSystem(allRhs, allDxs)
 
--- now to expand each matrix ...
--- r is fixed
-for r=1,3 do
-	local n = 31
-	local Ar = Matrix(
-		range(n):map(function(i)
-			return range(n):map(function(j)
-				
-			
-			end)
-		end):unpack())
-end
---]]
+local dts = Matrix(allLhs):transpose()
+local dxs = Matrix(allDxs):transpose()
+printbr(dts:eq(A * dxs + b))
