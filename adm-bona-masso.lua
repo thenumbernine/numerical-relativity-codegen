@@ -105,7 +105,7 @@ using Gamma_i simplifies the inverse a lot, and makes the computation much easie
 --]]
 ADMBonaMasso.useContractedGammaLower = false
 
-ADMBonaMasso.includeTimeVars = true	-- includes alpha and gamma_ij in the left and right eigenvector transform generation
+ADMBonaMasso.includeTimeVars = false	-- includes alpha and gamma_ij in the left and right eigenvector transform generation
 
 function ADMBonaMasso:init(nrCodeGen, useShift)
 	self.nrCodeGen = nrCodeGen

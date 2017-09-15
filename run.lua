@@ -377,9 +377,9 @@ else
 	for dir=1,3 do
 		local QL = QLs[dir]
 		local QR = QRs[dir]
-
+		
 		-- TODO :eq(source terms) 
-
+		
 		if outputMethod == 'GraphViz' then
 			processGraph(QL,xNames[dir])
 			processGraph(QR,xNames[dir]..'inv')
@@ -389,6 +389,20 @@ else
 			printbr()
 			printbr('eigenvectors in '..xNames[dir]..' dir')
 			printbr((tostring(QR * U):gsub('0','\\cdot')))
+			printbr()
+		
+		
+			printbr('reconstruction of flux Jacobian')
+			local eigenfields = system:getEigenfields(dir)
+			local n = #eigenfields
+			local Lambdas = symmath.Matrix(range(n):map(function(i)
+				return range(n):map(function(j)
+					return i==j and eigenfields[i].lambda or 0
+				end)
+			end):unpack())
+		
+			local A = (QR * Lambdas * QL)()
+			printbr( (tostring(A):gsub('0', '\\cdot')) )
 			printbr()
 		end
 	end
