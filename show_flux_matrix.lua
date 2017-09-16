@@ -5,7 +5,6 @@
 require 'ext'
 require 'symmath'.setup{MathJax={usePartialLHSForDerivative=true}}
 
-
 local alpha = var'\\alpha'
 local beta = var'\\beta'
 local gamma = var'\\gamma'
@@ -194,10 +193,6 @@ for _,def in ipairs(defs) do
 		return lhs[{...}][1]
 	end)
 
-	for i in lhs:innerIter() do
-		print(tolua(i))
-	end
-
 	local eqns = lhs:eq(rhs):unravel()
 	for _,eqn in ipairs(eqns) do		
 		local lhs, rhs = table.unpack(eqn)
@@ -239,3 +234,106 @@ local A, b = factorLinearSystem(allRhs, allDxs)
 local dts = Matrix(allLhs):transpose()
 local dxs = Matrix(allDxs):transpose()
 printbr(dts:eq(A * dxs + b))
+
+local lambda = var'\\lambda'
+local n = #A
+local charpoly  = (A - Matrix.identity(n) * lambda):determinant()
+printbr(charpoly)
+
+--[[
+here's where I need polynomial factoring
+let:
+	x = lambda^2
+	a = alpha^2 * g
+char poly:
+	x^4 - a * (3 + f) * x^3 + a^2 * (3 + 3*f) * x^2 - a^3 * (1 + 3*f) * x + a^4 * f
+	= (x - a)^3 * (x - a f)
+	= (lambda^2 - alpha^2 gamma^xx)^3 * (lambda^2 - f alpha^2 gamma^xx)
+	= (lambda + alpha sqrt(gamma^xx))^3 (lambda - alpha sqrt(gamma^xx))^3 (lambda + alpha sqrt(f gamma^xx)) (lambda - alpha sqrt(f gamma^xx))
+roots are:
+	lambda = alpha sqrt(f gamma^xx)
+	lambda = -alpha sqrt(f gamma^xx)
+	lambda = alpha sqrt(gamma^xx) x3
+	lambda = -alpha sqrt(gamma^xx) x3
+--]]
+
+-- try solving it for one particular eigenvector/value
+local gammaUxx = gammaUVars[1][1]
+local lambdas = table{
+	-alpha * sqrt(f * gammaUxx),
+	-alpha * sqrt(gammaUxx),
+	0,
+	alpha * sqrt(gammaUxx),
+	alpha * sqrt(f * gammaUxx),
+}
+local evs = table()
+local multiplicity = table()
+for _,lambda in ipairs(lambdas) do
+	printbr('eigenvalue', lambda)
+
+	local A_minus_lambda_I = ((A - Matrix.identity(n) * lambda))()
+	
+	printbr('reducing', A_minus_lambda_I)
+	local sofar, reduce = A_minus_lambda_I:inverse()
+	-- show the gaussian elimination results
+	printbr(sofar, reduce)
+
+	-- now find the eigenvector ...
+	
+	-- find all non-leading columns
+	local nonLeadingCols = table()
+	local j = 1
+	for i=1,n do
+		while reduce[i][j] == Constant(0) and j <= n do
+			nonLeadingCols:insert(j)
+			j=j+1
+		end
+		if j > n then break end
+		assert(reduce[i][j] == Constant(1), "found a column that doesn't lead with 1")
+		j = j + 1
+	end
+	nonLeadingCols:append(range(j,n))
+
+	multiplicity:insert(#nonLeadingCols)
+
+	-- now build the eigenvector basis for this eigenvalue
+	local ev = Matrix:zeros{n, #nonLeadingCols}
+	
+	-- cycle through the rows
+	for i=1,n do
+		local k = nonLeadingCols:find(i) 
+		if k then
+			ev[i][k] = Constant(1)
+		else
+			-- j is the free param # (eigenvector col)
+			-- k is the non leading column
+			-- everything else in reduce[i][*] should be zero, except the leading 1
+			for k,j in ipairs(nonLeadingCols) do
+				ev[i][k] = ev[i][k] - reduce[i][j]
+			end
+		end
+	end
+	ev = ev()
+	printbr('eigenvector:')
+	printbr(ev)
+	evs:insert(ev)
+end
+
+
+local lambdaMat = Matrix.diagonal( table.append(
+	lambdas:map(function(lambda,i)
+		return range(multiplicity[i]):map(function() return lambda end)
+	end):unpack()
+):unpack() )
+printbr('$\\Lambda$:')
+printbr(lambdaMat)
+
+local evMat = Matrix(
+	table.append(
+		evs:map(function(ev)
+			return ev:transpose()
+		end):unpack()
+	):unpack()
+):transpose()
+printbr('R:')
+printbr(evMat)
