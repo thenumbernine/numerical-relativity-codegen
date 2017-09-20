@@ -5,22 +5,47 @@
 require 'ext'
 require 'symmath'.setup()
 
-local MathJax = require 'symmath.tostring.MathJax'
-MathJax.usePartialLHSForDerivative = true
+local textOutput = false
 
-symmath.tostring = MathJax
 
+local useVConstraint = true
+
+
+local MathJax
+if not textOutput then -- [[ mathjax output
+	MathJax = require 'symmath.tostring.MathJax'
+	MathJax.usePartialLHSForDerivative = true
+	symmath.tostring = MathJax
+else --]] -- [[ text output - breaking
+	function var(s)
+		if symmath.tostring.fixImplicitName then
+			s = symmath.tostring:fixImplicitName(s)
+			if s:sub(1,1) == '\\' then s = s:sub(2) end
+		end
+		return Variable(s)
+	end
+end --]]
+
+-- basis
+local x = var'x'
+local y = var'y'
+local z = var'z'
+local t = var't'
+-- kronecher delta
+local delta = var'\\delta'
+-- adm metric
 local alpha = var'\\alpha'
 local beta = var'\\beta'
 local gamma = var'\\gamma'
-local delta = var'\\delta'
+-- extrinsic curvature
 local K = var'K'
+-- first-order
 local a = var'a'
 local d = var'd'
+local V = var'V'
+-- lapse function
 local f = var'f'
 
-local x,y,z = vars('x', 'y', 'z')
-local t = var't'
 local xs = table{x,y,z}
 Tensor.coords{
 	{variables=xs},
@@ -40,25 +65,30 @@ local new_printbr_file, printbr
 do
 	local fileindex = 0
 	local printbr_file
+	local ext = textOutput and '.txt' or '.html'
 	new_printbr_file = function()
 		fileindex = fileindex + 1
 		if printbr_file then
-			printbr_file:write(MathJax.footer) 
+			if MathJax then printbr_file:write(MathJax.footer) end
 			printbr_file:close()
 		end
-		printbr_file = assert(io.open('show_flux_matrix.'..('%05d'):format(fileindex)..'.html', 'w'))
-		printbr_file:write(tostring(MathJax.header))
+		printbr_file = assert(io.open('show_flux_matrix.'..('%05d'):format(fileindex)..ext, 'w'))
+		if MathJax then printbr_file:write(tostring(MathJax.header)) end
 	end
-	printbr = function(...)
-		assert(printbr_file)
-		local n = select('#', ...)
-		for i=1,n do
-			printbr_file:write(tostring(select(i, ...)))
-			if i<n then printbr_file:write'\t' end
+	if not textOutput then -- [[ mathjax output
+		printbr = function(...)
+			assert(printbr_file)
+			local n = select('#', ...)
+			for i=1,n do
+				printbr_file:write(tostring(select(i, ...)))
+				if i<n then printbr_file:write'\t' end
+			end
+			printbr_file:write'<br>\n'
+			printbr_file:flush()
 		end
-		printbr_file:write'<br>\n'
-		printbr_file:flush()
-	end
+	else  --]] -- [[ text output
+		printbr = print
+	end --]]
 end
 
 new_printbr_file()
@@ -128,37 +158,85 @@ defs:insert( d'_kij,t':eq(
 	+ frac(1,2) * gamma'_li' * beta'^l_,jk' 
 	+ frac(1,2) * gamma'_lj' * beta'^l_,ik'
 ) )
-defs:insert( K'_ij,t':eq(
-	- frac(1,2) * alpha * a'_i,j'
-	- frac(1,2) * alpha * a'_j,i'
-	+ alpha * gamma'^kl' * (
-		-- gamma_ij,kl = gamma_ij,lk <=> d_kij,l = d_lij,k ... so symmetrize those ...
-		frac(1,2) * (d'_ilj,k' + d'_klj,i')
-		+ frac(1,2) * (d'_jik,l' + d'_lik,j')
-		- frac(1,2) * (d'_ikl,j' + d'_jkl,i')
-		- frac(1,2) * (d'_kij,l' + d'_lij,k')
-	)
-	+ alpha * (
-		-a'_i' * a'_j' 
-		+ a'_k' * gamma'^kl' * (d'_jli' + d'_ilj' - d'_lij')
-		+ gamma'^lm' * gamma'^kn' * (d'_jli' + d'_ilj' - d'_lij') * (d'_mkn' - 2 * d'_knm')
+
+if not useVConstraint then
+	-- TODO use the V def, but assign V'_k' = gamma'^ij' * (d'_kij' - d'_ijk')
+	-- but - for index expressions, you need to rename the indexes so they don't collide 
+	-- and for dense tensors, you need to use the gammaUVars and dVars tensors
+	--local V = (d'_kij' - d'_ijk') * gamma'^ij'
+	defs:insert( K'_ij,t':eq(
+		- frac(1,2) * alpha * a'_i,j'
+		- frac(1,2) * alpha * a'_j,i'
+		+ alpha * gamma'^kl' * (
+			-- gamma_ij,kl = gamma_ij,lk <=> d_kij,l = d_lij,k ... so symmetrize those ...
+			frac(1,2) * (d'_ilj,k' + d'_klj,i')
+			+ frac(1,2) * (d'_jik,l' + d'_lik,j')
+			- frac(1,2) * (d'_ikl,j' + d'_jkl,i')
+			- frac(1,2) * (d'_kij,l' + d'_lij,k')
+		)
+		+ alpha * (
+			-a'_i' * a'_j' 
+			+ a'_k' * gamma'^kl' * (d'_jli' + d'_ilj' - d'_lij')
+			+ gamma'^lm' * gamma'^kn' * (d'_jli' + d'_ilj' - d'_lij') * (d'_mkn' - 2 * d'_knm')
+			
+			+ 2 * gamma'^lm' * gamma'^kn' * (d'_klj' - d'_lkj') * d'_nim'
+			+ gamma'^lm' * gamma'^kn' * d'_ikl' * d'_jnm'
+			
+			+ gamma'^lm' * K'_lm' * K'_ij'
+			- 2 * gamma'^lm' * K'_il' * K'_jm'
+		)
+		+ K'_ij,k' * beta'^k'
+		+ K'_kj' * beta'^k_,i'
+		+ K'_ik' * beta'^k_,j'
+	) )
+else
+	defs:insert( K'_ij,t':eq(
+		- frac(1,2) * alpha * a'_i,j'
+		- frac(1,2) * alpha * a'_j,i'
+		+ alpha * (
+			  frac(1,2) * gamma'^pq' * d'_ipq,j'
+			+ frac(1,2) * gamma'^pq' * d'_jpq,i'
+			- frac(1,2) * gamma'^mr' * d'_mij,r'
+			- frac(1,2) * gamma'^mr' * d'_mji,r'
+		)
 		
-		+ 2 * gamma'^lm' * gamma'^kn' * (d'_klj' - d'_lkj') * d'_nim'
-		+ gamma'^lm' * gamma'^kn' * d'_ikl' * d'_jnm'
+		- alpha * V'_j,i'
+		- alpha * V'_i,j'
 		
-		+ gamma'^lm' * K'_lm' * K'_ij'
-		- 2 * gamma'^lm' * K'_il' * K'_jm'
-	)
-	+ K'_ij,k' * beta'^k'
-	+ K'_kj' * beta'^k_,i'
-	+ K'_ik' * beta'^k_,j'
-) )
+		+ alpha * (
+			-a'_i' * a'_j' 
+			+ gamma'^lm' * (d'_jli' + d'_ilj' - d'_lij') * (a'_m' + V'_m' - gamma'^kn' * d'_knm')
+			
+			+ gamma'^lm' * gamma'^kn' * (
+				2 * d'_lki' * d'_mnj'
+				- 2 * d'_lki' * d'_nmj'
+			
+				- frac(1,2) * d'_ilk' * d'_jmn'
+				- frac(1,2) * d'_jlk' * d'_imn'
+
+				+ d'_ilk' * d'_mnj'
+				+ d'_jlk' * d'_mni'
+			)
+			
+			+ gamma'^lm' * K'_lm' * K'_ij'
+			- 2 * gamma'^lm' * K'_il' * K'_jm'
+		)
+		+ K'_ij,k' * beta'^k'
+		+ K'_kj' * beta'^k_,i'
+		+ K'_ik' * beta'^k_,j'
+	) )
+	defs:insert( V'_k,t':eq(
+		-- TODO there are some source terms that should go here.
+		-- the eigenvectors that the Alcubierre 2008 book has only source terms, no first derivatives
+		-- how ever my own calculations come up with K_ij,k terms ... maybe they get absorbed into some other terms?
+		0
+	) )
+end
+
 printbr('partial derivatives')
 for _,def in ipairs(defs) do
 	printbr(def)
 end
-
---os.exit()
 
 local TensorRef = require 'symmath.tensor.TensorRef'
 for i=1,#defs do
@@ -190,7 +268,7 @@ defs = defs:map(function(def,i,t)
 	end)())()
 	rhs = simplify(rhs)
 	
-	if rhs ~= Constant(0) then
+	do -- if rhs ~= Constant(0) then
 		return lhs:eq(rhs), #t+1
 	end
 end)
@@ -219,10 +297,12 @@ local dVars = Tensor('_kij', function(k,i,j)
 	return var('d_{'..xs[k].name..xs[i].name..xs[j].name..'}', depvars)
 end)
 -- TODO reorder from [k][i][j] to [i][j][k]
-
 local KVars = Tensor('_ij', function(i,j)
 	if i > j then i,j = j,i end 
 	return var('K_{'..xs[i].name..xs[j].name..'}', depvars) 
+end)
+local VVars = Tensor('_k', function(k)
+	return var('V_'..xs[k].name, depvars)
 end)
 
 printbr('spelled out')
@@ -230,57 +310,73 @@ local allLhs = table()
 local allRhs = table()
 local defsForLhs = table()	-- check to make sure symmetric terms have equal rhs's.  key by the lhs
 for _,def in ipairs(defs) do
-	local def = def
-		:clone()
-		:map(function(expr)
-			if TensorRef.is(expr)
-			and expr[1] == gamma
-			then
-				for i=2,#expr do
-					assert(not expr[i].lower)
+	local var = def:lhs()[1]
+	if var == alpha or var == gamma then
+	else
+		def = def:map(function(expr)
+				if TensorRef.is(expr)
+				and expr[1] == gamma
+				then
+					for i=2,#expr do
+						assert(not expr[i].lower, "found a gamma_ij term")
+					end
+					return TensorRef(gammaUVars, table.unpack(expr, 2))
 				end
-				return TensorRef(gammaUVars, table.unpack(expr, 2))
-			end
+			end)
+			:replace(a, aVars)
+			:replace(d, dVars)
+			:replace(K, KVars)
+		if useVConstraint then 
+			def = def:replace(V, VVars)
+		end
+		def = def()
+		
+		local lhs, rhs = table.unpack(def)
+		if not lhs.dim then
+			printbr'failed to find lhs.dim'
+			printbr(tostring(lhs))
+			error'here'
+		end
+		local dim = lhs:dim()
+		assert(dim[#dim].value == 1)	-- the ,t ...
+
+		-- remove the ,t dimension
+		lhs = Tensor(table.sub(lhs.variance, 1, #dim-1), function(...)
+			return lhs[{...}][1]
 		end)
-		:replace(a, aVars)
-		:replace(d, dVars)
-		:replace(K, KVars)
-		:simplify()
 
-	local lhs, rhs = table.unpack(def)
-	local dim = lhs:dim()
-	assert(dim[#dim].value == 1)	-- the ,t ...
+		-- if it's a constant expression
+		-- TODO put this in :unravel() ?
+		if not rhs.dim then
+			rhs = Tensor(lhs.variance, function() return rhs end)
+		end
 
-	-- remove the ,t dimension
-	lhs = Tensor(table.sub(lhs.variance, 1, #dim-1), function(...)
-		return lhs[{...}][1]
-	end)
+		local eqns = lhs:eq(rhs):unravel()
+		for _,eqn in ipairs(eqns) do		
+			local lhs, rhs = table.unpack(eqn)
+			local lhsstr = tostring(lhs)
+			rhs = simplify(rhs)
+			if defsForLhs[lhsstr] then
+				if rhs ~= defsForLhs[lhsstr] then
+					print'mismatch'
+					print(lhs:eq(rhs))
+					print'difference'
+					print(simplify(rhs - defsForLhs[lhsstr]))
+					printbr()
+				end
+			else
+				defsForLhs[lhsstr] = rhs:clone()
 
-	local eqns = lhs:eq(rhs):unravel()
-	for _,eqn in ipairs(eqns) do		
-		local lhs, rhs = table.unpack(eqn)
-		local lhsstr = tostring(lhs)
-		rhs = simplify(rhs)
-		if defsForLhs[lhsstr] then
-			if rhs ~= defsForLhs[lhsstr] then
-				print'mismatch'
-				print(lhs:eq(rhs))
-				print'difference'
-				print(simplify(rhs - defsForLhs[lhsstr]))
-				printbr()
-			end
-		else
-			defsForLhs[lhsstr] = rhs:clone()
-
-			--[[ exclude dt terms that are zero -- that means these dx terms belong in the source terms 
-			if rhs ~= Constant(0) then
-			--]]
-			-- [[
-			do
-			--]]
-				allLhs:insert(lhs)
-				allRhs:insert(rhs)
-				printbr(lhs:eq(rhs))
+				--[[ exclude dt terms that are zero -- that means these dx terms belong in the source terms 
+				if rhs ~= Constant(0) then
+				--]]
+				-- [[
+				do
+				--]]
+					allLhs:insert(lhs)
+					allRhs:insert(rhs)
+					printbr(lhs:eq(rhs))
+				end
 			end
 		end
 	end
@@ -293,18 +389,29 @@ local allDxs = allLhs:map(function(lhs)
 	return diff(lhs[1], x)
 end)
 local A, b = factorLinearSystem(allRhs, allDxs)
+A = (-A)()	-- change from U,t = A U,x + b into U,t + A U,x = b
 
 local dts = Matrix(allLhs):transpose()
 local dxs = Matrix(allDxs):transpose()
-printbr(dts:eq(A * dxs + b))
+printbr((dts + A * dxs):eq(b))
 
---os.exit()
-new_printbr_file()
 
 local lambda = var'\\lambda'
 local n = #A
 local charpoly  = (A - Matrix.identity(n) * lambda):determinant()
 printbr(charpoly)
+
+--[[ this works fast enough without simplification
+A = A()
+printbr'simplified:'
+printbr(A)
+
+local sofar, reduce = A:inverse()
+printbr(sofar)
+printbr(reduce)
+--]]
+
+os.exit()
 
 --[[
 here's where I need polynomial factoring
@@ -326,6 +433,7 @@ roots are:
 -- try solving it for one particular eigenvector/value
 local gammaUxx = gammaUVars[1][1]
 local lambdas = table{
+--[[	
 	-- the more multiplicity, the easier it is to factor
 	0,
 	-alpha * sqrt(gammaUxx),
@@ -333,25 +441,26 @@ local lambdas = table{
 	-- the less multiplicity, the more terms have to be reduced to identity, the more have to be simplified correctly
 	-- and my solver is choking on any sort of polynomials that it is trying to expand and re-factor.
 	-alpha * sqrt(f * gammaUxx),
+--]]	
 	alpha * sqrt(f * gammaUxx),
 }
 local evs = table()
 local multiplicity = table()
 for _,lambda in ipairs(lambdas) do
-	new_printbr_file()
 	printbr('eigenvalue', lambda)
 	
 	local A_minus_lambda_I = ((A - Matrix.identity(n) * lambda))()
 	printbr('reducing', A_minus_lambda_I)
 
 	local sofar, reduce = A_minus_lambda_I:inverse(nil, function(AInv, A, i, j, reason)
-		new_printbr_file()
+		-- [[
+--new_printbr_file()
 		printbr('eigenvalue', lambda)	
 		printbr('step', i, j, reason)
 		printbr(A, AInv)
+		--]]
 	end)
 	
-	new_printbr_file()
 	printbr('eigenvalue', lambda)
 	printbr('done inverting:')
 	-- show the gaussian elimination results
@@ -397,9 +506,9 @@ for _,lambda in ipairs(lambdas) do
 	printbr(ev)
 	evs:insert(ev)
 
-end
+os.exit()
 
-new_printbr_file()
+end
 
 local lambdaMat = Matrix.diagonal( table():append(
 	lambdas:map(function(lambda,i)
@@ -409,11 +518,12 @@ local lambdaMat = Matrix.diagonal( table():append(
 printbr('$\\Lambda$:')
 printbr(lambdaMat)
 
---[[
+-- [[
 local evMat = Matrix(
 	table():append(
 		evs:map(function(ev)
-		table.unpack(ev:transpose())
+			return table.unpack(ev:transpose())
+		end)
 	):unpack()
 ):transpose()
 printbr('R:')
