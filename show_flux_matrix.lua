@@ -5,18 +5,17 @@
 require 'ext'
 require 'symmath'.setup()
 
-local textOutput = false
-
-
 local useVConstraint = true
 
+local textOutput = false
 
 local MathJax
 if not textOutput then -- [[ mathjax output
 	MathJax = require 'symmath.tostring.MathJax'
 	MathJax.usePartialLHSForDerivative = true
 	symmath.tostring = MathJax
-else --]] -- [[ text output - breaking
+else --]] 
+	--[[ text output - breaking
 	function var(s)
 		if symmath.tostring.fixImplicitName then
 			s = symmath.tostring:fixImplicitName(s)
@@ -24,7 +23,8 @@ else --]] -- [[ text output - breaking
 		end
 		return Variable(s)
 	end
-end --]]
+	--]]
+end
 
 -- basis
 local x = var'x'
@@ -75,20 +75,16 @@ do
 		printbr_file = assert(io.open('show_flux_matrix.'..('%05d'):format(fileindex)..ext, 'w'))
 		if MathJax then printbr_file:write(tostring(MathJax.header)) end
 	end
-	if not textOutput then -- [[ mathjax output
-		printbr = function(...)
-			assert(printbr_file)
-			local n = select('#', ...)
-			for i=1,n do
-				printbr_file:write(tostring(select(i, ...)))
-				if i<n then printbr_file:write'\t' end
-			end
-			printbr_file:write'<br>\n'
-			printbr_file:flush()
+	printbr = function(...)
+		assert(printbr_file)
+		local n = select('#', ...)
+		for i=1,n do
+			printbr_file:write(tostring(select(i, ...)))
+			if i<n then printbr_file:write'\t' end
 		end
-	else  --]] -- [[ text output
-		printbr = print
-	end --]]
+		printbr_file:write'<br>\n'
+		printbr_file:flush()
+	end
 end
 
 new_printbr_file()
@@ -408,7 +404,10 @@ printbr(sofar)
 printbr(reduce)
 --]]
 
-os.exit()
+if not useVConstraint then
+	io.stderr:write"I'm not going to eigendecompose without useVConstraint set\n"
+	os.exit()
+end
 
 --[[
 here's where I need polynomial factoring
@@ -429,39 +428,44 @@ roots are:
 
 -- try solving it for one particular eigenvector/value
 local gammaUxx = gammaUVars[1][1]
+-- the eigenvalues are the same for useVConstraint on or off
+-- but the multiplicities are different: 
+-- with useVConstraint off we get 19, 3, 3, 1, 1
+-- with useVConstraint on we get 18, 5, 5, 1, 1
 local lambdas = table{
---[[	
 	-- the more multiplicity, the easier it is to factor
-	0,
-	-alpha * sqrt(gammaUxx),
-	alpha * sqrt(gammaUxx),
-	-- the less multiplicity, the more terms have to be reduced to identity, the more have to be simplified correctly
-	-- and my solver is choking on any sort of polynomials that it is trying to expand and re-factor.
+	-- also, without useVConstraints, the 1-multiplicity eigenvectors take forever and the expressions get huge and take forever
 	-alpha * sqrt(f * gammaUxx),
---]]	
+	-alpha * sqrt(gammaUxx),
+	0,
+	alpha * sqrt(gammaUxx),
 	alpha * sqrt(f * gammaUxx),
 }
+
 local evs = table()
 local multiplicity = table()
 for _,lambda in ipairs(lambdas) do
-	printbr('eigenvalue', lambda)
+io.stderr:write('finding eigenvector of eigenvalue '..tostring(lambda)..'\n') io.stderr:flush()
+	printbr('eigenvalue:', lambda)
 	
 	local A_minus_lambda_I = ((A - Matrix.identity(n) * lambda))()
-	printbr('reducing', A_minus_lambda_I)
+	--printbr'reducing'
+	--printbr(A_minus_lambda_I)
 
 	local sofar, reduce = A_minus_lambda_I:inverse(nil, function(AInv, A, i, j, reason)
-		-- [[
+		--[[
 --new_printbr_file()
 		printbr('eigenvalue', lambda)	
 		printbr('step', i, j, reason)
-		printbr(A, AInv)
+		printbr(A)
+		printbr(AInv)
 		--]]
 	end)
 	
-	printbr('eigenvalue', lambda)
-	printbr('done inverting:')
+	--printbr('done inverting:')
 	-- show the gaussian elimination results
-	printbr(sofar, reduce)
+	--printbr(sofar)
+	--printbr(reduce)
 
 	-- now find the eigenvector ...
 	
@@ -503,9 +507,8 @@ for _,lambda in ipairs(lambdas) do
 	printbr(ev)
 	evs:insert(ev)
 
-os.exit()
-
 end
+io.stderr:write('done finding eigenvector!\n') io.stderr:flush()
 
 local lambdaMat = Matrix.diagonal( table():append(
 	lambdas:map(function(lambda,i)
@@ -515,14 +518,18 @@ local lambdaMat = Matrix.diagonal( table():append(
 printbr('$\\Lambda$:')
 printbr(lambdaMat)
 
--- [[
-local evMat = Matrix(
+local evRMat = Matrix(
 	table():append(
 		evs:map(function(ev)
-			return table.unpack(ev:transpose())
-		end)
+			return ev:transpose()
+		end):unpack()
 	):unpack()
 ):transpose()
 printbr('R:')
-printbr(evMat)
---]]
+printbr(evRMat)
+
+local evLMat, _, reason = evRMat:inverse()
+assert(not reason, reason)	-- hmm, make Matrix.inverse more assert-compatible?
+
+printbr('L:')
+printbr(evLMat)
