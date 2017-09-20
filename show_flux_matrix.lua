@@ -194,10 +194,8 @@ else
 		- frac(1,2) * alpha * a'_i,j'
 		- frac(1,2) * alpha * a'_j,i'
 		+ alpha * (
-			  frac(1,2) * gamma'^pq' * d'_ipq,j'
-			+ frac(1,2) * gamma'^pq' * d'_jpq,i'
-			- frac(1,2) * gamma'^mr' * d'_mij,r'
-			- frac(1,2) * gamma'^mr' * d'_mji,r'
+			  frac(1,2) * gamma'^pq' * (d'_ipq,j' + d'_jpq,i')
+			- frac(1,2) * gamma'^mr' * (d'_mij,r' + d'_mji,r')
 		)
 		
 		- alpha * V'_j,i'
@@ -208,14 +206,13 @@ else
 			+ gamma'^lm' * (d'_jli' + d'_ilj' - d'_lij') * (a'_m' + V'_m' - gamma'^kn' * d'_knm')
 			
 			+ gamma'^lm' * gamma'^kn' * (
-				2 * d'_lki' * d'_mnj'
-				- 2 * d'_lki' * d'_nmj'
-			
-				- frac(1,2) * d'_ilk' * d'_jmn'
-				- frac(1,2) * d'_jlk' * d'_imn'
+				  (d'_lkj' - d'_klj') * d'_mni'
+				+ (d'_lki' - d'_kli') * d'_mnj'
+				
+				+ 2 * d'_ilk' * d'_mnj'
+				+ 2 * d'_jlk' * d'_mni'
 
-				+ d'_ilk' * d'_mnj'
-				+ d'_jlk' * d'_mni'
+				- 3 * d'_ilk' * d'_jmn'
 			)
 			
 			+ gamma'^lm' * K'_lm' * K'_ij'
