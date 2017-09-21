@@ -5,10 +5,10 @@
 require 'ext'
 require 'symmath'.setup()
 
-local useVConstraint = false	-- not needed with use1D
+local useVConstraint = true		-- not needed with use1D
 local textOutput = false
-local keepSourceTerms = true	-- this goes slow with 3D
-local use1D = true
+local keepSourceTerms = false	-- this goes slow with 3D
+local use1D = false
 
 
 local t,x,y,z = vars('t','x','y','z')
@@ -93,7 +93,7 @@ new_printbr_file()
 printbr[[primitive $\partial_t$ defs]]
 
 local dt_alpha_def = alpha',t':eq( 
-	- alpha^2 * f * gamma'^ij' * K'_ij' 
+	- alpha^2 * f * K'^i_i' 
 	+ alpha'_,i' * beta'^i' 
 )
 printbr(dt_alpha_def)
@@ -179,7 +179,8 @@ if not useVConstraint then
 			+ d'_i^lk' * d'_jlk'
 			
 			+ K'^k_k' * K'_ij'
-			- 2 * K'_i^k' * K'_kj'
+			- K'_i^k' * K'_kj'
+			- K'_j^k' * K'_ki'
 		)
 		+ K'_ij,k' * beta'^k'
 		+ K'_kj' * beta'^k_,i'
