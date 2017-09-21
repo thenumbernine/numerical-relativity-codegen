@@ -392,6 +392,7 @@ printbr((dts + A * dxs):eq(b))
 local lambda = var'\\lambda'
 local n = #A
 local charpoly  = (A - Matrix.identity(n) * lambda):determinant()
+printbr'characteristic polynomial:'
 printbr(charpoly)
 
 --[[ this works fast enough without simplification
