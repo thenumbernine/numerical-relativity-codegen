@@ -5,9 +5,15 @@
 require 'ext'
 require 'symmath'.setup()
 
-local useVConstraint = true
-
+local useVConstraint = false	-- not needed with use1D
 local textOutput = false
+local keepSourceTerms = true	-- this goes slow with 3D
+local use1D = true
+
+
+local t,x,y,z = vars('t','x','y','z')
+local xs = use1D and table{x} or table{x,y,z}
+
 
 local MathJax
 if not textOutput then -- [[ mathjax output
@@ -26,11 +32,6 @@ else --]]
 	--]]
 end
 
--- basis
-local x = var'x'
-local y = var'y'
-local z = var'z'
-local t = var't'
 -- kronecher delta
 local delta = var'\\delta'
 -- adm metric
@@ -46,12 +47,11 @@ local V = var'V'
 -- lapse function
 local f = var'f'
 
-local xs = table{x,y,z}
+
 Tensor.coords{
 	{variables=xs},
 	{variables={t}, symbols='t'},
 }
-
 
 local function simplify(expr)
 	expr = expr():factorDivision()
@@ -138,9 +138,9 @@ defs:insert( dt_alpha_def )
 defs:insert( dt_gamma_def )
 defs:insert( a'_k,t':eq( 
 	-alpha * f * gamma'^ij' * K'_ij,k' 
-	- alpha^2 * f:diff(alpha) * a'_k' * gamma'^ij' * K'_ij' 
+	- alpha^2 * f:diff(alpha) * a'_k' * K'^i_i' 
 	+ 2 * alpha * f * d'_k^ij' * K'_ij'
-	- alpha * a'_k' * f * gamma'^ij' * K'_ij'
+	- alpha * a'_k' * f * K'^i_i'
 	+ a'_k,i' * beta'^i' 
 	+ a'_i' * beta'^i_,k' 
 ) )
@@ -172,14 +172,14 @@ if not useVConstraint then
 		)
 		+ alpha * (
 			-a'_i' * a'_j' 
-			+ a'_k' * gamma'^kl' * (d'_jli' + d'_ilj' - d'_lij')
-			+ gamma'^lm' * gamma'^kn' * (d'_jli' + d'_ilj' - d'_lij') * (d'_mkn' - 2 * d'_knm')
+			+ a'_k' * (d'_ji^k' + d'_ij^k' - d'^k_ij')
+			+ (d'_jli' + d'_ilj' - d'_lij') * (d'^lk_k' - 2 * d'_k^kl')
 			
-			+ 2 * gamma'^lm' * gamma'^kn' * (d'_klj' - d'_lkj') * d'_nim'
-			+ gamma'^lm' * gamma'^kn' * d'_ikl' * d'_jnm'
+			+ 2 * (d'^kl_j' - d'^lk_j') * d'_kil'
+			+ d'_i^lk' * d'_jlk'
 			
-			+ gamma'^lm' * K'_lm' * K'_ij'
-			- 2 * gamma'^lm' * K'_il' * K'_jm'
+			+ K'^k_k' * K'_ij'
+			- 2 * K'_i^k' * K'_kj'
 		)
 		+ K'_ij,k' * beta'^k'
 		+ K'_kj' * beta'^k_,i'
@@ -199,20 +199,17 @@ else
 		
 		+ alpha * (
 			-a'_i' * a'_j' 
-			+ gamma'^lm' * (d'_jli' + d'_ilj' - d'_lij') * (a'_m' + V'_m' - gamma'^kn' * d'_knm')
+			+ (d'_ji^k' + d'_ij^k' - d'^k_ij') * (a'_k' + V'_k' - d'^l_lk')
 			
-			+ gamma'^lm' * gamma'^kn' * (
-				  (d'_lkj' - d'_klj') * d'_mni'
-				+ (d'_lki' - d'_kli') * d'_mnj'
-				
-				+ 2 * d'_ilk' * d'_mnj'
-				+ 2 * d'_jlk' * d'_mni'
+			+ 2 * (d'^kl_j' - d'^lk_j') * d'_kli'
 
-				- 3 * d'_ilk' * d'_jmn'
-			)
-			
-			+ gamma'^lm' * K'_lm' * K'_ij'
-			- 2 * gamma'^lm' * K'_il' * K'_jm'
+			+ 2 * d'_i^kl' * d'_klj'
+			+ 2 * d'_j^kl' * d'_kli'
+			- 3 * d'_i^kl' * d'_jkl'
+					
+			+ K'^k_k' * K'_ij'
+			- K'_i^k' * K'_kj'
+			- K'_j^k' * K'_ki'
 		)
 		+ K'_ij,k' * beta'^k'
 		+ K'_kj' * beta'^k_,i'
@@ -247,38 +244,53 @@ for _,def in ipairs(defs) do
 	printbr(def)
 end
 
--- for all summed terms, for all coefficients, 
---	if none have derivatives then remove them
--- remove from defs any equations that no longer have any terms
-defs = defs:map(function(def,i,t)
-	local lhs, rhs = table.unpack(defs[i])
-	rhs = (rhs - rhs:map(function(expr)
-		if TensorRef.is(expr) then
-			for j=2,#expr do
-				if expr[j].derivative then return 0 end
+if not keepSourceTerms then
+	-- for all summed terms, for all coefficients, 
+	--	if none have derivatives then remove them
+	-- remove from defs any equations that no longer have any terms
+	local sourceTerms = table()
+	defs = defs:map(function(def,i,t)
+		local lhs, rhs = table.unpack(defs[i])
+		
+		sourceTerms[i] = rhs:map(function(expr)
+			if TensorRef.is(expr) then
+				for j=2,#expr do
+					if expr[j].derivative then return 0 end
+				end
 			end
+		end)()
+		
+		rhs = (rhs - sourceTerms[i])()
+		rhs = simplify(rhs)
+		
+		do -- if rhs ~= Constant(0) then
+			return lhs:eq(rhs), #t+1
 		end
-	end)())()
-	rhs = simplify(rhs)
-	
-	do -- if rhs ~= Constant(0) then
-		return lhs:eq(rhs), #t+1
+	end)
+	printbr('neglecting source terms')
+	for _,def in ipairs(defs) do
+		printbr(def)
 	end
-end)
-printbr('neglecting source terms')
-for _,def in ipairs(defs) do
-	printbr(def)
+	printbr'...and those source terms are...'
+	for i,def in ipairs(defs) do
+		local lhs, rhs = table.unpack(def)
+		printbr(lhs..'$ + \\dots = $'..sourceTerms[i])
+	end
 end
-
 
 -- looking at all fluxes
 --local depvars = table{t,x,y,z}
 -- looking at the x dir only
 local depvars = table{t,x}
 
+local gammaVars = Tensor('_ij', function(i,j) 
+	if i > j then i,j = j,i end 
+	return var('\\gamma_{'..xs[i].name..xs[j].name..'}', depvars)
+end)
+
 local gammaUVars = Tensor('^ij', function(i,j) 
 	if i > j then i,j = j,i end 
-	return var('\\gamma^{'..xs[i].name..xs[j].name..'}', depvars) 
+	return var('\\gamma^{'..xs[i].name..xs[j].name..'}', depvars)
 end)
 
 local aVars = Tensor('_k', function(k)
@@ -297,6 +309,10 @@ end)
 local VVars = Tensor('_k', function(k)
 	return var('V_'..xs[k].name, depvars)
 end)
+
+-- by this ponit we're going to switch to expanded variables
+-- so defining a metric is safe
+Tensor.metric(gammaVars, gammaUVars)
 
 printbr('spelled out')
 local allLhs = table()
@@ -405,7 +421,7 @@ printbr(sofar)
 printbr(reduce)
 --]]
 
-if not useVConstraint then
+if not useVConstraint and not use1D then
 	io.stderr:write"I'm not going to eigendecompose without useVConstraint set\n"
 	os.exit()
 end
@@ -433,7 +449,11 @@ local gammaUxx = gammaUVars[1][1]
 -- but the multiplicities are different: 
 -- with useVConstraint off we get 19, 3, 3, 1, 1
 -- with useVConstraint on we get 18, 5, 5, 1, 1
-local lambdas = table{
+local lambdas = use1D and table{
+	-alpha * sqrt(f * gammaUxx),
+	0,
+	alpha * sqrt(f * gammaUxx),
+} or table{
 	-- the more multiplicity, the easier it is to factor
 	-- also, without useVConstraints, the 1-multiplicity eigenvectors take forever and the expressions get huge and take forever
 	-alpha * sqrt(f * gammaUxx),
