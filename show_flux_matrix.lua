@@ -50,11 +50,19 @@ local delta = var'\\delta'
 local alpha = var'\\alpha'
 local beta = var'\\beta'
 local gamma = var'\\gamma'
+-- pi
+local pi = var'\\pi'
+-- stress-energy T^ab n_a n_b
+local rho = var'\\rho'
 -- extrinsic curvature
 local K = var'K'
 -- first-order
 local a = var'a'
 local d = var'd'
+-- Ricci
+local R = var'R'
+-- projected stress-energy
+local S = var'S'
 -- lapse function
 local f = var'f'
 local df = var"f'"	-- TODO chain rule!
@@ -78,6 +86,7 @@ local function simplify(expr)
 	end
 	return expr
 end
+
 
 local new_printbr_file, printbr
 do
@@ -108,6 +117,7 @@ end
 new_printbr_file()
 
 
+
 -- TODO start with EFE, apply Gauss-Codazzi-Ricci, then automatically recast all higher order derivatives as new variables of 1st derivatives
 printbr[[primitive $\partial_t$ defs]]
 
@@ -125,7 +135,17 @@ local dt_gamma_def = gamma'_ij,t':eq(
 )
 printbr(dt_gamma_def) 
 
--- [=[
+local dt_K_def = K'_ij,t':eq(
+	K'_ij,k' * beta'^k' 
+	+ K'_ki' * beta'^k_,j'
+	+ K'_kj' * beta'^k_,i'
+	- alpha',ij'
+	+ Gamma'^k_ij' * alpha',k'
+	+ alpha * (R'_ij' + K'^k_k' * K'_ij' - 2 * K'_ik' * K'^k_j')
+	+ 4 * pi * alpha * (gamma'_ij' * (S - rho) - 2 * S'_ij')
+)
+printbr(dt_K_def)
+
 printbr[[auxiliary variables]]
 
 local a_def = a'_k':eq(log(alpha)'_,k')
@@ -143,6 +163,93 @@ printbr(d_def)
 
 dgamma_for_d = (d_def * 2)():switch()
 printbr(dgamma_for_d)
+
+printbr[[${\gamma^{ij}}_{,k}$ wrt aux vars]]
+
+local dgammaU_def = gamma'^ij_,k':eq(-gamma'^il' * gamma'_lm,k' * gamma'^mj')
+printbr(dgammaU_def)
+
+local dgammaU_for_d = dgammaU_def:subst(dgamma_for_d:reindex{lmk='ijk'})()
+printbr(dgammaU_for_d) 
+
+printbr[[connections wrt aux vars]]
+local connL_def = Gamma'_ijk':eq(frac(1,2) * (gamma'_ij,k' + gamma'_ik,j' - gamma'_jk,i'))
+printbr(connL_def)
+
+local connL_for_d = connL_def
+	:subst(dgamma_for_d)
+	:subst(dgamma_for_d:reindex{ikj='ijk'})
+	:subst(dgamma_for_d:reindex{jki='ijk'})
+	:simplify()
+printbr(connL_for_d)
+
+-- [[ just raise Gamma, keep d and gamma separate0
+local conn_for_d = (gamma'^il' * connL_for_d:reindex{ljk='ijk'})()
+	:replace(gamma'^il' * Gamma'_ljk', Gamma'^i_jk')
+--]]
+--[[ expand() is adding a -1 somewhere that makes the last replace() choke
+local conn_for_d = (gamma'^il' * connL_for_d:reindex{ljk='ijk'})()
+	:expand()
+	:replace(gamma'^il' * Gamma'_ljk', Gamma'^i_jk')
+	:replace(gamma'^il' * d'_jlk', d'_jk^i')
+	:replace(gamma'^il' * d'_klj', d'_kj^i')
+	:replace((-gamma'^il' * d'_ljk')():expand(), -d'^i_jk')
+--]]
+--[[ TODO raise expression / equation? this works only for dense tensors
+local conn_for_d = connL_for_d'^i_jk'()
+--]]
+--[[ if you want to raise d's indexes
+local conn_for_d = connL_for_d:map(function(expr)
+	if TensorRef.is(expr) then
+		for i=2,#expr do
+			if expr[i].symbol == 'i' then expr[i].lower = false end
+		end
+	end
+end)
+--]]
+printbr(conn_for_d)
+
+printbr[[Ricci wrt aux vars]]
+
+local R_def = R'_ij':eq(Gamma'^k_ij'',k' - Gamma'^k_ik'',j' + Gamma'^k_lk' * Gamma'^l_ij' - Gamma'^k_lj' * Gamma'^l_ik')
+printbr(R_def)
+
+local R_for_d = R_def
+	:subst(conn_for_d:reindex{kij='ijk'})
+	:subst(conn_for_d:reindex{kik='ijk'})
+	:subst(conn_for_d:reindex{klkm='ijkl'})
+	:subst(conn_for_d:reindex{lijn='ijkl'})
+	:subst(conn_for_d:reindex{kljm='ijkl'})
+	:subst(conn_for_d:reindex{likn='ijkl'})
+printbr(R_for_d)
+
+R_for_d = R_for_d()
+printbr(R_for_d)
+
+R_for_d = R_for_d
+	:subst(dgammaU_for_d:reindex{kljn='ijkl'})
+	:subst(dgammaU_for_d:reindex{klkn='ijkl'})
+	:simplify()
+printbr(R_for_d)
+
+printbr'symmetrizing'
+R_for_d = R_for_d
+	:splitOffDerivIndexes()
+	:symmetrizeIndexes(gamma, {1,2})
+	:simplify()
+	:symmetrizeIndexes(d, {2,3})
+	:simplify()
+	:symmetrizeIndexes(d, {1,4})
+	:simplify()
+printbr(R_for_d)
+
+R_for_d = R_for_d
+	:replace((gamma'^km' * d'_jlm' * gamma'^ln' * d'_ikn')(), d'_ikl' * gamma'^km' * d'_jmn' * gamma'^ln')()
+	:replace((gamma'^km' * d'_ljm' * gamma'^ln' * d'_ikn')(), d'_ikn' * gamma'^km' * d'_mjl' * gamma'^ln')()
+	:replace((gamma'^km' * d'_ljm' * gamma'^ln' * d'_nik')(), d'_kin' * gamma'^km' * d'_mjl' * gamma'^ln')()
+	:replace((gamma'^km' * d'_ljm' * gamma'^ln' * d'_kin')(), d'_nik' * gamma'^km' * d'_mjl' * gamma'^ln')()
+	:simplify()
+printbr(R_for_d)
 
 printbr[[time derivative of $a_k,t$]]
 
@@ -220,6 +327,42 @@ dt_d_def = dt_d_def
 	:subst(dalpha_for_a)
 	:simplify()
 printbr(dt_d_def)
+
+printbr[[$K_{ij,t}$ with hyperbolic terms]]
+
+printbr(dt_K_def)
+
+dt_K_def = dt_K_def
+	:replace(alpha',ij', frac(1,2) * (alpha',i'',j' + alpha',j'',i'))
+	:subst(dalpha_for_a:reindex{i='k'})
+	:subst(dalpha_for_a:reindex{j='k'})
+	:subst(dalpha_for_a)
+printbr(dt_K_def)
+	
+dt_K_def = dt_K_def:simplify()
+printbr(dt_K_def)
+
+dt_K_def = dt_K_def
+	:subst(dalpha_for_a:reindex{j='k'})
+	:subst(dalpha_for_a:reindex{i='k'})
+	:simplify()
+printbr(dt_K_def)
+
+dt_K_def = dt_K_def:subst(conn_for_d:reindex{kij='ijk'})
+printbr(dt_K_def)
+
+dt_K_def = dt_K_def:subst(R_for_d)
+printbr(dt_K_def)
+dt_K_def = dt_K_def()
+printbr(dt_K_def)
+
+local dsym_def = d'_ijk,l':eq(frac(1,2) * (d'_ijk,l' + d'_ljk,i'))
+dt_K_def = dt_K_def
+	:subst(dsym_def:reindex{ijlk='ijkl'})
+	:subst(dsym_def:reindex{iklj='ijkl'})
+	:subst(dsym_def:reindex{jilk='ijkl'})
+	:subst(dsym_def:reindex{kijl='ijkl'})
+printbr(dt_K_def)
 
 
 local defs = table()
@@ -307,6 +450,7 @@ else
 			0
 		) )
 	elseif useGamma then
+		
 		defs:insert( K'_ij,t':eq(
 			- frac(1,2) * alpha * a'_i,j'
 			- frac(1,2) * alpha * a'_j,i'
@@ -357,37 +501,7 @@ else
 			- 2 * alpha * d'_k^ij' * K'_ij'
 		) )
 	else
-		-- neither useV nor useGamma
-		-- TODO use the V def, but assign V'_k' = gamma'^ij' * (d'_kij' - d'_ijk')
-		-- but - for index expressions, you need to rename the indexes so they don't collide 
-		-- and for dense tensors, you need to use the gammaUVars and dVars tensors
-		--local V = (d'_kij' - d'_ijk') * gamma'^ij'
-		defs:insert( K'_ij,t':eq(
-			- frac(1,2) * alpha * a'_i,j'
-			- frac(1,2) * alpha * a'_j,i'
-			+ alpha * gamma'^kl' * (
-				-- gamma_ij,kl = gamma_ij,lk <=> d_kij,l = d_lij,k ... so symmetrize those ...
-				frac(1,2) * (d'_ilj,k' + d'_klj,i')
-				+ frac(1,2) * (d'_jik,l' + d'_lik,j')
-				- frac(1,2) * (d'_ikl,j' + d'_jkl,i')
-				- frac(1,2) * (d'_kij,l' + d'_lij,k')
-			)
-			+ alpha * (
-				-a'_i' * a'_j' 
-				+ a'_k' * (d'_ji^k' + d'_ij^k' - d'^k_ij')
-				+ (d'_jli' + d'_ilj' - d'_lij') * (d'^lk_k' - 2 * d'_k^kl')
-				
-				+ 2 * (d'^kl_j' - d'^lk_j') * d'_kil'
-				+ d'_i^lk' * d'_jlk'
-				
-				+ K'^k_k' * K'_ij'
-				- K'_i^k' * K'_kj'
-				- K'_j^k' * K'_ki'
-			)
-			+ K'_ij,k' * beta'^k'
-			+ K'_kj' * beta'^k_,i'
-			+ K'_ik' * beta'^k_,j'
-		) )
+		defs:insert(dt_K_def)
 	end
 end
 
