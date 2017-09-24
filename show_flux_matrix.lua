@@ -117,7 +117,6 @@ end
 new_printbr_file()
 
 
-
 -- TODO start with EFE, apply Gauss-Codazzi-Ricci, then automatically recast all higher order derivatives as new variables of 1st derivatives
 printbr[[primitive $\partial_t$ defs]]
 
@@ -170,16 +169,14 @@ local dgammaU_def = gamma'^ij_,k':eq(-gamma'^il' * gamma'_lm,k' * gamma'^mj')
 printbr(dgammaU_def)
 
 local dgammaU_for_d = dgammaU_def:subst(dgamma_for_d:reindex{lmk='ijk'})()
-printbr(dgammaU_for_d) 
+printbr(dgammaU_for_d)
 
 printbr[[connections wrt aux vars]]
 local connL_def = Gamma'_ijk':eq(frac(1,2) * (gamma'_ij,k' + gamma'_ik,j' - gamma'_jk,i'))
 printbr(connL_def)
 
 local connL_for_d = connL_def
-	:subst(dgamma_for_d)
-	:subst(dgamma_for_d:reindex{ikj='ijk'})
-	:subst(dgamma_for_d:reindex{jki='ijk'})
+	:substIndex(dgamma_for_d)
 	:simplify()
 printbr(connL_for_d)
 
@@ -214,23 +211,36 @@ printbr[[Ricci wrt aux vars]]
 local R_def = R'_ij':eq(Gamma'^k_ij'',k' - Gamma'^k_ik'',j' + Gamma'^k_lk' * Gamma'^l_ij' - Gamma'^k_lj' * Gamma'^l_ik')
 printbr(R_def)
 
-local R_for_d = R_def
+--[[
+local orig_R_for_d = R_def
 	:subst(conn_for_d:reindex{kij='ijk'})
 	:subst(conn_for_d:reindex{kik='ijk'})
 	:subst(conn_for_d:reindex{klkm='ijkl'})
 	:subst(conn_for_d:reindex{lijn='ijkl'})
 	:subst(conn_for_d:reindex{kljm='ijkl'})
 	:subst(conn_for_d:reindex{likn='ijkl'})
+printbr(orig_R_for_d)
+--]]
+local R_for_d = R_def
+	:substIndex(conn_for_d)
+	:reindex{llmnmn = 'abcdef'}	-- still working on the reindex automatic replace ...
 printbr(R_for_d)
 
 R_for_d = R_for_d()
 printbr(R_for_d)
 
-R_for_d = R_for_d
+-- [[
+local orig_R_for_d = R_for_d
 	:subst(dgammaU_for_d:reindex{kljn='ijkl'})
 	:subst(dgammaU_for_d:reindex{klkn='ijkl'})
 	:simplify()
+printbr(orig_R_for_d)
+--]]
+--[[
+R_for_d = R_for_d:substIndex(dgammaU_for_d):simplify()
 printbr(R_for_d)
+os.exit()
+--]]
 
 printbr'symmetrizing'
 R_for_d = R_for_d
