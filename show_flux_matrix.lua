@@ -144,13 +144,15 @@ printbr(d_def)
 dgamma_for_d = (d_def * 2)():switch()
 printbr(dgamma_for_d)
 
-printbr[[aux var time derivatives]]
+printbr[[time derivative of $a_k,t$]]
 
 -- TODO splitDerivs
-local dt_a_def = a_def',t'():replace(alpha',kt', alpha',t'',k')
+local dt_a_def = a_def',t'()
 printbr(dt_a_def)
 
-dt_a_def = dt_a_def:subst(dt_alpha_def)
+dt_a_def = dt_a_def
+	:replace(alpha',kt', alpha',t'',k')
+	:subst(dt_alpha_def)
 printbr(dt_a_def)
 
 dt_a_def = dt_a_def() 
@@ -195,19 +197,30 @@ dt_a_def = dt_a_def
 	)
 printbr(dt_a_def)
 
-os.exit()
+printbr[[time derivative of $d_{kij,t}$]]
 
--- TODO here -- distribute ,t -- and don't apply Derivative.visitorHandler.Prune ...
-local ruleIndex = Derivative.rules.Prune:find(nil, function(kv) return next(kv) == 'otherVars' end)
-local push = Derivative.rules.Prune:remove(ruleIndex)
+local dt_d_def = d_def',t'()
+printbr(dt_d_def)
 
-dt_a_def = dt_a_def():replace(function(expr)
-	if expr == a:diff(t) then return a'_,t' end
-end)
-printbr(dt_a_def)
+dt_d_def = dt_d_def
+	:replace(gamma'_ij,k,t', gamma'_ij,t'',k')
+	-- TODO automatically relabel the sum indexes
+	-- ... this would require knowledge of the entire dt_d_def expression, to know what indexes are available
+	:subst(dt_gamma_def:reindex{ijl='ijk'})
+printbr(dt_d_def)
 
-Derivative.rules.Prune:insert(ruleIndex, push)
---]=]
+dt_d_def = dt_d_def()
+printbr(dt_d_def)
+
+dt_d_def = dt_d_def
+	:replace(gamma'_ij,l,k', gamma'_ij,l'',k')
+	:subst(dgamma_for_d:reindex{ijl='ijk'})
+	:subst(dgamma_for_d:reindex{ilk='ijk'})
+	:subst(dgamma_for_d:reindex{ljk='ijk'})
+	:subst(dalpha_for_a)
+	:simplify()
+printbr(dt_d_def)
+
 
 local defs = table()
 
@@ -253,26 +266,10 @@ else
 
 	-- TODO hyp gamma driver beta in terms of B
 
-	defs:insert( dt_gamma_def )
-	defs:insert( a'_k,t':eq( 
-		-alpha * f * gamma'^ij' * K'_ij,k' 
-		- alpha^2 * f:diff(alpha) * a'_k' * K'^i_i' 
-		+ 2 * alpha * f * d'_k^ij' * K'_ij'
-		- alpha * a'_k' * f * K'^i_i'
-		+ a'_k,i' * beta'^i' 
-		+ a'_i' * beta'^i_,k' 
-	) )
-	defs:insert( d'_kij,t':eq( 
-		-alpha * K'_ij,k' 
-		- alpha * a'_k' * K'_ij' 
-		+ d'_kij,l' * beta'^l' 
-		+ d'_lij' * beta'^l_,k' 
-		+ d'_kli' * beta'^l_,j' 
-		+ d'_klj' * beta'^l_,i' 
-		+ frac(1,2) * gamma'_li' * beta'^l_,jk' 
-		+ frac(1,2) * gamma'_lj' * beta'^l_,ik'
-	) )
-
+	defs:insert(dt_gamma_def)
+	defs:insert(dt_a_def)
+	defs:insert(dt_d_def)
+	
 	if useV then
 		defs:insert( K'_ij,t':eq(
 			- frac(1,2) * alpha * a'_i,j'
