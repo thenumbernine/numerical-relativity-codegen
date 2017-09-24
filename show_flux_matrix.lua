@@ -4,15 +4,27 @@
 -- I just wanted a script to create a flux jacobian matrix from tensor index equations
 require 'ext'
 require 'symmath'.setup()
+local TensorRef = require 'symmath.tensor.TensorRef'
 
-local useVConstraint = true		-- not needed with use1D
+TensorRef:pushRule'Prune/replacePartial'
+
 local textOutput = false
 local keepSourceTerms = false	-- this goes slow with 3D
 local use1D = false
+local useV = false				-- not needed with use1D
+local useGamma = false			-- exclusive to useV ... 
+local useZ4 = false
 
 
 local t,x,y,z = vars('t','x','y','z')
 local xs = use1D and table{x} or table{x,y,z}
+
+
+-- looking at all fluxes
+--local depvars = table{t,x,y,z}
+-- looking at the x dir only
+local depvars = table{t,x}
+
 
 
 local MathJax
@@ -43,10 +55,16 @@ local K = var'K'
 -- first-order
 local a = var'a'
 local d = var'd'
-local V = var'V'
 -- lapse function
 local f = var'f'
-
+local df = var"f'"	-- TODO chain rule!
+-- adm variants
+local V = var'V'
+local Gamma = var'\\Gamma'
+-- z4
+local Z = var'Z'
+local Theta = var('\\Theta', depvars)
+local m = var'm'
 
 Tensor.coords{
 	{variables=xs},
@@ -89,6 +107,7 @@ end
 
 new_printbr_file()
 
+
 -- TODO start with EFE, apply Gauss-Codazzi-Ricci, then automatically recast all higher order derivatives as new variables of 1st derivatives
 printbr[[primitive $\partial_t$ defs]]
 
@@ -106,16 +125,77 @@ local dt_gamma_def = gamma'_ij,t':eq(
 )
 printbr(dt_gamma_def) 
 
---[=[
+-- [=[
 printbr[[auxiliary variables]]
 
-local a_def = a'_,k':eq(log(alpha)'_,k')
-local simplified_a_def = a_def()
-printbr(a_def:eq(simplified_a_def:rhs()))
-a_def = simplified_a_def
+local a_def = a'_k':eq(log(alpha)'_,k')
+printbr(a_def)
 
-local dt_a_def = a_def:lhs()',t':eq(a_def:rhs()',t')
+local a_def = a_def()
+printbr(a_def)
+
+local dalpha_for_a = (a_def * alpha)():switch()
+printbr(dalpha_for_a)
+printbr(dalpha_for_a:reindex{i='k'})
+
+local d_def = d'_kij':eq(frac(1,2) * gamma'_ij,k')
+printbr(d_def)
+
+dgamma_for_d = (d_def * 2)():switch()
+printbr(dgamma_for_d)
+
+printbr[[aux var time derivatives]]
+
+-- TODO splitDerivs
+local dt_a_def = a_def',t'():replace(alpha',kt', alpha',t'',k')
 printbr(dt_a_def)
+
+dt_a_def = dt_a_def:subst(dt_alpha_def)
+printbr(dt_a_def)
+
+dt_a_def = dt_a_def() 
+printbr(dt_a_def)
+
+dt_a_def = dt_a_def:replace(alpha',ik', frac(1,2) * ( alpha',i'',k' + alpha',k'',i' )) 
+	:replace(K'^i_i,k', (gamma'^ij' * K'_ij')'_,k')
+printbr(dt_a_def)
+
+dt_a_def = dt_a_def
+	-- TODO functions, dependent variables, and total derivatives 
+	:replace(f',k', df * alpha',k')
+
+	-- TODO replace indexes automatically 
+	:subst(dalpha_for_a:reindex{i='k'})
+	:subst(dalpha_for_a)
+	
+printbr(dt_a_def)
+
+dt_a_def = dt_a_def()
+	:subst(dalpha_for_a:reindex{i='k'})
+	:subst(dalpha_for_a)
+	:replace(a'_i,k', a'_k,i')
+	:simplify()
+printbr(dt_a_def)
+
+dt_a_def = dt_a_def:replace(gamma'^ij_,k', -gamma'^il' * gamma'_lm,k' * gamma'^mj')()
+printbr(dt_a_def)
+
+dt_a_def = dt_a_def
+	:subst(dgamma_for_d:reindex{lmk='ijk'})
+	:simplify()
+printbr(dt_a_def)	
+
+dt_a_def = dt_a_def
+	:replace(
+		-- TODO replace sub-portions of commutative operators like mul() add() etc
+		-- TODO don't require that simplify() on the find() portion of replace() -- instead simplify automatically?  i experimented with this once ...
+		-- TODO simplify gammas automatically ... define a tensor expression metric variable?
+		(2 * alpha * f * gamma'^il' * d'_klm' * gamma'^mj' * K'_ij')(), 
+		2 * alpha * f * d'_k^ij' * K'_ij'
+	)
+printbr(dt_a_def)
+
+os.exit()
 
 -- TODO here -- distribute ,t -- and don't apply Derivative.visitorHandler.Prune ...
 local ruleIndex = Derivative.rules.Prune:find(nil, function(kv) return next(kv) == 'otherVars' end)
@@ -131,97 +211,187 @@ Derivative.rules.Prune:insert(ruleIndex, push)
 
 local defs = table()
 
-defs:insert( dt_alpha_def )
 
--- TODO hyp gamma driver beta in terms of B
+if useZ4 then
 
-defs:insert( dt_gamma_def )
-defs:insert( a'_k,t':eq( 
-	-alpha * f * gamma'^ij' * K'_ij,k' 
-	- alpha^2 * f:diff(alpha) * a'_k' * K'^i_i' 
-	+ 2 * alpha * f * d'_k^ij' * K'_ij'
-	- alpha * a'_k' * f * K'^i_i'
-	+ a'_k,i' * beta'^i' 
-	+ a'_i' * beta'^i_,k' 
-) )
-defs:insert( d'_kij,t':eq( 
-	-alpha * K'_ij,k' 
-	- alpha * a'_k' * K'_ij' 
-	+ d'_kij,l' * beta'^l' 
-	+ d'_lij' * beta'^l_,k' 
-	+ d'_kli' * beta'^l_,j' 
-	+ d'_klj' * beta'^l_,i' 
-	+ frac(1,2) * gamma'_li' * beta'^l_,jk' 
-	+ frac(1,2) * gamma'_lj' * beta'^l_,ik'
-) )
+	-- I'm omitting betas and source terms already
+	
+	defs:insert(a'_k,t':eq(
+		-f * alpha * (gamma'^ij' * K'_ij,k' - m * Theta'_,k')
+		+ a'_k' * alpha * (df * alpha + f) * (gamma'^ij' * K'_ij' - m * Theta)
+	))
 
-if not useVConstraint then
-	-- TODO use the V def, but assign V'_k' = gamma'^ij' * (d'_kij' - d'_ijk')
-	-- but - for index expressions, you need to rename the indexes so they don't collide 
-	-- and for dense tensors, you need to use the gammaUVars and dVars tensors
-	--local V = (d'_kij' - d'_ijk') * gamma'^ij'
-	defs:insert( K'_ij,t':eq(
-		- frac(1,2) * alpha * a'_i,j'
-		- frac(1,2) * alpha * a'_j,i'
+	defs:insert(d'_kij,t':eq(
+		-alpha * (K'_ij,k' + a'_k' * K'_ij')
+	))
+
+	defs:insert(K'_ij,t':eq(
+		- frac(1,2) * alpha * (a'_i,j' + a'_j,i')
 		+ alpha * gamma'^kl' * (
-			-- gamma_ij,kl = gamma_ij,lk <=> d_kij,l = d_lij,k ... so symmetrize those ...
 			frac(1,2) * (d'_ilj,k' + d'_klj,i')
-			+ frac(1,2) * (d'_jik,l' + d'_lik,j')
 			- frac(1,2) * (d'_ikl,j' + d'_jkl,i')
 			- frac(1,2) * (d'_kij,l' + d'_lij,k')
+			+ frac(1,2) * (d'_jik,l' + d'_lik,j')
 		)
-		+ alpha * (
-			-a'_i' * a'_j' 
-			+ a'_k' * (d'_ji^k' + d'_ij^k' - d'^k_ij')
-			+ (d'_jli' + d'_ilj' - d'_lij') * (d'^lk_k' - 2 * d'_k^kl')
-			
-			+ 2 * (d'^kl_j' - d'^lk_j') * d'_kil'
-			+ d'_i^lk' * d'_jlk'
-			
-			+ K'^k_k' * K'_ij'
-			- K'_i^k' * K'_kj'
-			- K'_j^k' * K'_ki'
-		)
-		+ K'_ij,k' * beta'^k'
-		+ K'_kj' * beta'^k_,i'
-		+ K'_ik' * beta'^k_,j'
-	) )
-else
-	defs:insert( K'_ij,t':eq(
-		- frac(1,2) * alpha * a'_i,j'
-		- frac(1,2) * alpha * a'_j,i'
-		+ alpha * (
-			  frac(1,2) * gamma'^pq' * (d'_ipq,j' + d'_jpq,i')
-			- frac(1,2) * gamma'^mr' * (d'_mij,r' + d'_mji,r')
-		)
-		
-		- alpha * V'_j,i'
-		- alpha * V'_i,j'
-		
-		+ alpha * (
-			-a'_i' * a'_j' 
-			+ (d'_ji^k' + d'_ij^k' - d'^k_ij') * (a'_k' + V'_k' - d'^l_lk')
-			
-			+ 2 * (d'^kl_j' - d'^lk_j') * d'_kli'
+		+ alpha * (Z'_j,i' + Z'_i,j')
+		- alpha * a'_i' * a'_j'
+	))
+	
+	defs:insert(Theta'_,t':eq(
+		frac(1,2) * alpha * gamma'^kl' * gamma'^ij' * (d'_ilj,k' - d'_ikl,j' - d'_kij,l' + d'_jik,l')
+		+ alpha * gamma'^kl' * Z'_l,k'
+	))
 
-			+ 2 * d'_i^kl' * d'_klj'
-			+ 2 * d'_j^kl' * d'_kli'
-			- 3 * d'_i^kl' * d'_jkl'
-					
-			+ K'^k_k' * K'_ij'
-			- K'_i^k' * K'_kj'
-			- K'_j^k' * K'_ki'
-		)
-		+ K'_ij,k' * beta'^k'
-		+ K'_kj' * beta'^k_,i'
-		+ K'_ik' * beta'^k_,j'
+	defs:insert(Z'_k,t':eq(
+		alpha * gamma'^ij' * (K'_ik,j' - K'_ij,k')
+		+ alpha * Theta'_,k'
+	))
+
+else
+
+	defs:insert( dt_alpha_def )
+
+	-- TODO hyp gamma driver beta in terms of B
+
+	defs:insert( dt_gamma_def )
+	defs:insert( a'_k,t':eq( 
+		-alpha * f * gamma'^ij' * K'_ij,k' 
+		- alpha^2 * f:diff(alpha) * a'_k' * K'^i_i' 
+		+ 2 * alpha * f * d'_k^ij' * K'_ij'
+		- alpha * a'_k' * f * K'^i_i'
+		+ a'_k,i' * beta'^i' 
+		+ a'_i' * beta'^i_,k' 
 	) )
-	defs:insert( V'_k,t':eq(
-		-- TODO there are some source terms that should go here.
-		-- the eigenvectors that the Alcubierre 2008 book has only source terms, no first derivatives
-		-- how ever my own calculations come up with K_ij,k terms ... maybe they get absorbed into some other terms?
-		0
+	defs:insert( d'_kij,t':eq( 
+		-alpha * K'_ij,k' 
+		- alpha * a'_k' * K'_ij' 
+		+ d'_kij,l' * beta'^l' 
+		+ d'_lij' * beta'^l_,k' 
+		+ d'_kli' * beta'^l_,j' 
+		+ d'_klj' * beta'^l_,i' 
+		+ frac(1,2) * gamma'_li' * beta'^l_,jk' 
+		+ frac(1,2) * gamma'_lj' * beta'^l_,ik'
 	) )
+
+	if useV then
+		defs:insert( K'_ij,t':eq(
+			- frac(1,2) * alpha * a'_i,j'
+			- frac(1,2) * alpha * a'_j,i'
+			+ alpha * (
+				  frac(1,2) * gamma'^pq' * (d'_ipq,j' + d'_jpq,i')
+				- frac(1,2) * gamma'^mr' * (d'_mij,r' + d'_mji,r')
+			)
+			
+			- alpha * V'_j,i'
+			- alpha * V'_i,j'
+			
+			+ alpha * (
+				-a'_i' * a'_j' 
+				+ (d'_ji^k' + d'_ij^k' - d'^k_ij') * (a'_k' + V'_k' - d'^l_lk')
+				
+				+ 2 * (d'^kl_j' - d'^lk_j') * d'_kli'
+
+				+ 2 * d'_i^kl' * d'_klj'
+				+ 2 * d'_j^kl' * d'_kli'
+				- 3 * d'_i^kl' * d'_jkl'
+						
+				+ K'^k_k' * K'_ij'
+				- K'_i^k' * K'_kj'
+				- K'_j^k' * K'_ki'
+			)
+			+ K'_ij,k' * beta'^k'
+			+ K'_kj' * beta'^k_,i'
+			+ K'_ik' * beta'^k_,j'
+		) )
+		defs:insert( V'_k,t':eq(
+			-- TODO there are some source terms that should go here.
+			-- the eigenvectors that the Alcubierre 2008 book has only source terms, no first derivatives
+			-- how ever my own calculations come up with K_ij,k terms ... maybe they get absorbed into some other terms?
+			0
+		) )
+	elseif useGamma then
+		defs:insert( K'_ij,t':eq(
+			- frac(1,2) * alpha * a'_i,j'
+			- frac(1,2) * alpha * a'_j,i'
+			
+			+ alpha * (
+				frac(1,2) * gamma'^pq' * (d'_ipq,j' + d'_jpq,i')
+				- frac(1,2) * gamma'^mr' * (d'_mij,r' + d'_mji,r')
+				- gamma'^mp' * d'_mpi,j'
+				- gamma'^mp' * d'_mpj,i'
+			)
+		
+			+ 2 * alpha * Gamma'_i,j'
+			+ 2 * alpha * Gamma'_j,i'
+			
+			+ alpha * (
+				-a'_i' * a'_j' 
+				+ (d'_ji^k' + d'_ij^k' - d'^k_ij') * (a'_k' - Gamma'_k')
+				
+				+ 2 * (d'^kl_j' - d'^lk_j') * d'_kli'
+				- 3 * d'_i^kl' * d'_jkl'
+
+				+ 4 * d'_i^kl' * d'_klj'
+				+ 4 * d'_j^kl' * d'_kli'
+						
+				+ K'^k_k' * K'_ij'
+				- K'_i^k' * K'_kj'
+				- K'_j^k' * K'_ki'
+			)
+			+ K'_ij,k' * beta'^k'
+			+ K'_kj' * beta'^k_,i'
+			+ K'_ik' * beta'^k_,j'
+		) )
+		defs:insert( Gamma'_k,t':eq(
+			-alpha * 2 * gamma'^qr' * K'_kq,r'
+			+ alpha * gamma'^pq' * K'_pq,k'
+			- 2 * (d'_lk^r' + d'^r_kl') * beta'^l_,r'
+			- (2 * d'_n^nr' - d'^rn_n') * gamma'_kl' * beta'^l_,r'
+			+ Gamma'_k,r' * beta'^r'
+			+ Gamma'^r' * beta'^l_,r' * gamma'_kl'
+			+ Gamma'_l' * beta'^l_,k'
+			+ gamma'_kl' * beta'^l_,ij' * gamma'^ij'
+			- 2 * alpha * K'_ik' * Gamma'^i'
+			- 2 * alpha * a'^i' * K'_ki'
+			+ alpha * a'_k' * K'^k_k'
+			+ 4 * alpha * d'_i^ij' * K'_kj'
+			- 2 * alpha * d'^ji_i' * K'_kj'
+			+ 4 * alpha * d'^ij_k' * K'_ij'
+			- 2 * alpha * d'_k^ij' * K'_ij'
+		) )
+	else
+		-- neither useV nor useGamma
+		-- TODO use the V def, but assign V'_k' = gamma'^ij' * (d'_kij' - d'_ijk')
+		-- but - for index expressions, you need to rename the indexes so they don't collide 
+		-- and for dense tensors, you need to use the gammaUVars and dVars tensors
+		--local V = (d'_kij' - d'_ijk') * gamma'^ij'
+		defs:insert( K'_ij,t':eq(
+			- frac(1,2) * alpha * a'_i,j'
+			- frac(1,2) * alpha * a'_j,i'
+			+ alpha * gamma'^kl' * (
+				-- gamma_ij,kl = gamma_ij,lk <=> d_kij,l = d_lij,k ... so symmetrize those ...
+				frac(1,2) * (d'_ilj,k' + d'_klj,i')
+				+ frac(1,2) * (d'_jik,l' + d'_lik,j')
+				- frac(1,2) * (d'_ikl,j' + d'_jkl,i')
+				- frac(1,2) * (d'_kij,l' + d'_lij,k')
+			)
+			+ alpha * (
+				-a'_i' * a'_j' 
+				+ a'_k' * (d'_ji^k' + d'_ij^k' - d'^k_ij')
+				+ (d'_jli' + d'_ilj' - d'_lij') * (d'^lk_k' - 2 * d'_k^kl')
+				
+				+ 2 * (d'^kl_j' - d'^lk_j') * d'_kil'
+				+ d'_i^lk' * d'_jlk'
+				
+				+ K'^k_k' * K'_ij'
+				- K'_i^k' * K'_kj'
+				- K'_j^k' * K'_ki'
+			)
+			+ K'_ij,k' * beta'^k'
+			+ K'_kj' * beta'^k_,i'
+			+ K'_ik' * beta'^k_,j'
+		) )
+	end
 end
 
 printbr('partial derivatives')
@@ -229,7 +399,6 @@ for _,def in ipairs(defs) do
 	printbr(def)
 end
 
-local TensorRef = require 'symmath.tensor.TensorRef'
 for i=1,#defs do
 	local lhs, rhs = table.unpack(defs[i])
 	
@@ -279,10 +448,6 @@ if not keepSourceTerms then
 	end
 end
 
--- looking at all fluxes
---local depvars = table{t,x,y,z}
--- looking at the x dir only
-local depvars = table{t,x}
 
 local gammaVars = Tensor('_ij', function(i,j) 
 	if i > j then i,j = j,i end 
@@ -310,6 +475,12 @@ end)
 local VVars = Tensor('_k', function(k)
 	return var('V_'..xs[k].name, depvars)
 end)
+local GammaVars = Tensor('_k', function(k)
+	return var('\\Gamma_'..xs[k].name, depvars)
+end)
+local ZVars = Tensor('_k', function(k)
+	return var('Z_'..xs[k].name, depvars)
+end)
 
 -- by this ponit we're going to switch to expanded variables
 -- so defining a metric is safe
@@ -336,29 +507,41 @@ for _,def in ipairs(defs) do
 			:replace(a, aVars)
 			:replace(d, dVars)
 			:replace(K, KVars)
-		if useVConstraint then 
+		if useV then 
 			def = def:replace(V, VVars)
 		end
+		if useGamma then
+			def = def:replace(Gamma, GammaVars)
+		end
+		if useZ4 then
+			def = def:replace(Theta'_,k', Tensor('_k', function(k) return Theta:diff(xs[k]) end))
+			def = def:replace(Z, ZVars)
+		end
 		def = def()
-		
+
 		local lhs, rhs = table.unpack(def)
 		if not lhs.dim then
+			-- then it's already a constant
+			-- TODO maybe don't uatomatically convert x,t into x:diff(t) ... maybe make a separate function for that
+			--[[
 			printbr'failed to find lhs.dim'
 			printbr(tostring(lhs))
 			error'here'
-		end
-		local dim = lhs:dim()
-		assert(dim[#dim].value == 1)	-- the ,t ...
+			--]]
+		else
+			local dim = lhs:dim()
+			assert(dim[#dim].value == 1)	-- the ,t ...
 
-		-- remove the ,t dimension
-		lhs = Tensor(table.sub(lhs.variance, 1, #dim-1), function(...)
-			return lhs[{...}][1]
-		end)
+			-- remove the ,t dimension
+			lhs = Tensor(table.sub(lhs.variance, 1, #dim-1), function(...)
+				return lhs[{...}][1]
+			end)
 
-		-- if it's a constant expression
-		-- TODO put this in :unravel() ?
-		if not rhs.dim then
-			rhs = Tensor(lhs.variance, function() return rhs end)
+			-- if it's a constant expression
+			-- TODO put this in :unravel() ?
+			if not rhs.dim then
+				rhs = Tensor(lhs.variance, function() return rhs end)
+			end
 		end
 
 		local eqns = lhs:eq(rhs):unravel()
@@ -368,10 +551,10 @@ for _,def in ipairs(defs) do
 			rhs = simplify(rhs)
 			if defsForLhs[lhsstr] then
 				if rhs ~= defsForLhs[lhsstr] then
-					print'mismatch'
-					print(lhs:eq(rhs))
-					print'difference'
-					print(simplify(rhs - defsForLhs[lhsstr]))
+					printbr'mismatch'
+					printbr(lhs:eq(rhs))
+					printbr'difference'
+					printbr(simplify(rhs - defsForLhs[lhsstr]))
 					printbr()
 				end
 			else
@@ -422,10 +605,11 @@ printbr(sofar)
 printbr(reduce)
 --]]
 
-if not useVConstraint and not use1D then
-	io.stderr:write"I'm not going to eigendecompose without useVConstraint set\n"
+if not useV and not useGamma and not use1D then
+	io.stderr:write"I'm not going to eigendecompose without useV or useGamma set\n"
 	os.exit()
 end
+os.exit()
 
 --[[
 here's where I need polynomial factoring
@@ -446,10 +630,10 @@ roots are:
 
 -- try solving it for one particular eigenvector/value
 local gammaUxx = gammaUVars[1][1]
--- the eigenvalues are the same for useVConstraint on or off
+-- the eigenvalues are the same for useV on or off
 -- but the multiplicities are different: 
--- with useVConstraint off we get 19, 3, 3, 1, 1
--- with useVConstraint on we get 18, 5, 5, 1, 1
+-- with useV off we get 19, 3, 3, 1, 1
+-- with useV on we get 18, 5, 5, 1, 1
 local lambdas = use1D and table{
 	-alpha * sqrt(f * gammaUxx),
 	0,
