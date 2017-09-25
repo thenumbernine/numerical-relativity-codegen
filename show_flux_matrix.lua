@@ -180,7 +180,7 @@ local connL_for_d = connL_def
 	:simplify()
 printbr(connL_for_d)
 
--- [[ just raise Gamma, keep d and gamma separate0
+-- [[ just raise Gamma, keep d and gamma separate
 local conn_for_d = (gamma'^il' * connL_for_d:reindex{ljk='ijk'})()
 	:replace(gamma'^il' * Gamma'_ljk', Gamma'^i_jk')
 --]]
@@ -211,7 +211,7 @@ printbr[[Ricci wrt aux vars]]
 local R_def = R'_ij':eq(Gamma'^k_ij'',k' - Gamma'^k_ik'',j' + Gamma'^k_lk' * Gamma'^l_ij' - Gamma'^k_lj' * Gamma'^l_ik')
 printbr(R_def)
 
---[[
+-- [[
 local orig_R_for_d = R_def
 	:subst(conn_for_d:reindex{kij='ijk'})
 	:subst(conn_for_d:reindex{kik='ijk'})
@@ -220,11 +220,14 @@ local orig_R_for_d = R_def
 	:subst(conn_for_d:reindex{kljm='ijkl'})
 	:subst(conn_for_d:reindex{likn='ijkl'})
 printbr(orig_R_for_d)
---]]
+local R_for_d = orig_R_for_d
+--[[
+--[[
 local R_for_d = R_def
 	:substIndex(conn_for_d)
 	:reindex{llmnmn = 'abcdef'}	-- still working on the reindex automatic replace ...
 printbr(R_for_d)
+--]]
 
 R_for_d = R_for_d()
 printbr(R_for_d)
@@ -235,6 +238,7 @@ local orig_R_for_d = R_for_d
 	:subst(dgammaU_for_d:reindex{klkn='ijkl'})
 	:simplify()
 printbr(orig_R_for_d)
+R_for_d = orig_R_for_d
 --]]
 --[[
 R_for_d = R_for_d:substIndex(dgammaU_for_d):simplify()
