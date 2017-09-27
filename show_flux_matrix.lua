@@ -11,9 +11,10 @@ TensorRef:pushRule'Prune/replacePartial'
 local textOutput = false
 local keepSourceTerms = false	-- this goes slow with 3D
 local use1D = false
+local useShift = false			-- whether to include beta^i_,t
 local useV = false				-- not needed with use1D
 local useGamma = false			-- exclusive to useV ... 
-local useZ4 = false
+local useZ4 = true
 
 
 local t,x,y,z = vars('t','x','y','z')
@@ -56,6 +57,7 @@ local pi = var'\\pi'
 local rho = var'\\rho'
 -- extrinsic curvature
 local K = var'K'
+local A = var'A'	-- trace-free
 -- first-order
 local a = var'a'
 local d = var'd'
@@ -66,6 +68,9 @@ local S = var'S'
 -- lapse function
 local f = var'f'
 local df = var"f'"	-- TODO chain rule!
+-- shift
+local b = var'b'	-- b^i_j = beta^i_,j
+local B = var'B'	-- B^i = beta^i_,t
 -- adm variants
 local V = var'V'
 local Gamma = var'\\Gamma'
@@ -117,6 +122,57 @@ end
 new_printbr_file()
 
 
+local dt_beta_def
+local dt_B_def
+if useShift then
+	-- hyperbolic Gamma driver
+	-- 2008 Alcubierre eqns 4.3.31 & 4.3.32
+	-- B^i = beta^i_,t
+	-- so what should be used for beta^i_,j ? Bona&Masso use B for that in their papers ...
+	-- I'll use b for the spatial derivative and B for the time derivative
+	dt_beta_def = beta'^k_,t':eq(
+		beta'^i' * beta'^k_,i' + B'^k'
+	)
+	printbr(dt_beta_def)
+	local xi = frac(3,4)
+	dt_B_def = B'^i_,t':eq(
+		-- Lie derivative
+		beta'^k' * B'^i_,k'
+		-- eq
+		+ alpha^2 * xi * B'^i' * (
+			-- 2nd derivs
+			gamma'^jk' * beta'^i_,jk'
+			+ frac(1,3) * gamma'^ik' * beta'^j_,jk'
+			-- beta derivs
+			+ 2 * gamma'^jk' * Gamma'^i_lj' *  beta'^l_,k'
+			+ frac(1,3) * gamma'^ik' * Gamma'^j_lj' 'beta^l_,k'
+			- Gamma'^l' * beta'^i_,l'
+			-- 1st order derivs
+			+ (gamma'^im' * gamma'^jk' + frac(1,3) * gamma'^ik' * gamma'^jm') * (d'_jlm,k' + d'_ljm,k' - d'_mlj,k') * beta'^l'
+			- alpha * (2 * gamma'^ik' * gamma'^lj' - gamma'^ij' * gamma'^kl') * K'_kl,j'
+			
+			-- source terms
+			+ 2 * d'^jmi' * (d'_jml' + d'_lmj' - d'_mlj') * beta'^l'
+			- Gamma'^i_lm' * Gamma'^m' * beta'^l'
+			+ Gamma'^i_km' * gamma'^jk' * Gamma'^m_jl' * beta'^l'
+			- frac(2,3) * gamma'^ik' * d'_k^jm' * Gamma'_jlm' * beta'^l'
+			+ gamma'^ij' * R'_jk' * beta'^k'
+			
+			+ 2 * alpha * d'_j^ji' * K'^k_k'
+			- 2 * alpha * d'^ijk' * K'_jk'
+			+ 4 * alpha * d'^jki' * A'_jk'
+			+ 4 * alpha * d'_jk^j' * A'^ik'
+			
+			- 2 * alpha * a'_j' * A'^ij'
+			- 2 * alpha * Gamma'^i_jk' * A'^jk'
+			- 2 * alpha * Gamma'^j_jk' * A'^ik'
+		)
+	)
+	printbr(dt_B_def)
+	os.exit()
+end
+
+
 -- TODO start with EFE, apply Gauss-Codazzi-Ricci, then automatically recast all higher order derivatives as new variables of 1st derivatives
 printbr[[primitive $\partial_t$ defs]]
 
@@ -141,9 +197,16 @@ local dt_K_def = K'_ij,t':eq(
 	- alpha',ij'
 	+ Gamma'^k_ij' * alpha',k'
 	+ alpha * (R'_ij' + K'^k_k' * K'_ij' - 2 * K'_ik' * K'^k_j')
+	-- stress-energy terms	
 	+ 4 * pi * alpha * (gamma'_ij' * (S - rho) - 2 * S'_ij')
 )
 printbr(dt_K_def)
+
+printbr[[lapse]]
+
+-- TODO functions, dependent variables, and total derivatives 
+local df_def = f',k':eq(df * alpha * a'_k')
+printbr(df_def)
 
 printbr[[auxiliary variables]]
 
@@ -155,7 +218,6 @@ printbr(a_def)
 
 local dalpha_for_a = (a_def * alpha)():switch()
 printbr(dalpha_for_a)
-printbr(dalpha_for_a:reindex{i='k'})
 
 local d_def = d'_kij':eq(frac(1,2) * gamma'_ij,k')
 printbr(d_def)
@@ -168,7 +230,7 @@ printbr[[${\gamma^{ij}}_{,k}$ wrt aux vars]]
 local dgammaU_def = gamma'^ij_,k':eq(-gamma'^il' * gamma'_lm,k' * gamma'^mj')
 printbr(dgammaU_def)
 
-local dgammaU_for_d = dgammaU_def:subst(dgamma_for_d:reindex{lmk='ijk'})()
+local dgammaU_for_d = dgammaU_def:substIndex(dgamma_for_d)()
 printbr(dgammaU_for_d)
 
 printbr[[connections wrt aux vars]]
@@ -211,58 +273,28 @@ printbr[[Ricci wrt aux vars]]
 local R_def = R'_ij':eq(Gamma'^k_ij'',k' - Gamma'^k_ik'',j' + Gamma'^k_lk' * Gamma'^l_ij' - Gamma'^k_lj' * Gamma'^l_ik')
 printbr(R_def)
 
--- [[
-local orig_R_for_d = R_def
-	:subst(conn_for_d:reindex{kij='ijk'})
-	:subst(conn_for_d:reindex{kik='ijk'})
-	:subst(conn_for_d:reindex{klkm='ijkl'})
-	:subst(conn_for_d:reindex{lijn='ijkl'})
-	:subst(conn_for_d:reindex{kljm='ijkl'})
-	:subst(conn_for_d:reindex{likn='ijkl'})
-printbr(orig_R_for_d)
-local R_for_d = orig_R_for_d
---[[
---[[
-local R_for_d = R_def
-	:substIndex(conn_for_d)
-	:reindex{llmnmn = 'abcdef'}	-- still working on the reindex automatic replace ...
+local R_for_d = R_def:substIndex(conn_for_d)
 printbr(R_for_d)
---]]
 
 R_for_d = R_for_d()
 printbr(R_for_d)
 
--- [[
-local orig_R_for_d = R_for_d
-	:subst(dgammaU_for_d:reindex{kljn='ijkl'})
-	:subst(dgammaU_for_d:reindex{klkn='ijkl'})
-	:simplify()
-printbr(orig_R_for_d)
-R_for_d = orig_R_for_d
---]]
---[[
-R_for_d = R_for_d:substIndex(dgammaU_for_d):simplify()
+R_for_d = R_for_d:substIndex(dgammaU_for_d)()
 printbr(R_for_d)
-os.exit()
---]]
 
 printbr'symmetrizing'
 R_for_d = R_for_d
-	:splitOffDerivIndexes()
-	:symmetrizeIndexes(gamma, {1,2})
-	:simplify()
-	:symmetrizeIndexes(d, {2,3})
-	:simplify()
-	:symmetrizeIndexes(d, {1,4})
-	:simplify()
+	:symmetrizeIndexes(gamma, {1,2})()
+	:symmetrizeIndexes(d, {2,3})()
+	:symmetrizeIndexes(d, {1,4})()
 printbr(R_for_d)
 
 R_for_d = R_for_d
-	:replace((gamma'^km' * d'_jlm' * gamma'^ln' * d'_ikn')(), d'_ikl' * gamma'^km' * d'_jmn' * gamma'^ln')()
-	:replace((gamma'^km' * d'_ljm' * gamma'^ln' * d'_ikn')(), d'_ikn' * gamma'^km' * d'_mjl' * gamma'^ln')()
-	:replace((gamma'^km' * d'_ljm' * gamma'^ln' * d'_nik')(), d'_kin' * gamma'^km' * d'_mjl' * gamma'^ln')()
-	:replace((gamma'^km' * d'_ljm' * gamma'^ln' * d'_kin')(), d'_nik' * gamma'^km' * d'_mjl' * gamma'^ln')()
-	:simplify()
+	:replace((gamma'^km' * d'_jlm' * gamma'^ln' * d'_kin')(), gamma'^km' * d'_jlm' * gamma'^ln' * d'_nik')()
+	:replace((gamma'^km' * d'_ljm' * gamma'^ln' * d'_ikn')(), gamma'^km' * d'_mjl' * gamma'^ln' * d'_ikn')()
+	:replace((gamma'^km' * d'_ljm' * gamma'^ln' * d'_kin')(), gamma'^km' * d'_mjl' * gamma'^ln' * d'_nik')()
+	:replace((gamma'^km' * d'_ljm' * gamma'^ln' * d'_nik')(), gamma'^km' * d'_mjl' * gamma'^ln' * d'_kin')()
+	:replace((gamma'^km' * d'_jlm' * gamma'^ln' * d'_ikn')(), gamma'^kp' * d'_jop' * gamma'^mo' * d'_ikm')()
 printbr(R_for_d)
 
 printbr[[time derivative of $a_k,t$]]
@@ -283,37 +315,24 @@ dt_a_def = dt_a_def:replace(alpha',ik', frac(1,2) * ( alpha',i'',k' + alpha',k''
 	:replace(K'^i_i,k', (gamma'^ij' * K'_ij')'_,k')
 printbr(dt_a_def)
 
-dt_a_def = dt_a_def
-	-- TODO functions, dependent variables, and total derivatives 
-	:replace(f',k', df * alpha',k')
-
-	-- TODO replace indexes automatically 
-	:subst(dalpha_for_a:reindex{i='k'})
-	:subst(dalpha_for_a)
-	
+dt_a_def = dt_a_def:substIndex(df_def, dalpha_for_a)
 printbr(dt_a_def)
 
 dt_a_def = dt_a_def()
-	:subst(dalpha_for_a:reindex{i='k'})
-	:subst(dalpha_for_a)
-	:replace(a'_i,k', a'_k,i')
+	:substIndex(dalpha_for_a)
+	:symmetrizeIndexes(a, {1,2})
 	:simplify()
 printbr(dt_a_def)
 
-dt_a_def = dt_a_def:replace(gamma'^ij_,k', -gamma'^il' * gamma'_lm,k' * gamma'^mj')()
+dt_a_def = dt_a_def:substIndex(dgammaU_for_d)()
 printbr(dt_a_def)
-
-dt_a_def = dt_a_def
-	:subst(dgamma_for_d:reindex{lmk='ijk'})
-	:simplify()
-printbr(dt_a_def)	
 
 dt_a_def = dt_a_def
 	:replace(
 		-- TODO replace sub-portions of commutative operators like mul() add() etc
 		-- TODO don't require that simplify() on the find() portion of replace() -- instead simplify automatically?  i experimented with this once ...
 		-- TODO simplify gammas automatically ... define a tensor expression metric variable?
-		(2 * alpha * f * gamma'^il' * d'_klm' * gamma'^mj' * K'_ij')(), 
+		(2 * alpha * f * gamma'^im' * d'_kml' * gamma'^lj' * K'_ij')(), 
 		2 * alpha * f * d'_k^ij' * K'_ij'
 	)
 printbr(dt_a_def)
@@ -383,7 +402,11 @@ local defs = table()
 
 
 if useZ4 then
-
+	
+	--[[ this is my best attempt to interpret some earlier papers ...
+	-- 2004 Bona, Palenzuela "Dynamical shift conditions for the Z4 and BSSN formalisms"
+	-- 2005 Bona, Ledvinka, Palenzuela-Luque, Zacek, "Constraint-preserving boundary conditions in the Z4 Numerical Relativity formalism"
+	
 	-- I'm omitting betas and source terms already
 	
 	defs:insert(a'_k,t':eq(
@@ -416,6 +439,293 @@ if useZ4 then
 		alpha * gamma'^ij' * (K'_ik,j' - K'_ij,k')
 		+ alpha * Theta'_,k'
 	))
+
+	--]]
+	-- [[ I'm taking this from 2008 Yano et al Flux-Vector-Splitting method for Z4 formalism and its numerical analysis
+
+	printbr'Z4 terms'
+
+	local dbeta_for_b 
+	if useShift then
+		dbeta_for_b = beta'^i_,j':eq(b'^i_j')	-- I'm flipping the order from Bona et al - they like partials, I like comma derivatives
+		printbr(dbeta_for_b)
+	else
+		dbeta_for_b = beta'^i_,j':eq(beta'^i_,j')
+	end
+
+	local dt_a_def = a'_i,t':eq(
+		(beta'^j' * a'_i')',j' 
+		- (alpha * f * K'^j_j' + beta'^j' * a'_j')'_,i' 
+		+ b'^j_i' * a'_j' 
+		- b'^j_j' * a'_i'
+	)
+	printbr(dt_a_def)
+
+	dt_a_def = dt_a_def():substIndex(df_def)
+	printbr(dt_a_def)
+	
+	dt_a_def = dt_a_def
+		:substIndex(dalpha_for_a)
+		:substIndex(dbeta_for_b)
+		:splitOffDerivIndexes()
+		:replace(K'^j_j', gamma'^jk' * K'_jk')()
+		:substIndex(dgammaU_for_d)()
+		-- TODO simplifyMetric(gamma) operation to do just this ...
+		:replace((2 * alpha * f * gamma'^jm' * d'_iml' * gamma'^lk' * K'_jk')(), 2 * alpha * f * d'_i^jk' * K'_jk')
+	printbr(dt_a_def)
+
+	defs:insert(dt_a_def)
+
+	local Q = var'Q'
+	
+	if useShift then
+	
+		local Qu_def = Q'^i':eq( -1/alpha * beta'^k' * b'^i_k' - alpha * gamma'^ki' * (gamma'_jk,l' * gamma'^jl' - Gamma'^j_kj' - a'_k'))
+		printbr(Qu_def) 
+
+		Qu_def = Qu_def:substIndex(dgamma_for_d, conn_for_d)
+		printbr(Qu_def)
+
+		local dt_b_def = b'^i_k,t':eq(
+			-(
+				-(beta'^j' * b'^i_k')'_,j'
+				+ (
+					alpha * Q'^i'
+					+ beta'^j' * b'^i_j'
+				)'_,k'
+			)
+			+ b'^i_j' * b'^j_k'
+			- b'^j_j' * b'^i_k'
+		)
+		printbr(dt_b_def)
+
+		dt_b_def = dt_b_def()
+		printbr(dt_b_def)
+
+		-- TODO automatically split off deriv indexes before substIndex -- on the find and the expr?
+		dt_b_def = dt_b_def:splitOffDerivIndexes():substIndex(Qu_def)
+		printbr(dt_b_def)
+		
+		dt_b_def = dt_b_def()
+		printbr(dt_b_def)
+
+		dt_b_def = dt_b_def
+			:substIndex(dgammaU_for_d)
+			:substIndex(dalpha_for_a)
+			:substIndex(dbeta_for_b)
+			:substIndex(dgamma_for_d)
+			
+			-- TODO relabel
+			:replace(b'^l_k' * b'^i_l', b'^i_j' * b'^j_k')
+			:replace(beta'^l' * b'^i_l,k', beta'^j' * b'^i_j,k')
+			:symmetrizeIndexes(gamma, {1,2})
+			
+			:simplify()
+		printbr(dt_b_def)
+		
+		defs:insert(dt_b_def)
+
+	end
+
+	-- 2005 Bona et al eqn 24: gamma_ij,t = -2 alpha Q_ij ... and from eqn 3 I'm betting I've got gamma_ij,t right
+	-- 2008 Yano et al doesn't give an equation for Q_ij
+	local Qll_def = Q'_ij':eq(
+		-1/(2*alpha) * dt_gamma_def:rhs()
+	)
+	printbr(Qll_def)
+
+	dt_d_def = d'_kij,t':eq(
+		(beta'^l' * d'_kij')'_,l'
+		- (alpha * Q'_ij' + beta'^l' * d'_lij')'_,k'
+		+ b'^l_k' * d'_lij' 
+		- b'^l_l' * d'_kij'
+	)
+	printbr(dt_d_def)
+
+	dt_d_def = dt_d_def:substIndex(Qll_def)	
+	printbr(dt_d_def)
+	
+	dt_d_def = dt_d_def()
+	printbr(dt_d_def)
+
+	dt_d_def = dt_d_def
+		:substIndex(dalpha_for_a)()
+		:substIndex(dbeta_for_b)()
+		:substIndex(dgamma_for_d)()
+		-- splitOffDerivIndexes isn't fully compatible with substIndex ...
+		:substIndex(dbeta_for_b'_,k'())
+		:substIndex(dgamma_for_d'_,l'())
+		:symmetrizeIndexes(d, {1,4})()
+	printbr(dt_d_def)
+	defs:insert(dt_d_def)
+
+	local xi = var'\\xi'
+	dt_K_def = K'_ij,t':eq(
+		(beta'^k' * K'_ij')'_,k'
+	
+		-- (alpha lambda^k_ij),k
+		- (alpha * (
+			d'^k_ij' 
+			- frac(1,2) * (1 + xi) * (d'_ij^k' + d'_ji^k')
+		))'_,k'
+		- (alpha * (
+			frac(1,2) * (
+				a'_j'
+				+ d'_jl^l'
+				- (1 - xi) * d'^l_lj'
+				- 2 * Z'_j'
+			)
+		))'_,i'
+		- (alpha * (
+			frac(1,2) * (
+				a'_i'
+				+ d'_il^l'
+				- (1 - xi) * d'^l_li'
+				- 2 * Z'_i'
+			)
+		))'_,j'
+		
+		-- 2005 Bona et al eqn A.1 of S(K_ij) 
+		- K'_ij' * b'^k_k'
+		+ K'_ik' * b'^k_j'
+		+ K'_jk' * b'^k_i'
+		+ alpha * (
+			frac(1,2) * (1 + xi) * (
+				-a'_k' * Gamma'^k_ij'
+				+ frac(1,2) * (
+					a'_i' * d'_jk^k'
+					+ a'_j' * d'_ik^k'
+				)
+			)
+			+ frac(1,2) * (1 - xi) * (
+				a'_k' * d'^k_ij'
+				- frac(1,2) * (
+					a'_j' * (2 * d'^k_ki' - d'_ik^k')
+					+ a'_i' * (2 * d'^k_kj' - d'_jk^k')
+				)
+				+ 2 * (
+					d'_ir^m' * d'^r_mj'
+					+ d'_jr^m' * d'^r_mi'
+				)
+				- 2 * d'^l_lk' * (d'_ij^k' + d'_ji^k')
+			)
+			+ (d'_kl^l' + a'_k' - 2 * Z'_k') * Gamma'^k_ij'
+			- Gamma'^k_mj' * Gamma'^m_ki'
+			- (a'_i' * Z'_j' + a'_j' * Z'_i')
+			+ 2 * K'^k_i' * K'_kj'
+			+ (K'^k_k' - 2 * Theta) * K'_ij'
+		)
+		-- stress-energy terms	
+		+ 4 * pi * alpha * (gamma'_ij' * (S - rho) - 2 * S'_ij')
+	)
+	printbr(dt_K_def)
+
+	-- do this before simplify, or splitOffDerivIndexes before this
+	dt_K_def = dt_K_def
+		:replaceIndex(d'^i_jk', gamma'^il' * d'_ljk')
+		:replaceIndex(d'_ij^k', d'_ijl' * gamma'^lk')
+
+	dt_K_def = dt_K_def()
+	printbr(dt_K_def)
+
+	dt_K_def = dt_K_def
+		:replaceIndex(xi'_,k', 0)
+		:simplify()
+		:substIndex(dgammaU_for_d)
+		:substIndex(dgamma_for_d)
+		:substIndex(conn_for_d)
+		:substIndex(dalpha_for_a)
+		:substIndex(dbeta_for_b)
+		:substIndex(conn_for_d)
+		:simplify()
+	printbr(dt_K_def)
+
+	-- TODO function to simplify gammas and deltas
+
+	defs:insert(dt_K_def)
+	
+	
+	local dt_Theta_def = Theta'_,t':eq(
+		(beta'^k' * Theta)'_,k'
+		- (alpha * (d'^kj_j' - d'_j^jk' - Z'^k'))'_,k'
+		-- 2005 Bona et al eqn A.3 of S(Theta)
+		-Theta * b'^k_k'
+		+ alpha/2 * (
+			2 * a'_k' * (d'^kj_j' - d'_j^jk' - 2 * Z'^k')
+			+ d'_k^rs' * Gamma'^k_rs'
+			- d'^kj_j' * (d'_kl^l' - 2 * Z'_k')
+			- K'^k_r' * K'^r_k'
+			+ K'^k_k' * (K'^l_l' - 2 * Theta)
+		)
+		- 8 * pi * alpha * rho
+	)
+	printbr(dt_Theta_def) 
+	
+	dt_Theta_def = dt_Theta_def
+		:replaceIndex(Z'^i', gamma'^ij' * Z'_j')
+		:replaceIndex(d'^i_jk', gamma'^il' * d'_ljk')
+		:replaceIndex(d'^ij_k', gamma'^il' * gamma'^jm' * d'_lmk')
+		:replaceIndex(d'_i^jk', d'_ilm' * gamma'^lj' * gamma'^mk')
+		:replaceIndex(d'_ij^k', d'_ijl' * gamma'^lk')
+
+	dt_Theta_def = dt_Theta_def()
+	printbr(dt_Theta_def)
+
+	dt_Theta_def = dt_Theta_def
+		:simplify()
+		:substIndex(dgammaU_for_d)
+		:substIndex(dgamma_for_d)
+		:substIndex(conn_for_d)
+		:substIndex(dalpha_for_a)
+		:substIndex(dbeta_for_b)
+		:substIndex(conn_for_d)
+		:simplify()
+	printbr(dt_Theta_def)
+
+	defs:insert(dt_Theta_def)
+
+	local dt_Z_def = Z'_i,t':eq(
+		(beta'^k' * Z'_i')'_,k'
+		+ (alpha * K'^k_i')'_,k'
+		- (alpha * (K'^k_k' - Theta))'_,i'
+		-- 2005 Bona et al eqn A.2 S(Z_i)
+		- Z'_i' * b'^k_k'
+		+ Z'_k' * b'^k_i'
+		+ alpha * (
+			a'_i' * (K'^k_k' - 2 * Theta)
+			- a'_k' * K'^k_i'
+			- K'^k_r' * Gamma'^r_ki'
+			+ K'^k_i' * (d'kl^l' - 2 * Z'_k')
+		)
+		- 8 * pi * alpha * S'_i'
+	)
+	printbr(dt_Z_def)
+
+	printbr(dt_Z_def) 
+	
+	dt_Z_def = dt_Z_def
+		:replaceIndex(K'^i_j', gamma'^ik' * K'_kj')
+		:replaceIndex(d'^i_jk', gamma'^il' * d'_ljk')
+		:replaceIndex(d'_ij^k', d'_ijl' * gamma'^lk')
+
+	dt_Z_def = dt_Z_def()
+	printbr(dt_Z_def)
+
+	dt_Z_def = dt_Z_def
+		:simplify()
+		:substIndex(dgammaU_for_d)
+		:substIndex(dgamma_for_d)
+		:substIndex(conn_for_d)
+		:substIndex(dalpha_for_a)
+		:substIndex(dbeta_for_b)
+		:substIndex(conn_for_d)
+		:simplify()
+	printbr(dt_Z_def)
+
+
+	defs:insert(dt_Z_def)
+
+	--]]
 
 else
 
@@ -587,6 +897,9 @@ end)
 local aVars = Tensor('_k', function(k)
 	return var('a_'..xs[k].name, depvars)
 end)
+local bVars = Tensor('^i_j', function(i,j)
+	return var('{b^'..xs[i].name..'}_'..xs[j].name, depvars)
+end)
 
 local dVars = Tensor('_kij', function(k,i,j)
 	if i > j then i,j = j,i end 
@@ -623,15 +936,17 @@ for _,def in ipairs(defs) do
 				if TensorRef.is(expr)
 				and expr[1] == gamma
 				then
-					for i=2,#expr do
-						assert(not expr[i].lower, "found a gamma_ij term")
+					for i=4,#expr do	-- expr[1] is the variable, 2,3 are the ij indexes, so start at 4 for derivatives
+						assert(not expr[i].lower, "found a gamma_ij term: "..tostring(expr))
 					end
 					return TensorRef(gammaUVars, table.unpack(expr, 2))
 				end
 			end)
 			:replace(a, aVars)
+			:replace(b, bVars)
 			:replace(d, dVars)
 			:replace(K, KVars)
+			:replace(Theta',t', Theta:diff(t))
 		if useV then 
 			def = def:replace(V, VVars)
 		end
@@ -640,6 +955,7 @@ for _,def in ipairs(defs) do
 		end
 		if useZ4 then
 			def = def:replace(Theta'_,k', Tensor('_k', function(k) return Theta:diff(xs[k]) end))
+			def = def:replace(Theta'_,i', Tensor('_i', function(k) return Theta:diff(xs[k]) end))
 			def = def:replace(Z, ZVars)
 		end
 		def = def()
@@ -701,7 +1017,7 @@ for _,def in ipairs(defs) do
 end
 
 local allDxs = allLhs:map(function(lhs)
-	assert(diff.is(lhs))
+	assert(diff.is(lhs), "somehow got a non-derivative on the lhs: "..tostring(lhs))
 	assert(lhs[2] == t)
 	assert(#lhs == 2)
 	return diff(lhs[1], x)
@@ -730,11 +1046,10 @@ printbr(sofar)
 printbr(reduce)
 --]]
 
-if not useV and not useGamma and not use1D then
+if not useV and not useGamma and not useZ4 and not use1D then
 	io.stderr:write"I'm not going to eigendecompose without useV or useGamma set\n"
 	os.exit()
 end
-os.exit()
 
 --[[
 here's where I need polynomial factoring
@@ -766,11 +1081,20 @@ local lambdas = use1D and table{
 } or table{
 	-- the more multiplicity, the easier it is to factor
 	-- also, without useVConstraints, the 1-multiplicity eigenvectors take forever and the expressions get huge and take forever
+	-- [[
+	0,
+	-alpha * sqrt(gammaUxx),
+	alpha * sqrt(gammaUxx),
+	-alpha * sqrt(f * gammaUxx),
+	alpha * sqrt(f * gammaUxx),
+	--]]
+	--[[
 	-alpha * sqrt(f * gammaUxx),
 	-alpha * sqrt(gammaUxx),
 	0,
 	alpha * sqrt(gammaUxx),
 	alpha * sqrt(f * gammaUxx),
+	--]]
 }
 
 local evs = table()

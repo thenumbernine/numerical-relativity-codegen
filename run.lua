@@ -119,10 +119,10 @@ function NRCodeGen:init()
 	self.outputCode = outputCode
 	self.outputMethod = outputMethod
 
-	self.system = require 'adm-bona-masso'(self, false)	-- ADM, no shift
+	--self.system = require 'adm-bona-masso'(self, false)	-- ADM, no shift
 	--self.system = require 'adm-bona-masso'(self, true)	-- ADM with shift
 	--self.system = require 'fobssn'(self)
-	--self.system = require 'z4'(self)
+	self.system = require 'z4'(self)
 end
 
 local nrCodeGen = NRCodeGen()
@@ -280,6 +280,20 @@ for dir=1,3 do
 	end
 	--]]
 
+	-- [[
+	printbr('reconstruction of flux Jacobian')
+	local n = #eigenfields
+	local Lambdas = symmath.Matrix(range(n):map(function(i)
+		return range(n):map(function(j)
+			return i==j and eigenfields[i].lambda or 0
+		end)
+	end):unpack())
+
+	local A = (QR * Lambdas * QL)()
+	printbr( (tostring(A):gsub('0', '\\cdot')) )
+	printbr()
+	--]]
+
 	printbr('...done!')
 
 	-- save for later
@@ -392,18 +406,6 @@ else
 			printbr()
 		
 		
-			printbr('reconstruction of flux Jacobian')
-			local eigenfields = system:getEigenfields(dir)
-			local n = #eigenfields
-			local Lambdas = symmath.Matrix(range(n):map(function(i)
-				return range(n):map(function(j)
-					return i==j and eigenfields[i].lambda or 0
-				end)
-			end):unpack())
-		
-			local A = (QR * Lambdas * QL)()
-			printbr( (tostring(A):gsub('0', '\\cdot')) )
-			printbr()
 		end
 	end
 end
