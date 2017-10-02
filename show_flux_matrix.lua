@@ -11,20 +11,23 @@ TensorRef:pushRule'Prune/replacePartial'
 local textOutput = false
 local keepSourceTerms = false	-- this goes slow with 3D
 local use1D = false
-local useShift = false			-- whether to include beta^i_,t
-local useV = false				-- not needed with use1D
-local useGamma = false			-- exclusive to useV ... 
-local useZ4 = true
+local removeZeroRows = true		-- whether to keep variables whose dt rows are entirely zero
+local useShift = false		-- whether to include beta^i_,t
+-- these are all exclusive
+local useV = true				-- ADM Bona-Masso with V constraint.  Not needed with use1D
+local useGamma = false			-- ADM Bona-Masso with Gamma^i_,t . Exclusive to useV ... 
+local useZ4 = false				-- Z4.  TODO factor and substitute metric inverses better
 
 
 local t,x,y,z = vars('t','x','y','z')
 local xs = use1D and table{x} or table{x,y,z}
 
 
--- looking at all fluxes
---local depvars = table{t,x,y,z}
--- looking at the x dir only
-local depvars = table{t,x}
+local fluxdir = 1
+--local fluxdir = 2
+--local fluxdir = 3
+local fluxdirvar = xs[fluxdir]
+local depvars = table{t,fluxdirvar}
 
 
 
@@ -122,8 +125,16 @@ end
 new_printbr_file()
 
 
-local dt_beta_def
-local dt_B_def
+-- TODO start with EFE, apply Gauss-Codazzi-Ricci, then automatically recast all higher order derivatives as new variables of 1st derivatives
+printbr[[primitive $\partial_t$ defs]]
+
+local dt_alpha_def = alpha',t':eq( 
+	- alpha^2 * f * K'^i_i' 
+	+ alpha'_,i' * beta'^i' 
+)
+printbr(dt_alpha_def)
+
+local dt_beta_def, dt_B_def
 if useShift then
 	-- hyperbolic Gamma driver
 	-- 2008 Alcubierre eqns 4.3.31 & 4.3.32
@@ -169,18 +180,7 @@ if useShift then
 		)
 	)
 	printbr(dt_B_def)
-	os.exit()
 end
-
-
--- TODO start with EFE, apply Gauss-Codazzi-Ricci, then automatically recast all higher order derivatives as new variables of 1st derivatives
-printbr[[primitive $\partial_t$ defs]]
-
-local dt_alpha_def = alpha',t':eq( 
-	- alpha^2 * f * K'^i_i' 
-	+ alpha'_,i' * beta'^i' 
-)
-printbr(dt_alpha_def)
 
 local dt_gamma_def = gamma'_ij,t':eq( 
 	-2 * alpha * K'_ij' 
@@ -218,6 +218,20 @@ printbr(a_def)
 
 local dalpha_for_a = (a_def * alpha)():switch()
 printbr(dalpha_for_a)
+
+-- I'm flipping the order from Bona et al - they like partials, I like comma derivatives
+-- I think I've seen this with a 1/2 in front of it in some papers ...
+-- or should I call this 'b_for_dbeta' ?
+local b_def
+local dbeta_for_b
+
+if useShift then
+	b_def = b'^i_j':eq(beta'^i_,j')
+	printbr(b_def)
+
+	dbeta_for_b = b_def:solve(beta'^i_,j')
+	printbr(dbeta_for_b)
+end
 
 local d_def = d'_kij':eq(frac(1,2) * gamma'_ij,k')
 printbr(d_def)
@@ -297,7 +311,27 @@ R_for_d = R_for_d
 	:replace((gamma'^km' * d'_jlm' * gamma'^ln' * d'_ikn')(), gamma'^kp' * d'_jop' * gamma'^mo' * d'_ikm')()
 printbr(R_for_d)
 
-printbr[[time derivative of $a_k,t$]]
+printbr[[time derivative of $\alpha_{,t}$]]
+
+-- don't subst alpha,t ..
+dt_alpha_def = dt_alpha_def:subst(dalpha_for_a:reindex{i='k'})
+printbr(dt_alpha_def)
+
+printbr[[time derivative of $\gamma_{ij,t}$]]
+
+printbr(dt_gamma_def)
+
+-- don't use substIndex to preserve gamma_ij,t
+--dt_gamma_def = dt_gamma_def:substIndex(dgamma_for_d)
+dt_gamma_def = dt_gamma_def
+	:subst(dgamma_for_d)
+if useShift then
+	dt_gamma_def = dt_gamma_def
+		:substIndex(dbeta_for_b)
+end
+printbr(dt_gamma_def)
+
+printbr[[time derivative of $a_{k,t}$]]
 
 -- TODO splitDerivs
 local dt_a_def = a_def',t'()
@@ -336,6 +370,56 @@ dt_a_def = dt_a_def
 		2 * alpha * f * d'_k^ij' * K'_ij'
 	)
 printbr(dt_a_def)
+
+local dt_b_def
+if useShift then
+
+	printbr[[time derivative of ${\beta^i}_{,t}$]]
+
+	printbr(dt_beta_def)
+
+	-- can't use substIndex or it'll pick up the ,t
+	--dt_beta_def = dt_beta_def:substIndex(dbeta_for_b)
+	dt_beta_def = dt_beta_def:subst(dbeta_for_b:reindex{ki='ij'})
+	printbr(dt_beta_def)
+
+
+	printbr[[time derivative of ${b^i}_{j,t}$]]
+
+	dt_b_def = dt_beta_def',j'():reindex{ij='ji'}
+	printbr(dt_b_def)
+
+	dt_b_def = dt_b_def
+		:replace(beta'^k_,ti', beta'^k_,i'',t')
+		:substIndex(dbeta_for_b)
+	printbr(dt_b_def)
+	
+	printbr[[aux var $A^{ij}$]]
+	
+	local A_for_K_uu = A'^ij':eq( K'^ij' - frac(1,3) * gamma'^ij' * gamma'^kl' * K'_kl')
+	printbr(A_for_K_uu) 
+
+	-- TODO substIndex handle this -- but skip any upper/lower changes inside of comma derivatives
+	local A_for_K_ll = A'_ij':eq( K'_ij' - frac(1,3) * gamma'_ij' * gamma'^kl' * K'_kl')
+
+	printbr[[time derivative of ${B^i}_{,t}$]]
+
+	printbr(dt_B_def)
+
+	dt_B_def = dt_B_def()
+	printbr(dt_B_def)
+	
+	dt_B_def = dt_B_def
+		:substIndex(Gamma'^i':eq(Gamma'^i_jk' * gamma'^jk'))
+		:substIndex(conn_for_d)
+		:substIndex(A_for_K_uu)
+		:substIndex(A_for_K_ll)
+		:substIndex(dbeta_for_b)
+		:substIndex(dbeta_for_b',k'())
+		:substIndex(R_for_d)
+		:simplify()
+	printbr(dt_B_def)
+end
 
 printbr[[time derivative of $d_{kij,t}$]]
 
@@ -390,11 +474,20 @@ dt_K_def = dt_K_def()
 printbr(dt_K_def)
 
 local dsym_def = d'_ijk,l':eq(frac(1,2) * (d'_ijk,l' + d'_ljk,i'))
+--[[ substIndex works ... but replaces the replaced ...
 dt_K_def = dt_K_def
-	:subst(dsym_def:reindex{ijlk='ijkl'})
-	:subst(dsym_def:reindex{iklj='ijkl'})
-	:subst(dsym_def:reindex{jilk='ijkl'})
-	:subst(dsym_def:reindex{kijl='ijkl'})
+	:substIndex(dsym_def:reindex{ijlk='ijkl'})
+	:substIndex(dsym_def:reindex{iklj='ijkl'})
+	:substIndex(dsym_def:reindex{jilk='ijkl'})
+	:substIndex(dsym_def:reindex{kijl='ijkl'})
+--]]
+-- [[
+dt_K_def = dt_K_def
+	:subst(dsym_def:reindex{ijmk='ijkl'})
+	:subst(dsym_def:reindex{ikmj='ijkl'})
+	:subst(dsym_def:reindex{jimk='ijkl'})
+	:subst(dsym_def:reindex{kijm='ijkl'})
+--]]
 printbr(dt_K_def)
 
 
@@ -445,14 +538,6 @@ if useZ4 then
 
 	printbr'Z4 terms'
 
-	local dbeta_for_b 
-	if useShift then
-		dbeta_for_b = beta'^i_,j':eq(b'^i_j')	-- I'm flipping the order from Bona et al - they like partials, I like comma derivatives
-		printbr(dbeta_for_b)
-	else
-		dbeta_for_b = beta'^i_,j':eq(beta'^i_,j')
-	end
-
 	local dt_a_def = a'_i,t':eq(
 		(beta'^j' * a'_i')',j' 
 		- (alpha * f * K'^j_j' + beta'^j' * a'_j')'_,i' 
@@ -466,7 +551,12 @@ if useZ4 then
 	
 	dt_a_def = dt_a_def
 		:substIndex(dalpha_for_a)
-		:substIndex(dbeta_for_b)
+	
+	if useShift then
+		dt_a_def = dt_a_def:substIndex(dbeta_for_b)
+	end
+
+	dt_a_def = dt_a_def 
 		:splitOffDerivIndexes()
 		:replace(K'^j_j', gamma'^jk' * K'_jk')()
 		:substIndex(dgammaU_for_d)()
@@ -512,7 +602,13 @@ if useZ4 then
 		dt_b_def = dt_b_def
 			:substIndex(dgammaU_for_d)
 			:substIndex(dalpha_for_a)
-			:substIndex(dbeta_for_b)
+		
+		if useShift then
+			dt_b_def = dt_b_def
+				:substIndex(dbeta_for_b)
+		end
+		
+		dt_b_def = dt_b_def
 			:substIndex(dgamma_for_d)
 			
 			-- TODO relabel
@@ -550,10 +646,22 @@ if useZ4 then
 
 	dt_d_def = dt_d_def
 		:substIndex(dalpha_for_a)()
-		:substIndex(dbeta_for_b)()
+		
+	if useShift then	
+		dt_d_def = dt_d_def
+			:substIndex(dbeta_for_b)()
+	end
+
+	dt_d_def = dt_d_def
 		:substIndex(dgamma_for_d)()
 		-- splitOffDerivIndexes isn't fully compatible with substIndex ...
-		:substIndex(dbeta_for_b'_,k'())
+	
+	if useShift then
+		dt_d_def = dt_d_def
+			:substIndex(dbeta_for_b'_,k'())
+	end
+
+	dt_d_def = dt_d_def
 		:substIndex(dgamma_for_d'_,l'())
 		:symmetrizeIndexes(d, {1,4})()
 	printbr(dt_d_def)
@@ -635,7 +743,13 @@ if useZ4 then
 		:substIndex(dgamma_for_d)
 		:substIndex(conn_for_d)
 		:substIndex(dalpha_for_a)
-		:substIndex(dbeta_for_b)
+	
+	if useShift then
+		dt_K_def = dt_K_def
+			:substIndex(dbeta_for_b)
+	end
+
+	dt_K_def = dt_K_def
 		:substIndex(conn_for_d)
 		:simplify()
 	printbr(dt_K_def)
@@ -677,7 +791,13 @@ if useZ4 then
 		:substIndex(dgamma_for_d)
 		:substIndex(conn_for_d)
 		:substIndex(dalpha_for_a)
-		:substIndex(dbeta_for_b)
+
+	if useShift then
+		dt_Theta_def = dt_Theta_def
+			:substIndex(dbeta_for_b)
+	end
+
+	dt_Theta_def = dt_Theta_def
 		:substIndex(conn_for_d)
 		:simplify()
 	printbr(dt_Theta_def)
@@ -717,7 +837,13 @@ if useZ4 then
 		:substIndex(dgamma_for_d)
 		:substIndex(conn_for_d)
 		:substIndex(dalpha_for_a)
-		:substIndex(dbeta_for_b)
+
+	if useShift then
+		dt_Z_def = dt_Z_def
+			:substIndex(dbeta_for_b)
+	end
+
+	dt_Z_def = dt_Z_def
 		:substIndex(conn_for_d)
 		:simplify()
 	printbr(dt_Z_def)
@@ -729,12 +855,12 @@ if useZ4 then
 
 else
 
-	defs:insert( dt_alpha_def )
-
-	-- TODO hyp gamma driver beta in terms of B
-
+	defs:insert(dt_alpha_def)
+	defs:insert(dt_beta_def)
 	defs:insert(dt_gamma_def)
 	defs:insert(dt_a_def)
+	defs:insert(dt_b_def)
+	defs:insert(dt_B_def)
 	defs:insert(dt_d_def)
 	
 	if useV then
@@ -834,19 +960,21 @@ for _,def in ipairs(defs) do
 	printbr(def)
 end
 
-for i=1,#defs do
-	local lhs, rhs = table.unpack(defs[i])
-	
-	rhs = rhs:map(function(expr)
-		if TensorRef.is(expr) and expr[1] == beta then return 0 end
-	end)()
-	rhs = simplify(rhs)
-	
-	defs[i] = lhs:eq(rhs)
-end
-printbr('neglecting shift')
-for _,def in ipairs(defs) do
-	printbr(def)
+if not useShift then
+	for i=1,#defs do
+		local lhs, rhs = table.unpack(defs[i])
+		
+		rhs = rhs:map(function(expr)
+			if TensorRef.is(expr) and expr[1] == beta then return 0 end
+		end)()
+		rhs = simplify(rhs)
+		
+		defs[i] = lhs:eq(rhs)
+	end
+	printbr('neglecting shift')
+	for _,def in ipairs(defs) do
+		printbr(def)
+	end
 end
 
 if not keepSourceTerms then
@@ -894,6 +1022,11 @@ local gammaUVars = Tensor('^ij', function(i,j)
 	return var('\\gamma^{'..xs[i].name..xs[j].name..'}', depvars)
 end)
 
+local gammaLVars = Tensor('_ij', function(i,j) 
+	if i > j then i,j = j,i end 
+	return var('\\gamma_{'..xs[i].name..xs[j].name..'}', depvars)
+end)
+
 local aVars = Tensor('_k', function(k)
 	return var('a_'..xs[k].name, depvars)
 end)
@@ -920,7 +1053,27 @@ local ZVars = Tensor('_k', function(k)
 	return var('Z_'..xs[k].name, depvars)
 end)
 
--- by this ponit we're going to switch to expanded variables
+-- TODO get 3x3 inverse to work automatically.  
+local det_gamma_times_gammaUInv = Matrix(
+	{
+		gammaUVars[2][2] * gammaUVars[3][3] - gammaUVars[2][3]^2,
+		gammaUVars[1][3] * gammaUVars[2][3] - gammaUVars[1][2] * gammaUVars[3][3],
+		gammaUVars[1][2] * gammaUVars[2][3] - gammaUVars[1][3] * gammaUVars[2][2],
+	},
+	{
+		gammaUVars[1][3] * gammaUVars[2][3] - gammaUVars[1][2] * gammaUVars[3][3],
+		gammaUVars[1][1] * gammaUVars[3][3] - gammaUVars[1][3]^2,
+		gammaUVars[1][2] * gammaUVars[1][3] - gammaUVars[1][1] * gammaUVars[2][3],
+	},
+	{
+		gammaUVars[1][2] * gammaUVars[2][3] - gammaUVars[1][3] * gammaUVars[2][2],
+		gammaUVars[1][2] * gammaUVars[1][3] - gammaUVars[1][1] * gammaUVars[2][3],
+		gammaUVars[1][1] * gammaUVars[2][2] - gammaUVars[1][2]^2,
+	}
+)
+
+
+-- by this point we're going to switch to expanded variables
 -- so defining a metric is safe
 Tensor.metric(gammaVars, gammaUVars)
 
@@ -930,7 +1083,8 @@ local allRhs = table()
 local defsForLhs = table()	-- check to make sure symmetric terms have equal rhs's.  key by the lhs
 for _,def in ipairs(defs) do
 	local var = def:lhs()[1]
-	if var == alpha or var == gamma then
+	if var == alpha or var == gamma then	-- these should be zero anyways ...
+		assert(def:rhs() == Constant(0), "expected zero")
 	else
 		def = def:map(function(expr)
 				if TensorRef.is(expr)
@@ -963,7 +1117,7 @@ for _,def in ipairs(defs) do
 		local lhs, rhs = table.unpack(def)
 		if not lhs.dim then
 			-- then it's already a constant
-			-- TODO maybe don't uatomatically convert x,t into x:diff(t) ... maybe make a separate function for that
+			-- TODO maybe don't automatically convert x,t into x:diff(t) ... maybe make a separate function for that
 			--[[
 			printbr'failed to find lhs.dim'
 			printbr(tostring(lhs))
@@ -975,6 +1129,8 @@ for _,def in ipairs(defs) do
 
 			-- remove the ,t dimension
 			lhs = Tensor(table.sub(lhs.variance, 1, #dim-1), function(...)
+				local lhs_i = lhs[{...}][1]
+				assert(Expression.is(lhs_i), "expected an Expression here, but got "..tostring(lhs_i).." from "..tostring(lhs))
 				return lhs[{...}][1]
 			end)
 
@@ -990,7 +1146,10 @@ for _,def in ipairs(defs) do
 			local lhs, rhs = table.unpack(eqn)
 			local lhsstr = tostring(lhs)
 			rhs = simplify(rhs)
-			if defsForLhs[lhsstr] then
+
+			if removeZeroRows and rhs == Constant(0) then
+				printbr('removing zero row '..lhs:eq(rhs))
+			elseif defsForLhs[lhsstr] then
 				if rhs ~= defsForLhs[lhsstr] then
 					printbr'mismatch'
 					printbr(lhs:eq(rhs))
@@ -1020,10 +1179,17 @@ local allDxs = allLhs:map(function(lhs)
 	assert(diff.is(lhs), "somehow got a non-derivative on the lhs: "..tostring(lhs))
 	assert(lhs[2] == t)
 	assert(#lhs == 2)
-	return diff(lhs[1], x)
+	return diff(lhs[1], fluxdirvar)
 end)
 local A, b = factorLinearSystem(allRhs, allDxs)
 A = (-A)()	-- change from U,t = A U,x + b into U,t + A U,x = b
+
+--[[ simplify inverses
+A = A
+	:replace((gammaUVars[1][1] * gammaUVars[2][2] - gammaUVars[1][2]^2)(), gamma * gammaLVars[3][3])
+	:replace((gammaUVars[1][1] * gammaUVars[2][3] - gammaUVars[1][2] * gammaUVars[1][3])(), gamma * gammaLVars[2][3])
+	:replace((gammaUVars[1][1] * gammaUVars[3][3] - gammaUVars[1][3]^2)(), gamma * gammaLVars[3][3])
+--]]
 
 local dts = Matrix(allLhs):transpose()
 local dxs = Matrix(allDxs):transpose()
@@ -1050,6 +1216,7 @@ if not useV and not useGamma and not useZ4 and not use1D then
 	io.stderr:write"I'm not going to eigendecompose without useV or useGamma set\n"
 	os.exit()
 end
+os.exit()
 
 --[[
 here's where I need polynomial factoring
@@ -1069,31 +1236,33 @@ roots are:
 --]]
 
 -- try solving it for one particular eigenvector/value
-local gammaUxx = gammaUVars[1][1]
+local gammaUjj = gammaUVars[fluxdir][fluxdir]
 -- the eigenvalues are the same for useV on or off
 -- but the multiplicities are different: 
 -- with useV off we get 19, 3, 3, 1, 1
 -- with useV on we get 18, 5, 5, 1, 1
 local lambdas = use1D and table{
-	-alpha * sqrt(f * gammaUxx),
+	-alpha * sqrt(f * gammaUjj),
 	0,
-	alpha * sqrt(f * gammaUxx),
+	alpha * sqrt(f * gammaUjj),
 } or table{
 	-- the more multiplicity, the easier it is to factor
 	-- also, without useVConstraints, the 1-multiplicity eigenvectors take forever and the expressions get huge and take forever
 	-- [[
+	-alpha * sqrt(f * gammaUjj),
+	-alpha * sqrt(gammaUjj),
 	0,
-	-alpha * sqrt(gammaUxx),
-	alpha * sqrt(gammaUxx),
-	-alpha * sqrt(f * gammaUxx),
-	alpha * sqrt(f * gammaUxx),
+	alpha * sqrt(gammaUjj),
+	alpha * sqrt(f * gammaUjj),
 	--]]
+	
+	
 	--[[
-	-alpha * sqrt(f * gammaUxx),
-	-alpha * sqrt(gammaUxx),
 	0,
-	alpha * sqrt(gammaUxx),
-	alpha * sqrt(f * gammaUxx),
+	-alpha * sqrt(gammaUjj),
+	alpha * sqrt(gammaUjj),
+	-alpha * sqrt(f * gammaUjj),
+	alpha * sqrt(f * gammaUjj),
 	--]]
 }
 
@@ -1158,6 +1327,17 @@ io.stderr:write('finding eigenvector of eigenvalue '..tostring(lambda)..'\n') io
 		end
 	end
 	ev = ev()
+	
+	--[[ try to remove any inverses ...
+	for i=1,3 do
+		for j=1,3 do
+			ev = ev:replace(det_gamma_times_gammaUInv[i][j](), gamma * gammaLVars[i][j])
+			-- this doesn't simplify like I want it to ...
+			ev = ev:replace((-det_gamma_times_gammaUInv[i][j])(), -gamma * gammaLVars[i][j])
+		end
+	end
+	--]]
+
 	printbr('eigenvector:')
 	printbr(ev)
 	evs:insert(ev)
