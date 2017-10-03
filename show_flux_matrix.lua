@@ -85,6 +85,9 @@ local m = var'm'
 Tensor.coords{
 	{variables=xs},
 	{variables={t}, symbols='t'},
+	{variables={x}, symbols='x'},
+	{variables={y}, symbols='y'},
+	{variables={z}, symbols='z'},
 }
 
 local function simplify(expr)
@@ -123,25 +126,6 @@ do
 end
 
 new_printbr_file()
-
-
---[=[ works here, crashes down there
-local beta = Tensor('^i', function(i)
-	return var('\\beta^'..xs[i].name)
-end)
-local B = Tensor('^i', function(i)
-	return var('B^'..xs[i].name, depvars)
-end)
-local b = Tensor('^i_j', function(i,j)
-	return var('{b^'..xs[i].name..'}_'..xs[j].name, depvars)
-end)
-local def = b'^k_i,t':eq( B'^k_,i' + beta'^j' * b'^k_j,i')
-printbr(def)
-def = def()
-printbr(def)
-os.exit()
---]=]
-
 
 
 
@@ -437,21 +421,21 @@ if useShift then
 	printbr(dt_B_def)
 	
 	dt_B_def = dt_B_def
-		:substIndex(conn_for_d)
-	dt_B_def = dt_B_def
 		:substIndex(Gamma'^i':eq(Gamma'^i_jk' * gamma'^jk'))
-	dt_B_def = dt_B_def
+		:substIndex(conn_for_d)
 		:substIndex(A_for_K_uu)
-	dt_B_def = dt_B_def
 		:substIndex(A_for_K_ll)
-	dt_B_def = dt_B_def
 		:substIndex(dbeta_for_b)
-	dt_B_def = dt_B_def
 		:substIndex(dbeta_for_b',k'())
-	dt_B_def = dt_B_def
 		:substIndex(R_for_d)
-	dt_B_def = dt_B_def
 		:simplify()
+
+	printbr(dt_B_def)
+
+	-- TODO automatic relabel indexes
+	-- TODO prevent substIndex from using indexes already reserved for other coordinate sets
+	dt_B_def = dt_B_def:symmetrizeIndexes(gamma, {1,2})()
+	dt_B_def = dt_B_def:symmetrizeIndexes(d, {2,3})()
 	printbr(dt_B_def)
 end
 
@@ -476,7 +460,10 @@ dt_d_def = dt_d_def
 	:subst(dgamma_for_d:reindex{ilk='ijk'})
 	:subst(dgamma_for_d:reindex{ljk='ijk'})
 	:subst(dalpha_for_a)
-	:simplify()
+if useShift then
+	dt_d_def = dt_d_def:substIndex(dbeta_for_b)
+end	
+dt_d_def = dt_d_def:simplify()
 printbr(dt_d_def)
 
 printbr[[$K_{ij,t}$ with hyperbolic terms]]
@@ -522,6 +509,9 @@ dt_K_def = dt_K_def
 	:subst(dsym_def:reindex{jimk='ijkl'})
 	:subst(dsym_def:reindex{kijm='ijkl'})
 --]]
+if useShift then
+	dt_K_def = dt_K_def:substIndex(dbeta_for_b)
+end	
 printbr(dt_K_def)
 
 
@@ -898,7 +888,8 @@ else
 	defs:insert(dt_d_def)
 	
 	if useV then
-		defs:insert( K'_ij,t':eq(
+		-- TODO just replace this
+		dt_K_def = K'_ij,t':eq(
 			- frac(1,2) * alpha * a'_i,j'
 			- frac(1,2) * alpha * a'_j,i'
 			+ alpha * (
@@ -926,7 +917,11 @@ else
 			+ K'_ij,k' * beta'^k'
 			+ K'_kj' * beta'^k_,i'
 			+ K'_ik' * beta'^k_,j'
-		) )
+		)
+		if useShift then
+			dt_K_def = dt_K_def:substIndex(dbeta_for_b)
+		end
+		defs:insert(dt_K_def)
 		defs:insert( V'_k,t':eq(
 			-- TODO there are some source terms that should go here.
 			-- the eigenvectors that the Alcubierre 2008 book has only source terms, no first derivatives
@@ -1235,22 +1230,41 @@ local allDxs = allLhs:map(function(lhs)
 	return diff(lhs[1], fluxdirvar)
 end)
 local A, b = factorLinearSystem(allRhs, allDxs)
+local n = #A
+
 A = (-A)()	-- change from U,t = A U,x + b into U,t + A U,x = b
 
+if useShift then
+	A = (A + betaVars[fluxdir] * Matrix.identity(n))()		-- remove diagonals
+end
+
+
+-- simplify the flux jacobian matrix
 --[[ simplify inverses
 A = A
 	:replace((gammaUVars[1][1] * gammaUVars[2][2] - gammaUVars[1][2]^2)(), gamma * gammaLVars[3][3])
 	:replace((gammaUVars[1][1] * gammaUVars[2][3] - gammaUVars[1][2] * gammaUVars[1][3])(), gamma * gammaLVars[2][3])
 	:replace((gammaUVars[1][1] * gammaUVars[3][3] - gammaUVars[1][3]^2)(), gamma * gammaLVars[3][3])
 --]]
+do
+	local gammaLU = (gammaLVars'_ik' * gammaUVars'^kj')()
+	local gammaLL = (gammaLVars'_ik' * gammaLU'_j^k')()
+	for i=1,3 do
+		for j=1,3 do
+			A = A:replace(gammaLL[i][j], gammaLVars[i][j])
+		end
+	end
+end
 
 local dts = Matrix(allLhs):transpose()
 local dxs = Matrix(allDxs):transpose()
-printbr((dts + A * dxs):eq(b))
-
+if not useShift then
+	printbr((dts + A * dxs):eq(b))
+else
+	printbr((dts + (A - betaVars[fluxdir] * Matrix.identity(n)) * dxs):eq(b))
+end
 
 local lambda = var'\\lambda'
-local n = #A
 local charpoly  = (A - Matrix.identity(n) * lambda):determinant()
 printbr'characteristic polynomial:'
 printbr(charpoly)
@@ -1301,7 +1315,7 @@ local lambdas = use1D and table{
 } or table{
 	-- the more multiplicity, the easier it is to factor
 	-- also, without useVConstraints, the 1-multiplicity eigenvectors take forever and the expressions get huge and take forever
-	-- [[
+	--[[
 	-alpha * sqrt(f * gammaUjj),
 	-alpha * sqrt(gammaUjj),
 	0,
@@ -1310,7 +1324,7 @@ local lambdas = use1D and table{
 	--]]
 	
 	
-	--[[
+	-- [[
 	0,
 	-alpha * sqrt(gammaUjj),
 	alpha * sqrt(gammaUjj),
