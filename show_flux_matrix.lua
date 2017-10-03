@@ -12,7 +12,7 @@ local textOutput = false
 local keepSourceTerms = false	-- this goes slow with 3D
 local use1D = false
 local removeZeroRows = true		-- whether to keep variables whose dt rows are entirely zero
-local useShift = false		-- whether to include beta^i_,t
+local useShift = true			-- whether to include beta^i_,t
 -- these are all exclusive
 local useV = true				-- ADM Bona-Masso with V constraint.  Not needed with use1D
 local useGamma = false			-- ADM Bona-Masso with Gamma^i_,t . Exclusive to useV ... 
@@ -125,6 +125,26 @@ end
 new_printbr_file()
 
 
+--[=[ works here, crashes down there
+local beta = Tensor('^i', function(i)
+	return var('\\beta^'..xs[i].name)
+end)
+local B = Tensor('^i', function(i)
+	return var('B^'..xs[i].name, depvars)
+end)
+local b = Tensor('^i_j', function(i,j)
+	return var('{b^'..xs[i].name..'}_'..xs[j].name, depvars)
+end)
+local def = b'^k_i,t':eq( B'^k_,i' + beta'^j' * b'^k_j,i')
+printbr(def)
+def = def()
+printbr(def)
+os.exit()
+--]=]
+
+
+
+
 -- TODO start with EFE, apply Gauss-Codazzi-Ricci, then automatically recast all higher order derivatives as new variables of 1st derivatives
 printbr[[primitive $\partial_t$ defs]]
 
@@ -150,13 +170,13 @@ if useShift then
 		-- Lie derivative
 		beta'^k' * B'^i_,k'
 		-- eq
-		+ alpha^2 * xi * B'^i' * (
+		+ alpha^2 * xi * (
 			-- 2nd derivs
 			gamma'^jk' * beta'^i_,jk'
 			+ frac(1,3) * gamma'^ik' * beta'^j_,jk'
 			-- beta derivs
-			+ 2 * gamma'^jk' * Gamma'^i_lj' *  beta'^l_,k'
-			+ frac(1,3) * gamma'^ik' * Gamma'^j_lj' 'beta^l_,k'
+			+ 2 * gamma'^jk' * Gamma'^i_lj' * beta'^l_,k'
+			+ frac(1,3) * gamma'^ik' * Gamma'^j_lj' * beta'^l_,k'
 			- Gamma'^l' * beta'^i_,l'
 			-- 1st order derivs
 			+ (gamma'^im' * gamma'^jk' + frac(1,3) * gamma'^ik' * gamma'^jm') * (d'_jlm,k' + d'_ljm,k' - d'_mlj,k') * beta'^l'
@@ -371,6 +391,11 @@ dt_a_def = dt_a_def
 	)
 printbr(dt_a_def)
 
+if useShift then
+	dt_a_def = dt_a_def:substIndex(dbeta_for_b)
+	printbr(dt_a_def)
+end
+
 local dt_b_def
 if useShift then
 
@@ -392,6 +417,8 @@ if useShift then
 	dt_b_def = dt_b_def
 		:replace(beta'^k_,ti', beta'^k_,i'',t')
 		:substIndex(dbeta_for_b)
+		-- hmm, without this, we have problems down when splitting pdes off
+		:simplify()
 	printbr(dt_b_def)
 	
 	printbr[[aux var $A^{ij}$]]
@@ -410,13 +437,20 @@ if useShift then
 	printbr(dt_B_def)
 	
 	dt_B_def = dt_B_def
-		:substIndex(Gamma'^i':eq(Gamma'^i_jk' * gamma'^jk'))
 		:substIndex(conn_for_d)
+	dt_B_def = dt_B_def
+		:substIndex(Gamma'^i':eq(Gamma'^i_jk' * gamma'^jk'))
+	dt_B_def = dt_B_def
 		:substIndex(A_for_K_uu)
+	dt_B_def = dt_B_def
 		:substIndex(A_for_K_ll)
+	dt_B_def = dt_B_def
 		:substIndex(dbeta_for_b)
+	dt_B_def = dt_B_def
 		:substIndex(dbeta_for_b',k'())
+	dt_B_def = dt_B_def
 		:substIndex(R_for_d)
+	dt_B_def = dt_B_def
 		:simplify()
 	printbr(dt_B_def)
 end
@@ -1011,6 +1045,9 @@ if not keepSourceTerms then
 	end
 end
 
+local betaVars = Tensor('^i', function(i)
+	return var('\\beta^'..xs[i].name)
+end)
 
 local gammaVars = Tensor('_ij', function(i,j) 
 	if i > j then i,j = j,i end 
@@ -1032,6 +1069,9 @@ local aVars = Tensor('_k', function(k)
 end)
 local bVars = Tensor('^i_j', function(i,j)
 	return var('{b^'..xs[i].name..'}_'..xs[j].name, depvars)
+end)
+local BVars = Tensor('^i', function(i)
+	return var('B^'..xs[i].name, depvars)
 end)
 
 local dVars = Tensor('_kij', function(k,i,j)
@@ -1083,13 +1123,20 @@ local allRhs = table()
 local defsForLhs = table()	-- check to make sure symmetric terms have equal rhs's.  key by the lhs
 for _,def in ipairs(defs) do
 	local var = def:lhs()[1]
-	if var == alpha or var == gamma then	-- these should be zero anyways ...
+	
+	-- these should be zero anyways ...
+	if var == alpha 
+	or var == beta 
+	or var == gamma 
+	then	
 		assert(def:rhs() == Constant(0), "expected zero")
 	else
-		def = def:map(function(expr)
+		def = def
+			:map(function(expr)
 				if TensorRef.is(expr)
 				and expr[1] == gamma
 				then
+					-- warn if there are any gamma^ij_,k...
 					for i=4,#expr do	-- expr[1] is the variable, 2,3 are the ij indexes, so start at 4 for derivatives
 						assert(not expr[i].lower, "found a gamma_ij term: "..tostring(expr))
 					end
@@ -1097,10 +1144,16 @@ for _,def in ipairs(defs) do
 				end
 			end)
 			:replace(a, aVars)
-			:replace(b, bVars)
 			:replace(d, dVars)
 			:replace(K, KVars)
 			:replace(Theta',t', Theta:diff(t))
+		
+		if useShift then
+			def = def
+				:replace(beta, betaVars)
+				:replace(b, bVars)
+				:replace(B, BVars)
+		end
 		if useV then 
 			def = def:replace(V, VVars)
 		end
