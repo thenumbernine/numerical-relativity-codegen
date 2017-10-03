@@ -12,11 +12,11 @@ local textOutput = false
 local keepSourceTerms = false	-- this goes slow with 3D
 local use1D = false
 local removeZeroRows = true		-- whether to keep variables whose dt rows are entirely zero
-local useShift = true			-- whether to include beta^i_,t
+local useShift = false			-- whether to include beta^i_,t
 -- these are all exclusive
-local useV = true				-- ADM Bona-Masso with V constraint.  Not needed with use1D
+local useV = false				-- ADM Bona-Masso with V constraint.  Not needed with use1D
 local useGamma = false			-- ADM Bona-Masso with Gamma^i_,t . Exclusive to useV ... 
-local useZ4 = false				-- Z4.  TODO factor and substitute metric inverses better
+local useZ4 = true				-- Z4.  TODO factor and substitute metric inverses better
 
 
 local t,x,y,z = vars('t','x','y','z')
@@ -126,7 +126,6 @@ do
 end
 
 new_printbr_file()
-
 
 
 -- TODO start with EFE, apply Gauss-Codazzi-Ricci, then automatically recast all higher order derivatives as new variables of 1st derivatives
@@ -307,12 +306,10 @@ R_for_d = R_for_d
 	:symmetrizeIndexes(d, {1,4})()
 printbr(R_for_d)
 
-R_for_d = R_for_d
-	:replace((gamma'^km' * d'_jlm' * gamma'^ln' * d'_kin')(), gamma'^km' * d'_jlm' * gamma'^ln' * d'_nik')()
-	:replace((gamma'^km' * d'_ljm' * gamma'^ln' * d'_ikn')(), gamma'^km' * d'_mjl' * gamma'^ln' * d'_ikn')()
-	:replace((gamma'^km' * d'_ljm' * gamma'^ln' * d'_kin')(), gamma'^km' * d'_mjl' * gamma'^ln' * d'_nik')()
-	:replace((gamma'^km' * d'_ljm' * gamma'^ln' * d'_nik')(), gamma'^km' * d'_mjl' * gamma'^ln' * d'_kin')()
-	:replace((gamma'^km' * d'_jlm' * gamma'^ln' * d'_ikn')(), gamma'^kp' * d'_jop' * gamma'^mo' * d'_ikm')()
+R_for_d = R_for_d:tidyIndexes()()
+	:symmetrizeIndexes(gamma, {1,2})()
+	:symmetrizeIndexes(d, {2,3})()
+	:symmetrizeIndexes(d, {1,4})()
 printbr(R_for_d)
 
 printbr[[time derivative of $\alpha_{,t}$]]
@@ -434,8 +431,10 @@ if useShift then
 
 	-- TODO automatic relabel indexes
 	-- TODO prevent substIndex from using indexes already reserved for other coordinate sets
-	dt_B_def = dt_B_def:symmetrizeIndexes(gamma, {1,2})()
-	dt_B_def = dt_B_def:symmetrizeIndexes(d, {2,3})()
+	dt_B_def = dt_B_def
+		:symmetrizeIndexes(gamma, {1,2})()
+		:symmetrizeIndexes(d, {2,3})()
+		:symmetrizeIndexes(d, {1,4})()
 	printbr(dt_B_def)
 end
 
@@ -502,7 +501,7 @@ dt_K_def = dt_K_def
 	:substIndex(dsym_def:reindex{jilk='ijkl'})
 	:substIndex(dsym_def:reindex{kijl='ijkl'})
 --]]
--- [[
+--[[
 dt_K_def = dt_K_def
 	:subst(dsym_def:reindex{ijmk='ijkl'})
 	:subst(dsym_def:reindex{ikmj='ijkl'})
@@ -511,7 +510,11 @@ dt_K_def = dt_K_def
 --]]
 if useShift then
 	dt_K_def = dt_K_def:substIndex(dbeta_for_b)
-end	
+end
+dt_K_def = dt_K_def:tidyIndexes()()
+	:symmetrizeIndexes(gamma, {1,2})()
+	:symmetrizeIndexes(d, {2,3})()
+	:symmetrizeIndexes(d, {1,4})()
 printbr(dt_K_def)
 
 
@@ -774,8 +777,8 @@ if useZ4 then
 	end
 
 	dt_K_def = dt_K_def
-		:substIndex(conn_for_d)
-		:simplify()
+		:substIndex(conn_for_d)()
+		:tidyIndexes()()
 	printbr(dt_K_def)
 
 	-- TODO function to simplify gammas and deltas
@@ -994,7 +997,9 @@ if not useShift then
 		local lhs, rhs = table.unpack(defs[i])
 		
 		rhs = rhs:map(function(expr)
-			if TensorRef.is(expr) and expr[1] == beta then return 0 end
+			if TensorRef.is(expr) 
+			and (expr[1] == beta or expr[1] == b or expr[1] == B)
+			then return 0 end
 		end)()
 		rhs = simplify(rhs)
 		
@@ -1088,7 +1093,11 @@ local ZVars = Tensor('_k', function(k)
 	return var('Z_'..xs[k].name, depvars)
 end)
 
--- TODO get 3x3 inverse to work automatically.  
+--[[
+gamma^ij = inv(gamma_kl)^ij = 1/det(gamma_kl) adj(gamma_kl)^ij
+gamma_ij = inv(gamma^kl)_ij = 1/det(gamma^kl) adj(gamma^kl)_ij = det(gamma_kl) adj(gamma^kl)_ij
+TODO get 3x3 inverse to work automatically.  
+--]]
 local det_gamma_times_gammaUInv = Matrix(
 	{
 		gammaUVars[2][2] * gammaUVars[3][3] - gammaUVars[2][3]^2,
@@ -1238,15 +1247,29 @@ if useShift then
 	A = (A + betaVars[fluxdir] * Matrix.identity(n))()		-- remove diagonals
 end
 
+-- in-place substitution
+local function fixA(A)
+	for i=1,#A do
+		for j=1,#A[1] do
+			for k=1,3 do
+				for l=k,3 do
+					local expr = det_gamma_times_gammaUInv[k][l]
+					A[i][j] = A[i][j]:replace( expr(), gamma * gammaLVars[k][l])
+					assert(op.sub.is(expr) and #expr == 2)
+					local rev = expr[2] - expr[1]
+					A[i][j] = A[i][j]:replace( rev, -gamma * gammaLVars[k][l])
+				end
+			end
+			A[i][j] = A[i][j]()
+		end
+	end
+end
 
 -- simplify the flux jacobian matrix
---[[ simplify inverses
-A = A
-	:replace((gammaUVars[1][1] * gammaUVars[2][2] - gammaUVars[1][2]^2)(), gamma * gammaLVars[3][3])
-	:replace((gammaUVars[1][1] * gammaUVars[2][3] - gammaUVars[1][2] * gammaUVars[1][3])(), gamma * gammaLVars[2][3])
-	:replace((gammaUVars[1][1] * gammaUVars[3][3] - gammaUVars[1][3]^2)(), gamma * gammaLVars[3][3])
---]]
-do
+if useZ4 then-- simplify inverses
+	fixA(A)
+end
+if useShift and useV then	-- idk how this happens
 	local gammaLU = (gammaLVars'_ik' * gammaUVars'^kj')()
 	local gammaLL = (gammaLVars'_ik' * gammaLU'_j^k')()
 	for i=1,3 do
@@ -1283,7 +1306,6 @@ if not useV and not useGamma and not useZ4 and not use1D then
 	io.stderr:write"I'm not going to eigendecompose without useV or useGamma set\n"
 	os.exit()
 end
-os.exit()
 
 --[[
 here's where I need polynomial factoring
@@ -1344,6 +1366,8 @@ io.stderr:write('finding eigenvector of eigenvalue '..tostring(lambda)..'\n') io
 	--printbr(A_minus_lambda_I)
 
 	local sofar, reduce = A_minus_lambda_I:inverse(nil, function(AInv, A, i, j, reason)
+		fixA(A)
+		fixA(AInv)
 		--[[
 --new_printbr_file()
 		printbr('eigenvalue', lambda)	
