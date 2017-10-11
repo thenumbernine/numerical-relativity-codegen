@@ -1284,6 +1284,19 @@ roots are:
 	lambda = -alpha sqrt(f gamma^xx)
 	lambda = alpha sqrt(gamma^xx) x3
 	lambda = -alpha sqrt(gamma^xx) x3
+
+
+same deal, for Z4, no shift, remove zero rows:
+	x^7 - x^6 a (6 + f) + x^5 a^2 (6 f + 15) - x^4 a^3 (20 + 15 f) + x^3 a^4 (15 + 20 f) - x^2 a^5 (6 + 15 f) + x a^6 (1 + 6 f) - a^7 f
+	= (x - a f) (x - a)^6
+
+	lambda = +- alpha sqrt(f gamma^xx) has multiplicity 1
+	lambda = +- alpha sqrt(gamma^xx) has multiplicity 6
+	lambda = 0 has multiplicity 3 
+ 
+	however the eigenvectors of alpha sqrt(gamma^xx) only have dimension 5, not 6 ...
+	so ... that means this is not hyperbolic, right?
+
 --]]
 
 -- try solving it for one particular eigenvector/value
