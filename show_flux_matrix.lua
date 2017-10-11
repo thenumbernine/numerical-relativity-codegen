@@ -14,7 +14,7 @@ local use1D = false
 local removeZeroRows = true		-- whether to keep variables whose dt rows are entirely zero
 local useShift = false			-- whether to include beta^i_,t
 -- these are all exclusive
-local useV = false				-- ADM Bona-Masso with V constraint.  Not needed with use1D
+local useV = false			-- ADM Bona-Masso with V constraint.  Not needed with use1D
 local useGamma = false			-- ADM Bona-Masso with Gamma^i_,t . Exclusive to useV ... 
 local useZ4 = true				-- Z4.  TODO factor and substitute metric inverses better
 
@@ -523,45 +523,8 @@ local defs = table()
 
 if useZ4 then
 	
-	--[[ this is my best attempt to interpret some earlier papers ...
-	-- 2004 Bona, Palenzuela "Dynamical shift conditions for the Z4 and BSSN formalisms"
-	-- 2005 Bona, Ledvinka, Palenzuela-Luque, Zacek, "Constraint-preserving boundary conditions in the Z4 Numerical Relativity formalism"
-	
-	-- I'm omitting betas and source terms already
-	
-	defs:insert(a'_k,t':eq(
-		-f * alpha * (gamma'^ij' * K'_ij,k' - m * Theta'_,k')
-		+ a'_k' * alpha * (df * alpha + f) * (gamma'^ij' * K'_ij' - m * Theta)
-	))
-
-	defs:insert(d'_kij,t':eq(
-		-alpha * (K'_ij,k' + a'_k' * K'_ij')
-	))
-
-	defs:insert(K'_ij,t':eq(
-		- frac(1,2) * alpha * (a'_i,j' + a'_j,i')
-		+ alpha * gamma'^kl' * (
-			frac(1,2) * (d'_ilj,k' + d'_klj,i')
-			- frac(1,2) * (d'_ikl,j' + d'_jkl,i')
-			- frac(1,2) * (d'_kij,l' + d'_lij,k')
-			+ frac(1,2) * (d'_jik,l' + d'_lik,j')
-		)
-		+ alpha * (Z'_j,i' + Z'_i,j')
-		- alpha * a'_i' * a'_j'
-	))
-	
-	defs:insert(Theta'_,t':eq(
-		frac(1,2) * alpha * gamma'^kl' * gamma'^ij' * (d'_ilj,k' - d'_ikl,j' - d'_kij,l' + d'_jik,l')
-		+ alpha * gamma'^kl' * Z'_l,k'
-	))
-
-	defs:insert(Z'_k,t':eq(
-		alpha * gamma'^ij' * (K'_ik,j' - K'_ij,k')
-		+ alpha * Theta'_,k'
-	))
-
-	--]]
-	-- [[ I'm taking this from 2008 Yano et al Flux-Vector-Splitting method for Z4 formalism and its numerical analysis
+	-- I'm taking this from 2008 Yano et al Flux-Vector-Splitting method for Z4 formalism and its numerical analysis
+	-- ... and from its source paper, 2005 Bona et al "Geometrically motivated hyperbolic coordinate condions for numerical relativity- Analysis, issues and implementation"
 
 	printbr'Z4 terms'
 
@@ -878,8 +841,6 @@ if useZ4 then
 
 	defs:insert(dt_Z_def)
 
-	--]]
-
 else
 
 	defs:insert(dt_alpha_def)
@@ -891,7 +852,7 @@ else
 	defs:insert(dt_d_def)
 	
 	if useV then
-		-- TODO just replace this
+		-- TODO just replace the V's in this
 		dt_K_def = K'_ij,t':eq(
 			- frac(1,2) * alpha * a'_i,j'
 			- frac(1,2) * alpha * a'_j,i'
@@ -921,6 +882,7 @@ else
 			+ K'_kj' * beta'^k_,i'
 			+ K'_ik' * beta'^k_,j'
 		)
+		
 		if useShift then
 			dt_K_def = dt_K_def:substIndex(dbeta_for_b)
 		end
@@ -1374,6 +1336,23 @@ io.stderr:write('finding eigenvector of eigenvalue '..tostring(lambda)..'\n') io
 		printbr('step', i, j, reason)
 		printbr(A)
 		printbr(AInv)
+		--]]
+		-- [[
+		local f = assert(io.open('show_flux_matrix.progress.html','w'))
+		f:write(tostring(MathJax.header))
+		local function printbr(...)
+			for i=1,select('#', ...) do
+				if i>1 then f:write'\t' end
+				f:write(tostring(select(i, ...)))
+			end
+			f:write'<br>\n'
+			f:flush()
+		end
+		printbr('eigenvalue', lambda)	
+		printbr('step', i, j, reason)
+		printbr(A)
+		printbr(AInv)
+		f:close()
 		--]]
 	end)
 	
