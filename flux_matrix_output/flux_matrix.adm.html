@@ -1,0 +1,101 @@
+<!doctype html>
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <title>Symbolic Lua Output</title>
+		<script type="text/javascript">
+function loadScript(args) {
+	console.log("loading "+args.src);
+	var el = document.createElement('script');
+	document.body.append(el);
+	el.onload = function() {
+		console.log('loaded');
+		if (args.done !== undefined) args.done();
+	};
+	el.onerror = function() {
+		console.log("failed to load "+args.src);
+		if (args.fail !== undefined) args.fail();
+	};
+	el.src = args.src; 
+}
+function init() {
+	console.log('init...');
+	var urls = [
+		'file:///home/chris/Projects/christopheremoore.net/MathJax/MathJax.js?config=TeX-MML-AM_CHTML',
+		'/MathJax/MathJax.js?config=TeX-MML-AM_CHTML',
+		'https://cdn.rawgit.com/mathjax/MathJax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML'	];
+	var i = 0;
+	var loadNext = function() {
+		loadScript({
+			src : urls[i],
+			done : function() {
+				console.log("success!");
+				MathJax.Hub.Config({tex2jax: {inlineMath: [['$','$'], ['\\(','\\)']]}});
+			},
+			fail : function() {
+				++i;
+				if (i >= urls.length) {
+					console.log("looks like all our sources have failed!");
+				} else {
+					loadNext();
+				}
+			}
+		});
+	}
+	loadNext();
+}
+		</script>
+	</head>
+    <body onload='init();'>
+primitive $\partial_t$ defs<br>
+${\alpha}_{,t} = {{{{{-{{\alpha}^{2}}} f} {{\gamma}^i}^j} {{K}_i}_j} + {{\alpha}_{,i} {\beta}^i}}$<br>
+${{{\gamma}_i}_j}_{,t} = {{{{{{-2} \alpha} {{K}_i}_j} + {{{{\gamma}_i}_j}_{,k} {\beta}^k}} + {{{\gamma}_k}_j {{\beta}^k}_{,i}}} + {{{\gamma}_i}_k {{\beta}^k}_{,j}}}$<br>
+partial derivatives<br>
+${\alpha}_{,t} = {{{{{-{{\alpha}^{2}}} f} {{\gamma}^i}^j} {{K}_i}_j} + {{\alpha}_{,i} {\beta}^i}}$<br>
+${{{\gamma}_i}_j}_{,t} = {{{{{{-2} \alpha} {{K}_i}_j} + {{{{\gamma}_i}_j}_{,k} {\beta}^k}} + {{{\gamma}_k}_j {{\beta}^k}_{,i}}} + {{{\gamma}_i}_k {{\beta}^k}_{,j}}}$<br>
+${{a}_k}_{,t} = {{{{{{{{{-\alpha} f} {{\gamma}^i}^j} {{{K}_i}_j}_{,k}} - {{{{{{\alpha}^{2}} {\partial_{{\alpha}}(f)}} {a}_k} {{\gamma}^i}^j} {{K}_i}_j}} + {{{{2 \alpha} f} {{{d}_k}^i}^j} {{K}_i}_j}} - {{{{\alpha \cdot {a}_k} f} {{\gamma}^i}^j} {{K}_i}_j}} + {{{a}_k}_{,i} {\beta}^i}} + {{a}_i {{\beta}^i}_{,k}}}$<br>
+${{{{d}_k}_i}_j}_{,t} = {{{{{{{{{-\alpha} {{{K}_i}_j}_{,k}} - {{\alpha \cdot {a}_k} {{K}_i}_j}} + {{{{{d}_k}_i}_j}_{,l} {\beta}^l}} + {{{{d}_l}_i}_j {{\beta}^l}_{,k}}} + {{{{d}_k}_l}_i {{\beta}^l}_{,j}}} + {{{{d}_k}_l}_j {{\beta}^l}_{,i}}} + {{{\frac{1}{2}} {{\gamma}_l}_i} {{{\beta}^l}_{,j}}_{,k}}} + {{{\frac{1}{2}} {{\gamma}_l}_j} {{{\beta}^l}_{,i}}_{,k}}}$<br>
+${{{K}_i}_j}_{,t} = {{{{{{{{{-{\frac{1}{2}}} \alpha} {{a}_i}_{,j}} - {{{\frac{1}{2}} \alpha} {{a}_j}_{,i}}} + {{\alpha \cdot {{\gamma}^k}^l} {({{{{{\frac{1}{2}} {({{{{{d}_i}_l}_j}_{,k} + {{{{d}_k}_l}_j}_{,i}})}} + {{\frac{1}{2}} {({{{{{d}_j}_i}_k}_{,l} + {{{{d}_l}_i}_k}_{,j}})}}} - {{\frac{1}{2}} {({{{{{d}_i}_k}_l}_{,j} + {{{{d}_j}_k}_l}_{,i}})}}} - {{\frac{1}{2}} {({{{{{d}_k}_i}_j}_{,l} + {{{{d}_l}_i}_j}_{,k}})}}})}}} + {\alpha \cdot {({{{{{{{{-{a}_i} {a}_j} + {{{a}_k {{\gamma}^k}^l} {({{{{{d}_j}_l}_i + {{{d}_i}_l}_j} - {{{d}_l}_i}_j})}}} + {{{{{\gamma}^l}^m {{\gamma}^k}^n} {({{{{{d}_j}_l}_i + {{{d}_i}_l}_j} - {{{d}_l}_i}_j})}} {({{{{d}_m}_k}_n - {2 {{{d}_k}_n}_m}})}}} + {{{{2 {{\gamma}^l}^m} {{\gamma}^k}^n} {({{{{d}_k}_l}_j - {{{d}_l}_k}_j})}} {{{d}_n}_i}_m}} + {{{{{\gamma}^l}^m {{\gamma}^k}^n} {{{d}_i}_k}_l} {{{d}_j}_n}_m}} + {{{{\gamma}^l}^m {{K}_l}_m} {{K}_i}_j}} - {{{2 {{\gamma}^l}^m} {{K}_i}_l} {{K}_j}_m}})}}} + {{{{K}_i}_j}_{,k} {\beta}^k}} + {{{K}_k}_j {{\beta}^k}_{,i}}} + {{{K}_i}_k {{\beta}^k}_{,j}}}$<br>
+neglecting shift<br>
+${\alpha}_{,t} = {{-1} {{\alpha}^{2}} f {{\gamma}^i}^j {{K}_i}_j}$<br>
+${{{\gamma}_i}_j}_{,t} = {{-2} \alpha \cdot {{K}_i}_j}$<br>
+${{a}_k}_{,t} = {{-{\alpha \cdot f {{\gamma}^i}^j {{{K}_i}_j}_{,k}}} + {-{\alpha \cdot f {a}_k {{\gamma}^i}^j {{K}_i}_j}} + {2 \alpha \cdot f {{{d}_k}^i}^j {{K}_i}_j}}$<br>
+${{{{d}_k}_i}_j}_{,t} = {{-{\alpha \cdot {{{K}_i}_j}_{,k}}} + {-{\alpha \cdot {a}_k {{K}_i}_j}}}$<br>
+${{{K}_i}_j}_{,t} = {{\frac{-{\alpha \cdot {{\gamma}^k}^l {{{{d}_i}_k}_l}_{,j}}}{2}} + {\frac{\alpha \cdot {{\gamma}^k}^l {{{{d}_i}_l}_j}_{,k}}{2}} + {\frac{\alpha \cdot {{\gamma}^k}^l {{{{d}_j}_i}_k}_{,l}}{2}} + {\frac{-{\alpha \cdot {{\gamma}^k}^l {{{{d}_j}_k}_l}_{,i}}}{2}} + {\frac{-{\alpha \cdot {{\gamma}^k}^l {{{{d}_k}_i}_j}_{,l}}}{2}} + {\frac{\alpha \cdot {{\gamma}^k}^l {{{{d}_k}_l}_j}_{,i}}{2}} + {\frac{-{\alpha \cdot {{\gamma}^k}^l {{{{d}_l}_i}_j}_{,k}}}{2}} + {\frac{\alpha \cdot {{\gamma}^k}^l {{{{d}_l}_i}_k}_{,j}}{2}} + {-{2 \alpha \cdot {{\gamma}^l}^m {{K}_i}_l {{K}_j}_m}} + {\alpha \cdot {{\gamma}^l}^m {{K}_l}_m {{K}_i}_j} + {\alpha \cdot {{\gamma}^l}^m {{\gamma}^k}^n {{{d}_i}_k}_l {{{d}_j}_n}_m} + {-{2 \alpha \cdot {{\gamma}^l}^m {{\gamma}^k}^n {{{d}_i}_l}_j {{{d}_k}_n}_m}} + {\alpha \cdot {{\gamma}^l}^m {{\gamma}^k}^n {{{d}_i}_l}_j {{{d}_m}_k}_n} + {-{2 \alpha \cdot {{\gamma}^l}^m {{\gamma}^k}^n {{{d}_j}_l}_i {{{d}_k}_n}_m}} + {\alpha \cdot {{\gamma}^l}^m {{\gamma}^k}^n {{{d}_j}_l}_i {{{d}_m}_k}_n} + {2 \alpha \cdot {{\gamma}^l}^m {{\gamma}^k}^n {{{d}_k}_l}_j {{{d}_n}_i}_m} + {2 \alpha \cdot {{\gamma}^l}^m {{\gamma}^k}^n {{{d}_l}_i}_j {{{d}_k}_n}_m} + {-{\alpha \cdot {{\gamma}^l}^m {{\gamma}^k}^n {{{d}_l}_i}_j {{{d}_m}_k}_n}} + {-{2 \alpha \cdot {{\gamma}^l}^m {{\gamma}^k}^n {{{d}_l}_k}_j {{{d}_n}_i}_m}} + {\frac{-{\alpha \cdot {{a}_i}_{,j}}}{2}} + {-{\alpha \cdot {a}_i {a}_j}} + {\frac{-{\alpha \cdot {{a}_j}_{,i}}}{2}} + {\alpha \cdot {a}_k {{\gamma}^k}^l {{{d}_i}_l}_j} + {\alpha \cdot {a}_k {{\gamma}^k}^l {{{d}_j}_l}_i} + {-{\alpha \cdot {a}_k {{\gamma}^k}^l {{{d}_l}_i}_j}}}$<br>
+neglecting source terms<br>
+${\alpha}_{,t} = 0$<br>
+${{{\gamma}_i}_j}_{,t} = 0$<br>
+${{a}_k}_{,t} = {{-1} \alpha \cdot f {{\gamma}^i}^j {{{K}_i}_j}_{,k}}$<br>
+${{{{d}_k}_i}_j}_{,t} = {{-1} \alpha \cdot {{{K}_i}_j}_{,k}}$<br>
+${{{K}_i}_j}_{,t} = {{\frac{-{\alpha \cdot {{\gamma}^k}^l {{{{d}_i}_k}_l}_{,j}}}{2}} + {\frac{\alpha \cdot {{\gamma}^k}^l {{{{d}_i}_l}_j}_{,k}}{2}} + {\frac{\alpha \cdot {{\gamma}^k}^l {{{{d}_j}_i}_k}_{,l}}{2}} + {\frac{-{\alpha \cdot {{\gamma}^k}^l {{{{d}_j}_k}_l}_{,i}}}{2}} + {\frac{-{\alpha \cdot {{\gamma}^k}^l {{{{d}_k}_i}_j}_{,l}}}{2}} + {\frac{\alpha \cdot {{\gamma}^k}^l {{{{d}_k}_l}_j}_{,i}}{2}} + {\frac{-{\alpha \cdot {{\gamma}^k}^l {{{{d}_l}_i}_j}_{,k}}}{2}} + {\frac{\alpha \cdot {{\gamma}^k}^l {{{{d}_l}_i}_k}_{,j}}{2}} + {\frac{-{\alpha \cdot {{a}_i}_{,j}}}{2}} + {\frac{-{\alpha \cdot {{a}_j}_{,i}}}{2}}}$<br>
+spelled out<br>
+${\partial_{{t}}({a_x})} = {{-{\alpha \cdot f {\gamma^{xx}} \cdot {\partial_{{x}}({K_{xx}})}}} + {-{2 \alpha \cdot f {\gamma^{xy}} \cdot {\partial_{{x}}({K_{xy}})}}} + {-{2 \alpha \cdot f {\gamma^{xz}} \cdot {\partial_{{x}}({K_{xz}})}}} + {-{\alpha \cdot f {\gamma^{yy}} \cdot {\partial_{{x}}({K_{yy}})}}} + {-{2 \alpha \cdot f {\gamma^{yz}} \cdot {\partial_{{x}}({K_{yz}})}}} + {-{\alpha \cdot f {\gamma^{zz}} \cdot {\partial_{{x}}({K_{zz}})}}}}$<br>
+${\partial_{{t}}({a_y})} = 0$<br>
+${\partial_{{t}}({a_z})} = 0$<br>
+${\partial_{{t}}({d_{xxx}})} = {{-1} \alpha \cdot {\partial_{{x}}({K_{xx}})}}$<br>
+${\partial_{{t}}({d_{xxy}})} = {{-1} \alpha \cdot {\partial_{{x}}({K_{xy}})}}$<br>
+${\partial_{{t}}({d_{xxz}})} = {{-1} \alpha \cdot {\partial_{{x}}({K_{xz}})}}$<br>
+${\partial_{{t}}({d_{xyy}})} = {{-1} \alpha \cdot {\partial_{{x}}({K_{yy}})}}$<br>
+${\partial_{{t}}({d_{xyz}})} = {{-1} \alpha \cdot {\partial_{{x}}({K_{yz}})}}$<br>
+${\partial_{{t}}({d_{xzz}})} = {{-1} \alpha \cdot {\partial_{{x}}({K_{zz}})}}$<br>
+${\partial_{{t}}({d_{yxx}})} = 0$<br>
+${\partial_{{t}}({d_{yxy}})} = 0$<br>
+${\partial_{{t}}({d_{yxz}})} = 0$<br>
+${\partial_{{t}}({d_{yyy}})} = 0$<br>
+${\partial_{{t}}({d_{yyz}})} = 0$<br>
+${\partial_{{t}}({d_{yzz}})} = 0$<br>
+${\partial_{{t}}({d_{zxx}})} = 0$<br>
+${\partial_{{t}}({d_{zxy}})} = 0$<br>
+${\partial_{{t}}({d_{zxz}})} = 0$<br>
+${\partial_{{t}}({d_{zyy}})} = 0$<br>
+${\partial_{{t}}({d_{zyz}})} = 0$<br>
+${\partial_{{t}}({d_{zzz}})} = 0$<br>
+${\partial_{{t}}({K_{xx}})} = {{-{\alpha \cdot {\partial_{{x}}({a_x})}}} + {-{\alpha \cdot {\gamma^{yy}} \cdot {\partial_{{x}}({d_{xyy}})}}} + {\alpha \cdot {\gamma^{yy}} \cdot {\partial_{{x}}({d_{yxy}})}} + {-{2 \alpha \cdot {\gamma^{yz}} \cdot {\partial_{{x}}({d_{xyz}})}}} + {\alpha \cdot {\gamma^{yz}} \cdot {\partial_{{x}}({d_{yxz}})}} + {\alpha \cdot {\gamma^{yz}} \cdot {\partial_{{x}}({d_{zxy}})}} + {-{\alpha \cdot {\gamma^{zz}} \cdot {\partial_{{x}}({d_{xzz}})}}} + {\alpha \cdot {\gamma^{zz}} \cdot {\partial_{{x}}({d_{zxz}})}}}$<br>
+${\partial_{{t}}({K_{xy}})} = {{\frac{-{\alpha \cdot {\partial_{{x}}({a_y})}}}{2}} + {\alpha \cdot {\gamma^{xy}} \cdot {\partial_{{x}}({d_{xyy}})}} + {-{\alpha \cdot {\gamma^{xy}} \cdot {\partial_{{x}}({d_{yxy}})}}} + {\alpha \cdot {\gamma^{xz}} \cdot {\partial_{{x}}({d_{xyz}})}} + {\frac{-{\alpha \cdot {\gamma^{xz}} \cdot {\partial_{{x}}({d_{yxz}})}}}{2}} + {\frac{-{\alpha \cdot {\gamma^{xz}} \cdot {\partial_{{x}}({d_{zxy}})}}}{2}} + {\frac{-{\alpha \cdot {\gamma^{yz}} \cdot {\partial_{{x}}({d_{yyz}})}}}{2}} + {\frac{\alpha \cdot {\gamma^{yz}} \cdot {\partial_{{x}}({d_{zyy}})}}{2}} + {\frac{-{\alpha \cdot {\gamma^{zz}} \cdot {\partial_{{x}}({d_{yzz}})}}}{2}} + {\frac{\alpha \cdot {\gamma^{zz}} \cdot {\partial_{{x}}({d_{zyz}})}}{2}}}$<br>
+${\partial_{{t}}({K_{xz}})} = {{\frac{-{\alpha \cdot {\partial_{{x}}({a_z})}}}{2}} + {\alpha \cdot {\gamma^{xy}} \cdot {\partial_{{x}}({d_{xyz}})}} + {\frac{-{\alpha \cdot {\gamma^{xy}} \cdot {\partial_{{x}}({d_{yxz}})}}}{2}} + {\frac{-{\alpha \cdot {\gamma^{xy}} \cdot {\partial_{{x}}({d_{zxy}})}}}{2}} + {\alpha \cdot {\gamma^{xz}} \cdot {\partial_{{x}}({d_{xzz}})}} + {-{\alpha \cdot {\gamma^{xz}} \cdot {\partial_{{x}}({d_{zxz}})}}} + {\frac{\alpha \cdot {\gamma^{yy}} \cdot {\partial_{{x}}({d_{yyz}})}}{2}} + {\frac{-{\alpha \cdot {\gamma^{yy}} \cdot {\partial_{{x}}({d_{zyy}})}}}{2}} + {\frac{\alpha \cdot {\gamma^{yz}} \cdot {\partial_{{x}}({d_{yzz}})}}{2}} + {\frac{-{\alpha \cdot {\gamma^{yz}} \cdot {\partial_{{x}}({d_{zyz}})}}}{2}}}$<br>
+${\partial_{{t}}({K_{yy}})} = {{-{\alpha \cdot {\gamma^{xx}} \cdot {\partial_{{x}}({d_{xyy}})}}} + {\alpha \cdot {\gamma^{xx}} \cdot {\partial_{{x}}({d_{yxy}})}} + {\alpha \cdot {\gamma^{xz}} \cdot {\partial_{{x}}({d_{yyz}})}} + {-{\alpha \cdot {\gamma^{xz}} \cdot {\partial_{{x}}({d_{zyy}})}}}}$<br>
+${\partial_{{t}}({K_{yz}})} = {{-{\alpha \cdot {\gamma^{xx}} \cdot {\partial_{{x}}({d_{xyz}})}}} + {\frac{\alpha \cdot {\gamma^{xx}} \cdot {\partial_{{x}}({d_{yxz}})}}{2}} + {\frac{\alpha \cdot {\gamma^{xx}} \cdot {\partial_{{x}}({d_{zxy}})}}{2}} + {\frac{-{\alpha \cdot {\gamma^{xy}} \cdot {\partial_{{x}}({d_{yyz}})}}}{2}} + {\frac{\alpha \cdot {\gamma^{xy}} \cdot {\partial_{{x}}({d_{zyy}})}}{2}} + {\frac{\alpha \cdot {\gamma^{xz}} \cdot {\partial_{{x}}({d_{yzz}})}}{2}} + {\frac{-{\alpha \cdot {\gamma^{xz}} \cdot {\partial_{{x}}({d_{zyz}})}}}{2}}}$<br>
+${\partial_{{t}}({K_{zz}})} = {{-{\alpha \cdot {\gamma^{xx}} \cdot {\partial_{{x}}({d_{xzz}})}}} + {\alpha \cdot {\gamma^{xx}} \cdot {\partial_{{x}}({d_{zxz}})}} + {-{\alpha \cdot {\gamma^{xy}} \cdot {\partial_{{x}}({d_{yzz}})}}} + {\alpha \cdot {\gamma^{xy}} \cdot {\partial_{{x}}({d_{zyz}})}}}$<br>
+${{\left[\matrix{{\partial_{{t}}({a_x})}\\{\partial_{{t}}({a_y})}\\{\partial_{{t}}({a_z})}\\{\partial_{{t}}({d_{xxx}})}\\{\partial_{{t}}({d_{xxy}})}\\{\partial_{{t}}({d_{xxz}})}\\{\partial_{{t}}({d_{xyy}})}\\{\partial_{{t}}({d_{xyz}})}\\{\partial_{{t}}({d_{xzz}})}\\{\partial_{{t}}({d_{yxx}})}\\{\partial_{{t}}({d_{yxy}})}\\{\partial_{{t}}({d_{yxz}})}\\{\partial_{{t}}({d_{yyy}})}\\{\partial_{{t}}({d_{yyz}})}\\{\partial_{{t}}({d_{yzz}})}\\{\partial_{{t}}({d_{zxx}})}\\{\partial_{{t}}({d_{zxy}})}\\{\partial_{{t}}({d_{zxz}})}\\{\partial_{{t}}({d_{zyy}})}\\{\partial_{{t}}({d_{zyz}})}\\{\partial_{{t}}({d_{zzz}})}\\{\partial_{{t}}({K_{xx}})}\\{\partial_{{t}}({K_{xy}})}\\{\partial_{{t}}({K_{xz}})}\\{\partial_{{t}}({K_{yy}})}\\{\partial_{{t}}({K_{yz}})}\\{\partial_{{t}}({K_{zz}})}}\right]} + {{\left[\matrix{0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&{\alpha \cdot f {\gamma^{xx}}}&{2 \alpha \cdot f {\gamma^{xy}}}&{2 \alpha \cdot f {\gamma^{xz}}}&{\alpha \cdot f {\gamma^{yy}}}&{2 \alpha \cdot f {\gamma^{yz}}}&{\alpha \cdot f {\gamma^{zz}}}\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&\alpha&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&\alpha&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&\alpha&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&\alpha&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&\alpha&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&\alpha\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\\alpha&0&0&0&0&0&{\alpha \cdot {\gamma^{yy}}}&{2 \alpha \cdot {\gamma^{yz}}}&{\alpha \cdot {\gamma^{zz}}}&0&{-{\alpha \cdot {\gamma^{yy}}}}&{-{\alpha \cdot {\gamma^{yz}}}}&0&0&0&0&{-{\alpha \cdot {\gamma^{yz}}}}&{-{\alpha \cdot {\gamma^{zz}}}}&0&0&0&0&0&0&0&0&0\\0&{\frac{\alpha}{2}}&0&0&0&0&{-{\alpha \cdot {\gamma^{xy}}}}&{-{\alpha \cdot {\gamma^{xz}}}}&0&0&{\alpha \cdot {\gamma^{xy}}}&{\frac{\alpha \cdot {\gamma^{xz}}}{2}}&0&{\frac{\alpha \cdot {\gamma^{yz}}}{2}}&{\frac{\alpha \cdot {\gamma^{zz}}}{2}}&0&{\frac{\alpha \cdot {\gamma^{xz}}}{2}}&0&{\frac{-{\alpha \cdot {\gamma^{yz}}}}{2}}&{\frac{-{\alpha \cdot {\gamma^{zz}}}}{2}}&0&0&0&0&0&0&0\\0&0&{\frac{\alpha}{2}}&0&0&0&0&{-{\alpha \cdot {\gamma^{xy}}}}&{-{\alpha \cdot {\gamma^{xz}}}}&0&0&{\frac{\alpha \cdot {\gamma^{xy}}}{2}}&0&{\frac{-{\alpha \cdot {\gamma^{yy}}}}{2}}&{\frac{-{\alpha \cdot {\gamma^{yz}}}}{2}}&0&{\frac{\alpha \cdot {\gamma^{xy}}}{2}}&{\alpha \cdot {\gamma^{xz}}}&{\frac{\alpha \cdot {\gamma^{yy}}}{2}}&{\frac{\alpha \cdot {\gamma^{yz}}}{2}}&0&0&0&0&0&0&0\\0&0&0&0&0&0&{\alpha \cdot {\gamma^{xx}}}&0&0&0&{-{\alpha \cdot {\gamma^{xx}}}}&0&0&{-{\alpha \cdot {\gamma^{xz}}}}&0&0&0&0&{\alpha \cdot {\gamma^{xz}}}&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&{\alpha \cdot {\gamma^{xx}}}&0&0&0&{\frac{-{\alpha \cdot {\gamma^{xx}}}}{2}}&0&{\frac{\alpha \cdot {\gamma^{xy}}}{2}}&{\frac{-{\alpha \cdot {\gamma^{xz}}}}{2}}&0&{\frac{-{\alpha \cdot {\gamma^{xx}}}}{2}}&0&{\frac{-{\alpha \cdot {\gamma^{xy}}}}{2}}&{\frac{\alpha \cdot {\gamma^{xz}}}{2}}&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&{\alpha \cdot {\gamma^{xx}}}&0&0&0&0&0&{\alpha \cdot {\gamma^{xy}}}&0&0&{-{\alpha \cdot {\gamma^{xx}}}}&0&{-{\alpha \cdot {\gamma^{xy}}}}&0&0&0&0&0&0&0}\right]} {\left[\matrix{{\partial_{{x}}({a_x})}\\{\partial_{{x}}({a_y})}\\{\partial_{{x}}({a_z})}\\{\partial_{{x}}({d_{xxx}})}\\{\partial_{{x}}({d_{xxy}})}\\{\partial_{{x}}({d_{xxz}})}\\{\partial_{{x}}({d_{xyy}})}\\{\partial_{{x}}({d_{xyz}})}\\{\partial_{{x}}({d_{xzz}})}\\{\partial_{{x}}({d_{yxx}})}\\{\partial_{{x}}({d_{yxy}})}\\{\partial_{{x}}({d_{yxz}})}\\{\partial_{{x}}({d_{yyy}})}\\{\partial_{{x}}({d_{yyz}})}\\{\partial_{{x}}({d_{yzz}})}\\{\partial_{{x}}({d_{zxx}})}\\{\partial_{{x}}({d_{zxy}})}\\{\partial_{{x}}({d_{zxz}})}\\{\partial_{{x}}({d_{zyy}})}\\{\partial_{{x}}({d_{zyz}})}\\{\partial_{{x}}({d_{zzz}})}\\{\partial_{{x}}({K_{xx}})}\\{\partial_{{x}}({K_{xy}})}\\{\partial_{{x}}({K_{xz}})}\\{\partial_{{x}}({K_{yy}})}\\{\partial_{{x}}({K_{yz}})}\\{\partial_{{x}}({K_{zz}})}}\right]}}} = {\left[\matrix{0\\0\\0\\0\\0\\0\\0\\0\\0\\0\\0\\0\\0\\0\\0\\0\\0\\0\\0\\0\\0\\0\\0\\0\\0\\0\\0}\right]}$<br>
+characteristic polynomial:<br>
+$-{{{\lambda}^{{19}}} {({{{\lambda}^{8}} + {{{3 {{\lambda}^{4}} {{\alpha}^{4}} {{{\gamma^{xx}}}^{2}}} - {{{\lambda}^{2}} {{\alpha}^{6}} {{{\gamma^{xx}}}^{3}}}} - {3 {{\lambda}^{6}} {{\alpha}^{2}} {\gamma^{xx}}}} + {{{\alpha}^{8}} {{{\gamma^{xx}}}^{4}} f} + {{{3 {{\lambda}^{4}} {{\alpha}^{4}} {{{\gamma^{xx}}}^{2}} f} - {3 {{\lambda}^{2}} {{\alpha}^{6}} {{{\gamma^{xx}}}^{3}} f}} - {{{\lambda}^{6}} {{\alpha}^{2}} f {\gamma^{xx}}}}})}}$<br>

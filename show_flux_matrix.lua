@@ -113,7 +113,9 @@ local outputExt = textOutput and '.txt' or '.html'
 
 local printbr
 do
-	local printbr_file = assert(io.open(outputPrefix..outputExt, 'w'))
+	local filename = outputPrefix..outputExt
+	print('writing to '..filename)
+	local printbr_file = assert(io.open(filename, 'w'))
 	if MathJax then printbr_file:write(tostring(MathJax.header)) end
 	printbr = function(...)
 		assert(printbr_file)
