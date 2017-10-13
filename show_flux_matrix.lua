@@ -8,15 +8,17 @@ local TensorRef = require 'symmath.tensor.TensorRef'
 
 TensorRef:pushRule'Prune/replacePartial'
 
+
 local textOutput = false
 local keepSourceTerms = false	-- this goes slow with 3D
 local use1D = false
 local removeZeroRows = true		-- whether to keep variables whose dt rows are entirely zero
 local useShift = false			-- whether to include beta^i_,t
 -- these are all exclusive
-local useV = false			-- ADM Bona-Masso with V constraint.  Not needed with use1D
+local useV = false				-- ADM Bona-Masso with V constraint.  Not needed with use1D
 local useGamma = false			-- ADM Bona-Masso with Gamma^i_,t . Exclusive to useV ... 
 local useZ4 = true				-- Z4.  TODO factor and substitute metric inverses better
+
 
 
 local t,x,y,z = vars('t','x','y','z')
@@ -99,20 +101,20 @@ local function simplify(expr)
 end
 
 
-local new_printbr_file, printbr
+local outputPrefix = 'flux_matrix_output/flux_matrix.'
+	..(useZ4 and 'z4' or 'adm')
+	..(keepSourceTerms and '_withSource' or '')
+	..(useV and '_useV' or '')
+	..(useGamma and '_useGamma' or '')
+	..(useShift and '_useShift' or '')
+	..(removeZeroRows and '_noZeroRows' or '')
+	..(use1D and '_1D' or '')
+local outputExt = textOutput and '.txt' or '.html'
+
+local printbr
 do
-	local fileindex = 0
-	local printbr_file
-	local ext = textOutput and '.txt' or '.html'
-	new_printbr_file = function()
-		fileindex = fileindex + 1
-		if printbr_file then
-			if MathJax then printbr_file:write(MathJax.footer) end
-			printbr_file:close()
-		end
-		printbr_file = assert(io.open('show_flux_matrix.'..('%05d'):format(fileindex)..ext, 'w'))
-		if MathJax then printbr_file:write(tostring(MathJax.header)) end
-	end
+	local printbr_file = assert(io.open(outputPrefix..outputExt, 'w'))
+	if MathJax then printbr_file:write(tostring(MathJax.header)) end
 	printbr = function(...)
 		assert(printbr_file)
 		local n = select('#', ...)
@@ -124,8 +126,6 @@ do
 		printbr_file:flush()
 	end
 end
-
-new_printbr_file()
 
 
 -- TODO start with EFE, apply Gauss-Codazzi-Ricci, then automatically recast all higher order derivatives as new variables of 1st derivatives
@@ -1209,37 +1209,65 @@ if useShift then
 	A = (A + betaVars[fluxdir] * Matrix.identity(n))()		-- remove diagonals
 end
 
+
+
 -- in-place substitution
-local function fixA(A)
-	for i=1,#A do
-		for j=1,#A[1] do
-			for k=1,3 do
-				for l=k,3 do
-					local expr = det_gamma_times_gammaUInv[k][l]
-					A[i][j] = A[i][j]:replace( expr(), gamma * gammaLVars[k][l])
-					assert(op.sub.is(expr) and #expr == 2)
-					local rev = expr[2] - expr[1]
-					A[i][j] = A[i][j]:replace( rev, -gamma * gammaLVars[k][l])
-				end
+local gammaLU = (gammaLVars'_ik' * gammaUVars'^kj')()
+local gammaLL = (gammaLVars'_ik' * gammaLU'_j^k')()
+local gammaUU = (gammaUVars'^ik' * gammaLU'_k^j')()
+local function fixCell(A,i,j)
+	for k=1,3 do
+		for l=k,3 do
+			A[i][j] = A[i][j]:replace(gammaLL[k][l], gammaLVars[k][l])()
+			A[i][j] = A[i][j]:replace(gammaUU[k][l], gammaUVars[k][l])()
+			
+			A[i][j] = A[i][j]:replace(gammaLU[k][l], k == l and 1 or 0)()
+			
+			local expr = det_gamma_times_gammaUInv[k][l]
+			A[i][j] = A[i][j]:replace( expr(), gamma * gammaLVars[k][l])()
+			assert(op.sub.is(expr) and #expr == 2)
+			local rev = expr[2] - expr[1]
+			A[i][j] = A[i][j]:replace( rev, -gamma * gammaLVars[k][l])()
+		end
+	end
+end
+local function fixA(A, i, j, k, reason)
+	if not reason then -- just do everything
+		print('fixing everything in A...')
+		for i=1,#A do
+			for j=1,#A[1] do
+				fixCell(A,i,j)
 			end
-			A[i][j] = A[i][j]()
+		end
+	else
+		if reason == 'scale' then 	-- scale row i
+			for x=1,#A do
+				fixCell(A,i,x)
+			end
+		elseif reason == 'row' then	-- modified row j
+			for x=1,#A do
+				fixCell(A,j,x)
+			end
 		end
 	end
 end
 
 -- simplify the flux jacobian matrix
+-- [[
 if useZ4 then-- simplify inverses
 	fixA(A)
 end
+--]]
 if useShift and useV then	-- idk how this happens
-	local gammaLU = (gammaLVars'_ik' * gammaUVars'^kj')()
-	local gammaLL = (gammaLVars'_ik' * gammaLU'_j^k')()
 	for i=1,3 do
 		for j=1,3 do
 			A = A:replace(gammaLL[i][j], gammaLVars[i][j])
 		end
 	end
 end
+
+
+
 
 local dts = Matrix(allLhs):transpose()
 local dxs = Matrix(allDxs):transpose()
@@ -1340,18 +1368,19 @@ io.stderr:write('finding eigenvector of eigenvalue '..tostring(lambda)..'\n') io
 	--printbr'reducing'
 	--printbr(A_minus_lambda_I)
 
-	local sofar, reduce = A_minus_lambda_I:inverse(nil, function(AInv, A, i, j, reason)
-		fixA(A)
-		fixA(AInv)
+	local sofar, reduce = A_minus_lambda_I:inverse(nil, function(AInv, A, i, j, k, reason)
 		--[[
---new_printbr_file()
+		fixA(A, i, j, k, reason)
+		fixA(AInv, i, j, k, reason)
+		--]]
+		--[[
 		printbr('eigenvalue', lambda)	
 		printbr('step', i, j, reason)
 		printbr(A)
 		printbr(AInv)
 		--]]
 		-- [[
-		local f = assert(io.open('show_flux_matrix.progress.html','w'))
+		local f = assert(io.open(outputPrefix..'.progress'..outputExt,'w'))
 		f:write(tostring(MathJax.header))
 		local function printbr(...)
 			for i=1,select('#', ...) do
@@ -1362,7 +1391,7 @@ io.stderr:write('finding eigenvector of eigenvalue '..tostring(lambda)..'\n') io
 			f:flush()
 		end
 		printbr('eigenvalue', lambda)	
-		printbr('step', i, j, reason)
+		printbr('step', i, j, k, reason)
 		printbr(A)
 		printbr(AInv)
 		f:close()

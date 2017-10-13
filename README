@@ -1,3 +1,17 @@
+New Code:
+(show_flux_matrix.lua)
+
+
+This is making use of symmath tensor index expressions.
+It is lacking a polynomial solver.
+But, with correctly provided eigenvalues, it does linearize the flux, represent it as a matrix, and calculate the right and left eigenvector matrices.
+
+
+
+Old Code:
+(everything else)
+
+
 Code generation for numerical relativity projects.
 
 Different formalisms can be programmed into this by providing their source
