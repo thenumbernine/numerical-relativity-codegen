@@ -15,7 +15,7 @@ local use1D = false
 local removeZeroRows = false	-- whether to keep variables whose dt rows are entirely zero
 local useShift = false			-- whether to include beta^i_,t
 -- these are all exclusive
-local useV = false				-- ADM Bona-Masso with V constraint.  Not needed with use1D
+local useV = true				-- ADM Bona-Masso with V constraint.  Not needed with use1D
 local useGamma = false			-- ADM Bona-Masso with Gamma^i_,t . Exclusive to useV ... 
 local useZ4 = false				-- Z4.  TODO factor and substitute metric inverses better
 
@@ -1070,7 +1070,7 @@ gamma^ij = inv(gamma_kl)^ij = 1/det(gamma_kl) adj(gamma_kl)^ij
 gamma_ij = inv(gamma^kl)_ij = 1/det(gamma^kl) adj(gamma^kl)_ij = det(gamma_kl) adj(gamma^kl)_ij
 TODO get 3x3 inverse to work automatically.  
 --]]
-local det_gamma_times_gammaUInv = Matrix(
+local det_gamma_times_gammaUInv = not use1D and Matrix(
 	{
 		gammaUVars[2][2] * gammaUVars[3][3] - gammaUVars[2][3]^2,
 		gammaUVars[1][3] * gammaUVars[2][3] - gammaUVars[1][2] * gammaUVars[3][3],
@@ -1086,7 +1086,7 @@ local det_gamma_times_gammaUInv = Matrix(
 		gammaUVars[1][2] * gammaUVars[1][3] - gammaUVars[1][1] * gammaUVars[2][3],
 		gammaUVars[1][1] * gammaUVars[2][2] - gammaUVars[1][2]^2,
 	}
-)
+) or nil
 
 
 -- by this point we're going to switch to expanded variables
@@ -1230,29 +1230,32 @@ local gammaUU = (gammaUVars'^ik' * gammaLU'_k^j')()
 -- g delta^k_l = g (g^ka g_la + g^kb g_lb + g^kc g_lc)
 -- g (delta^k_l - g^ka g_la) = g (g^kb g_lb + g^kc g_lc)
 local someMoreRules = table()
-for k=1,3 do
-	someMoreRules[k] = table()
-	for l=1,3 do
-		local delta_kl = k == l and 1 or 0			
-		someMoreRules[k][l] = table()
-		for a=1,3 do
-			local b = a%3+1
-			local c = b%3+1
-			local find = (gammaUVars[k][b] * det_gamma_times_gammaUInv[l][b]
-						+ gammaUVars[k][c] * det_gamma_times_gammaUInv[l][c])()
-			
-			local sign = 1
-			if op.unm.is(find) then find = find[1] sign = -1 end
-			local repl = (sign * gamma * (delta_kl - gammaUVars[k][a] * gammaLVars[l][a]))()
-			
---			printbr(k,',',l,',',find:eq(repl))
-			
-			someMoreRules[k][l]:insert{find, repl}
+if det_gamma_times_gammaUInv then
+	for k=1,3 do
+		someMoreRules[k] = table()
+		for l=1,3 do
+			local delta_kl = k == l and 1 or 0			
+			someMoreRules[k][l] = table()
+			for a=1,3 do
+				local b = a%3+1
+				local c = b%3+1
+				local find = (gammaUVars[k][b] * det_gamma_times_gammaUInv[l][b]
+							+ gammaUVars[k][c] * det_gamma_times_gammaUInv[l][c])()
+				
+				local sign = 1
+				if op.unm.is(find) then find = find[1] sign = -1 end
+				local repl = (sign * gamma * (delta_kl - gammaUVars[k][a] * gammaLVars[l][a]))()
+				
+	--			printbr(k,',',l,',',find:eq(repl))
+				
+				someMoreRules[k][l]:insert{find, repl}
+			end
 		end
 	end
 end
 
 local function fixCell(A,i,j)
+	if not det_gamma_times_gammaUInv then return end
 	for k=1,3 do
 		for l=k,3 do
 			-- hmm ... the (1-f)'s are messing me up... it can't factor them out ...
@@ -1387,7 +1390,7 @@ local lambdas = use1D and table{
 } or table{
 	-- the more multiplicity, the easier it is to factor
 	-- also, without useVConstraints, the 1-multiplicity eigenvectors take forever and the expressions get huge and take forever
-	--[[
+	-- [[
 	-alpha * sqrt(f * gammaUjj),
 	-alpha * sqrt(gammaUjj),
 	0,
@@ -1396,7 +1399,7 @@ local lambdas = use1D and table{
 	--]]
 	
 	
-	-- [[
+	--[[
 	0,
 	-alpha * sqrt(gammaUjj),
 	alpha * sqrt(gammaUjj),
@@ -1442,7 +1445,7 @@ io.stderr:write('finding eigenvector of eigenvalue '..tostring(lambda)..'\n') io
 		printbr(A)
 		printbr(AInv)
 		f:close()
--- [=[
+--[=[
 io.write('generated '..i..', '..j..', '..k..' '..reason..' -- press enter ')
 io.flush()
 io.read'*l'
