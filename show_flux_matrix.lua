@@ -1217,19 +1217,55 @@ end
 local gammaLU = (gammaLVars'_ik' * gammaUVars'^kj')()
 local gammaLL = (gammaLVars'_ik' * gammaLU'_j^k')()
 local gammaUU = (gammaUVars'^ik' * gammaLU'_k^j')()
+
+-- g delta^k_l = g (g^kx g_lx + g^ky g_ly + g^kz g_lz)
+-- g delta^k_l = g (g^ka g_la + g^kb g_lb + g^kc g_lc)
+-- g (delta^k_l - g^ka g_la) = g (g^kb g_lb + g^kc g_lc)
+local someMoreRules = table()
+for k=1,3 do
+	someMoreRules[k] = table()
+	for l=1,3 do
+		local delta_kl = k == l and 1 or 0			
+		someMoreRules[k][l] = table()
+		for a=1,3 do
+			local b = a%3+1
+			local c = b%3+1
+			local find = (gammaUVars[k][b] * det_gamma_times_gammaUInv[l][b]
+						+ gammaUVars[k][c] * det_gamma_times_gammaUInv[l][c])()
+			
+			local sign = 1
+			if op.unm.is(find) then find = find[1] sign = -1 end
+			local repl = (sign * gamma * (delta_kl - gammaUVars[k][a] * gammaLVars[l][a]))()
+			
+			printbr(k,',',l,',',find:eq(repl))
+			
+			someMoreRules[k][l]:insert{find, repl}
+		end
+	end
+end
+
 local function fixCell(A,i,j)
 	for k=1,3 do
 		for l=k,3 do
+			-- hmm ... the (1-f)'s are messing me up... it can't factor them out ...
+			local delta_kl = k == l and 1 or 0			
 			A[i][j] = A[i][j]:replace(gammaLL[k][l], gammaLVars[k][l])()
 			A[i][j] = A[i][j]:replace(gammaUU[k][l], gammaUVars[k][l])()
-			
-			A[i][j] = A[i][j]:replace(gammaLU[k][l], k == l and 1 or 0)()
+			A[i][j] = A[i][j]:replace(gammaLU[k][l], delta_kl)()
 			
 			local expr = det_gamma_times_gammaUInv[k][l]
-			A[i][j] = A[i][j]:replace( expr(), gamma * gammaLVars[k][l])()
+			local expr_eq = gamma * gammaLVars[k][l]
+			A[i][j] = A[i][j]:replace( expr(), expr_eq)()
+			
 			assert(op.sub.is(expr) and #expr == 2)
-			local rev = expr[2] - expr[1]
-			A[i][j] = A[i][j]:replace( rev, -gamma * gammaLVars[k][l])()
+			local neg = expr[2] - expr[1]
+			local neg_eq = -gamma * gammaLVars[k][l]
+			A[i][j] = A[i][j]:replace( neg, neg_eq)()
+	
+			
+			for _,rule in ipairs(someMoreRules[k][l]) do
+				A[i][j] = A[i][j]:replace(rule[1], rule[2])
+			end
 		end
 	end
 end
@@ -1371,7 +1407,7 @@ io.stderr:write('finding eigenvector of eigenvalue '..tostring(lambda)..'\n') io
 	--printbr(A_minus_lambda_I)
 
 	local sofar, reduce = A_minus_lambda_I:inverse(nil, function(AInv, A, i, j, k, reason)
-		--[[
+		-- [[
 		fixA(A, i, j, k, reason)
 		fixA(AInv, i, j, k, reason)
 		--]]
@@ -1397,6 +1433,11 @@ io.stderr:write('finding eigenvector of eigenvalue '..tostring(lambda)..'\n') io
 		printbr(A)
 		printbr(AInv)
 		f:close()
+-- [=[
+io.write('generated '..i..', '..j..', '..k..' '..reason..' -- press enter ')
+io.flush()
+io.read'*l'
+--]=]
 		--]]
 	end)
 	

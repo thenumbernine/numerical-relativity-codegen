@@ -1,4 +1,4 @@
-New Code:
+### New Code:
 (show_flux_matrix.lua)
 
 
@@ -6,13 +6,22 @@ This is making use of symmath tensor index expressions.
 It is lacking a polynomial solver.
 But, with correctly provided eigenvalues, it does linearize the flux, represent it as a matrix, and calculate the right and left eigenvector matrices.
 
+[flux_matrix.adm.html](https://htmlpreview.github.io/?https://github.com/thenumbernine/numerical-relativity-codegen/blob/master/flux_matrix_output/flux_matrix%2eadm%2ehtml)
+
+[flux_matrix.adm_1D.html](https://htmlpreview.github.io/?https://github.com/thenumbernine/numerical-relativity-codegen/blob/master/flux_matrix_output/flux_matrix%2eadm_1D%2ehtml)
+[flux_matrix.adm_useV.html](https://htmlpreview.github.io/?https://github.com/thenumbernine/numerical-relativity-codegen/blob/master/flux_matrix_output/flux_matrix%2eadm_useV%2ehtml)
+[flux_matrix.adm_useV_noZeroRows_x.html](https://htmlpreview.github.io/?https://github.com/thenumbernine/numerical-relativity-codegen/blob/master/flux_matrix_output/flux_matrix%2eadm_useV_noZeroRows_x%2ehtml)
+[flux_matrix.adm_useV_noZeroRows_y.html](https://htmlpreview.github.io/?https://github.com/thenumbernine/numerical-relativity-codegen/blob/master/flux_matrix_output/flux_matrix%2eadm_useV_noZeroRows_y%2ehtml)
+[flux_matrix.adm_useV_noZeroRows_z.html](https://htmlpreview.github.io/?https://github.com/thenumbernine/numerical-relativity-codegen/blob/master/flux_matrix_output/flux_matrix%2eadm_useV_noZeroRows_z%2ehtml)
+[flux_matrix.adm_useV_useShift_noZeroRows.html](https://htmlpreview.github.io/?https://github.com/thenumbernine/numerical-relativity-codegen/blob/master/flux_matrix_output/flux_matrix%2eadm_useV_useShift_noZeroRows%2ehtml)
+[flux_matrix.z4.html](https://htmlpreview.github.io/?https://github.com/thenumbernine/numerical-relativity-codegen/blob/master/flux_matrix_output/flux_matrix%2ez4%2ehtml)
+[flux_matrix.z4_noZeroRows.html](https://htmlpreview.github.io/?https://github.com/thenumbernine/numerical-relativity-codegen/blob/master/flux_matrix_output/flux_matrix%2ez4_noZeroRows%2ehtml)
 
 
-Old Code:
-(everything else)
+### Old Code:
 
 
-Code generation for numerical relativity projects.
+## Code generation for numerical relativity projects.
 
 Different formalisms can be programmed into this by providing their source
 terms and eigenfields / eigenvalues.
@@ -34,7 +43,7 @@ This code can be used as follows:
 
 This project is based on the symmath-lua project.
 
-Sources:
+## Sources:
 
 "The apeparance of coordinate shocks in hyperbolic formalisms of General
 Relativity", Alcubierre, 1997.		
