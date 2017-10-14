@@ -112,6 +112,7 @@ local outputPrefix = 'flux_matrix_output/flux_matrix.'
 local outputExt = textOutput and '.txt' or '.html'
 
 local printbr
+local closeFile
 do
 	local filename = outputPrefix..outputExt
 	print('writing to '..filename)
@@ -126,6 +127,13 @@ do
 		end
 		printbr_file:write'<br>\n'
 		printbr_file:flush()
+	end
+	closeFile = function()
+		printbr_file:write[[
+	</body>
+</html>
+]]
+		printbr_file:close()
 	end
 end
 
@@ -1332,7 +1340,8 @@ printbr(reduce)
 
 if not useV and not useGamma and not useZ4 and not use1D then
 	io.stderr:write"I'm not going to eigendecompose without useV or useGamma set\n"
-	os.exit()
+	
+	closeFile() os.exit()
 end
 
 --[[
@@ -1523,3 +1532,5 @@ assert(not reason, reason)	-- hmm, make Matrix.inverse more assert-compatible?
 
 printbr('L:')
 printbr(evLMat)
+
+closeFile()
