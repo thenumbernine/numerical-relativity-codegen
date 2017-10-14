@@ -12,11 +12,7 @@ But, with correctly provided eigenvalues, it does linearize the flux, represent 
 
 [flux matrix.adm useV](https://htmlpreview.github.io/?https://github.com/thenumbernine/numerical-relativity-codegen/blob/master/flux_matrix_output/flux_matrix%2eadm_useV%2ehtml)
 
-[flux matrix.adm useV noZeroRows x](https://htmlpreview.github.io/?https://github.com/thenumbernine/numerical-relativity-codegen/blob/master/flux_matrix_output/flux_matrix%2eadm_useV_noZeroRows_x%2ehtml)
-
-[flux matrix.adm useV noZeroRows y](https://htmlpreview.github.io/?https://github.com/thenumbernine/numerical-relativity-codegen/blob/master/flux_matrix_output/flux_matrix%2eadm_useV_noZeroRows_y%2ehtml)
-
-[flux matrix.adm useV noZeroRows z](https://htmlpreview.github.io/?https://github.com/thenumbernine/numerical-relativity-codegen/blob/master/flux_matrix_output/flux_matrix%2eadm_useV_noZeroRows_z%2ehtml)
+[flux matrix.adm useV noZeroRows](https://htmlpreview.github.io/?https://github.com/thenumbernine/numerical-relativity-codegen/blob/master/flux_matrix_output/flux_matrix%2eadm_useV_noZeroRows%2ehtml)
 
 [flux matrix.adm useV useShift noZeroRows](https://htmlpreview.github.io/?https://github.com/thenumbernine/numerical-relativity-codegen/blob/master/flux_matrix_output/flux_matrix%2eadm_useV_useShift_noZeroRows%2ehtml)
 
