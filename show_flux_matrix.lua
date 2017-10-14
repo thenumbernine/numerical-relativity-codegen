@@ -12,7 +12,7 @@ TensorRef:pushRule'Prune/replacePartial'
 local textOutput = false
 local keepSourceTerms = false	-- this goes slow with 3D
 local use1D = false
-local removeZeroRows = false	-- whether to keep variables whose dt rows are entirely zero
+local removeZeroRows = true		-- whether to keep variables whose dt rows are entirely zero
 local useShift = false			-- whether to include beta^i_,t
 -- these are all exclusive
 local useV = true				-- ADM Bona-Masso with V constraint.  Not needed with use1D
