@@ -13,7 +13,7 @@ local textOutput = false
 local keepSourceTerms = false	-- this goes slow with 3D
 local use1D = false
 local removeZeroRows = true		-- whether to keep variables whose dt rows are entirely zero
-local useShift = false			-- whether to include beta^i_,t
+local useShift = true			-- whether to include beta^i_,t
 -- these are all exclusive
 local useV = true				-- ADM Bona-Masso with V constraint.  Not needed with use1D
 local useGamma = false			-- ADM Bona-Masso with Gamma^i_,t . Exclusive to useV ... 
@@ -1258,11 +1258,12 @@ local function fixCell(A,i,j)
 	if not det_gamma_times_gammaUInv then return end
 	for k=1,3 do
 		for l=k,3 do
-			-- hmm ... the (1-f)'s are messing me up... it can't factor them out ...
+			--[[ hmm ... the (1-f)'s are messing me up... it can't factor them out ...
 			local delta_kl = k == l and 1 or 0			
 			A[i][j] = A[i][j]:replace(gammaLL[k][l], gammaLVars[k][l])()
 			A[i][j] = A[i][j]:replace(gammaUU[k][l], gammaUVars[k][l])()
 			A[i][j] = A[i][j]:replace(gammaLU[k][l], delta_kl)()
+			--]]
 			
 			local expr = det_gamma_times_gammaUInv[k][l]
 			local expr_eq = gamma * gammaLVars[k][l]
@@ -1273,10 +1274,11 @@ local function fixCell(A,i,j)
 			local neg_eq = -gamma * gammaLVars[k][l]
 			A[i][j] = A[i][j]:replace( neg, neg_eq)()
 	
-			
+--[[ this is causing an explosion of terms ...
 			for _,rule in ipairs(someMoreRules[k][l]) do
 				A[i][j] = A[i][j]:replace(rule[1], rule[2])
 			end
+--]]		
 		end
 	end
 end
