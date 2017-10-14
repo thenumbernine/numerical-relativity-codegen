@@ -12,12 +12,12 @@ TensorRef:pushRule'Prune/replacePartial'
 local textOutput = false
 local keepSourceTerms = false	-- this goes slow with 3D
 local use1D = false
-local removeZeroRows = true		-- whether to keep variables whose dt rows are entirely zero
+local removeZeroRows = false	-- whether to keep variables whose dt rows are entirely zero
 local useShift = false			-- whether to include beta^i_,t
 -- these are all exclusive
 local useV = false				-- ADM Bona-Masso with V constraint.  Not needed with use1D
 local useGamma = false			-- ADM Bona-Masso with Gamma^i_,t . Exclusive to useV ... 
-local useZ4 = true				-- Z4.  TODO factor and substitute metric inverses better
+local useZ4 = false				-- Z4.  TODO factor and substitute metric inverses better
 
 
 
@@ -1237,7 +1237,7 @@ for k=1,3 do
 			if op.unm.is(find) then find = find[1] sign = -1 end
 			local repl = (sign * gamma * (delta_kl - gammaUVars[k][a] * gammaLVars[l][a]))()
 			
-			printbr(k,',',l,',',find:eq(repl))
+--			printbr(k,',',l,',',find:eq(repl))
 			
 			someMoreRules[k][l]:insert{find, repl}
 		end
