@@ -8,6 +8,8 @@ local TensorRef = require 'symmath.tensor.TensorRef'
 
 TensorRef:pushRule'Prune/replacePartial'
 
+symmath.debugSimplifyLoops = true
+symmath.simplifyMaxIter = 20
 
 local textOutput = false
 local keepSourceTerms = false	-- this goes slow with 3D
@@ -16,8 +18,8 @@ local removeZeroRows = true		-- whether to keep variables whose dt rows are enti
 local useShift = false			-- whether to include beta^i_,t
 -- these are all exclusive
 local useV = false				-- ADM Bona-Masso with V constraint.  Not needed with use1D
-local useGamma = false			-- ADM Bona-Masso with Gamma^i_,t . Exclusive to useV ... 
-local useZ4 = true				-- Z4.  TODO factor and substitute metric inverses better
+local useGamma = true			-- ADM Bona-Masso with Gamma^i_,t . Exclusive to useV ... 
+local useZ4 = false				-- Z4.  TODO factor and substitute metric inverses better
 
 
 

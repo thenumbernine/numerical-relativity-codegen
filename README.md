@@ -3,8 +3,11 @@
 
 
 This is making use of symmath tensor index expressions.
-It is lacking a polynomial solver.
-But, with correctly provided eigenvalues, it does linearize the flux, represent it as a matrix, and calculate the right and left eigenvector matrices.
+1) It starts with the tensor index PDE system.  
+2) From there it derives the tensor index PDE system for the specific numerical method formalism.
+3) Next it represents the PDE as a linear system, showing the source terms and the flux matrix.
+4) Next it factors the right eigenvectors of the flux matrix. Still working on eigenvalues. It is lacking a polynomial solver. But, with correctly provided eigenvalues, it does linearize the flux, represent it as a matrix, and calculate the right and left eigenvector matrices.
+5) Last it inverts the right eigenvector matrix to find the left eigenvectors.
 
 [flux matrix.adm](https://htmlpreview.github.io/?https://github.com/thenumbernine/numerical-relativity-codegen/blob/master/flux_matrix_output/flux_matrix%2eadm%2ehtml)
 
