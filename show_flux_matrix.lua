@@ -1392,11 +1392,13 @@ do
 	end
 	alpha = replaceAll(alpha, var'\\[alpha]')
 	for i=1,3 do
+		betaVars[i] = replaceAll(betaVars[i], var('bU'..xs[i].name))
 		for j=1,3 do
 			local u,v
 			if i < j then u,v = i,j else u,v = j,i end
-			gammaUVars[i][j] = replaceAll(gammaUVars[i][j], var('gU'..xs[i]..xs[j]))
-			gammaLVars[i][j] = replaceAll(gammaLVars[i][j], var('gL'..xs[i]..xs[j]))
+			local suffix = xs[u].name .. xs[v].name
+			gammaUVars[i][j] = replaceAll(gammaUVars[i][j], var('gU'..suffix))
+			gammaLVars[i][j] = replaceAll(gammaLVars[i][j], var('gL'..suffix))
 		end
 	end
 	gamma = replaceAll(gamma, var'g')
