@@ -15,11 +15,11 @@ local textOutput = false
 local keepSourceTerms = false	-- this goes slow with 3D
 local use1D = false
 local removeZeroRows = true		-- whether to keep variables whose dt rows are entirely zero
-local useShift = false			-- whether to include beta^i_,t
+local useShift = true			-- whether to include beta^i_,t
 -- these are all exclusive
-local useV = false				-- ADM Bona-Masso with V constraint.  Not needed with use1D
-local useGamma = true			-- ADM Bona-Masso with Gamma^i_,t . Exclusive to useV ... 
-local useZ4 = false				-- Z4.  TODO factor and substitute metric inverses better
+local useV = true				-- ADM Bona-Masso with V constraint.  Not needed with use1D
+local useGamma = false			-- ADM Bona-Masso with Gamma^i_,t . Exclusive to useV ... 
+local useZ4 = false				-- Z4
 
 
 
@@ -1071,6 +1071,8 @@ end)
 gamma^ij = inv(gamma_kl)^ij = 1/det(gamma_kl) adj(gamma_kl)^ij
 gamma_ij = inv(gamma^kl)_ij = 1/det(gamma^kl) adj(gamma^kl)_ij = det(gamma_kl) adj(gamma^kl)_ij
 TODO get 3x3 inverse to work automatically.  
+i.e. through adjacency matrices
+i.e. through the delta definition of inverses
 --]]
 local det_gamma_times_gammaUInv = not use1D and Matrix(
 	{
@@ -1232,41 +1234,76 @@ local gammaUU = (gammaUVars'^ik' * gammaLU'_k^j')()
 -- g delta^k_l = g (g^ka g_la + g^kb g_lb + g^kc g_lc)
 -- g (delta^k_l - g^ka g_la) = g (g^kb g_lb + g^kc g_lc)
 local someMoreRules = table()
-if det_gamma_times_gammaUInv then
-	for k=1,3 do
-		someMoreRules[k] = table()
-		for l=1,3 do
-			local delta_kl = k == l and 1 or 0			
-			someMoreRules[k][l] = table()
-			for a=1,3 do
-				local b = a%3+1
-				local c = b%3+1
-				local find = (gammaUVars[k][b] * det_gamma_times_gammaUInv[l][b]
-							+ gammaUVars[k][c] * det_gamma_times_gammaUInv[l][c])()
-				
-				local sign = 1
-				if op.unm.is(find) then find = find[1] sign = -1 end
-				local repl = (sign * gamma * (delta_kl - gammaUVars[k][a] * gammaLVars[l][a]))()
-				
-	--			printbr(k,',',l,',',find:eq(repl))
-				
-				someMoreRules[k][l]:insert{find, repl}
+do
+--[[
+	if det_gamma_times_gammaUInv then
+		for k=1,3 do
+			someMoreRules[k] = table()
+			for l=1,3 do
+				local delta_kl = k == l and 1 or 0			
+				someMoreRules[k][l] = table()
+				for a=1,3 do
+					local b = a%3+1
+					local c = b%3+1
+					local find = (gammaUVars[k][b] * det_gamma_times_gammaUInv[l][b]
+								+ gammaUVars[k][c] * det_gamma_times_gammaUInv[l][c])()
+					
+					local sign = 1
+					if op.unm.is(find) then find = find[1] sign = -1 end
+					local repl = (sign * gamma * (delta_kl - gammaUVars[k][a] * gammaLVars[l][a]))()
+					
+	--				printbr(k,',',l,',',find:eq(repl))
+					
+					someMoreRules[k][l]:insert{find, repl}
+				end
 			end
 		end
 	end
+--]]
+--[[
+	printbr()
+	for k=1,3 do
+		for l=1,3 do
+			printbr(k,',',l,',',(gamma * gammaLVars[k][l]):eq( det_gamma_times_gammaUInv[k][l] ))
+		end
+	end
+--]]
+--[[
+	printbr()
+	for k=1,3 do
+		for l=1,3 do
+			printbr(k,',',l,',',gammaLVars[k][l]:eq(gammaLL[k][l]))
+		end
+	end
+	printbr()
+	for k=1,3 do
+		for l=1,3 do
+			printbr(k,',',l,',',gammaUVars[k][l]:eq(gammaUU[k][l]))
+		end
+	end
+	printbr()
+	for k=1,3 do
+		for l=1,3 do
+			printbr(k,',',l,',',(Constant(k == l and 1 or 0)):eq(gammaLU[k][l]))
+		end
+	end
+--]]
 end
 
 local function fixCell(A,i,j)
 	if not det_gamma_times_gammaUInv then return end
 	for k=1,3 do
-		for l=k,3 do
-			--[[ hmm ... the (1-f)'s are messing me up... it can't factor them out ...
+		for l=1,3 do
+-- hmm ... the (1-f)'s are messing me up... it can't factor them out ...
+			
+-- [[ 
 			local delta_kl = k == l and 1 or 0			
 			A[i][j] = A[i][j]:replace(gammaLL[k][l], gammaLVars[k][l])()
 			A[i][j] = A[i][j]:replace(gammaUU[k][l], gammaUVars[k][l])()
 			A[i][j] = A[i][j]:replace(gammaLU[k][l], delta_kl)()
-			--]]
-			
+--]]
+
+--[[
 			local expr = det_gamma_times_gammaUInv[k][l]
 			local expr_eq = gamma * gammaLVars[k][l]
 			A[i][j] = A[i][j]:replace( expr(), expr_eq)()
@@ -1275,7 +1312,7 @@ local function fixCell(A,i,j)
 			local neg = expr[2] - expr[1]
 			local neg_eq = -gamma * gammaLVars[k][l]
 			A[i][j] = A[i][j]:replace( neg, neg_eq)()
-	
+--]]	
 --[[ this is causing an explosion of terms ...
 			for _,rule in ipairs(someMoreRules[k][l]) do
 				A[i][j] = A[i][j]:replace(rule[1], rule[2])
@@ -1307,7 +1344,9 @@ end
 
 -- simplify the flux jacobian matrix
 -- [[
-if useZ4 then-- simplify inverses
+if useZ4 
+or (useV and useShift)
+then-- simplify inverses
 	fixA(A)
 end
 --]]
@@ -1319,7 +1358,20 @@ if useShift and useV then	-- idk how this happens
 	end
 end
 
-
+--[[ testing how effective replace() works
+local expr = A[8][2]
+printbr'we have this'
+printbr(expr)
+printbr'we want to replace with this rule'
+printbr((gammaLL[1][1]):eq(gammaLVars[1][1]))
+printbr"here's how well it works"
+printbr(expr:replace(gammaLL[1][1], gammaLVars[1][1]))
+printbr("but are they equal?")
+printbr(expr == gammaLL[1][1])
+printbr("and here's the difference")
+printbr( (expr - gammaLL[1][1])() )
+os.exit()
+--]]
 
 
 local dts = Matrix(allLhs):transpose()
@@ -1329,6 +1381,50 @@ if not useShift then
 else
 	printbr((dts + (A - betaVars[fluxdir] * Matrix.identity(n)) * dxs):eq(b))
 end
+
+
+-- [[ outputting to mathematica (particularly useV useShift noZeroRows
+do
+	-- make variables Mathematica-friendly
+	local function replaceAll(from, to)
+		A = A:replace(from, to)
+		return to
+	end
+	alpha = replaceAll(alpha, var'\\[alpha]')
+	for i=1,3 do
+		for j=1,3 do
+			local u,v
+			if i < j then u,v = i,j else u,v = j,i end
+			gammaUVars[i][j] = replaceAll(gammaUVars[i][j], var('gU'..xs[i]..xs[j]))
+			gammaLVars[i][j] = replaceALl(gammaLVars[i][j], var('gL'..xs[i]..xs[j]))
+		end
+	end
+	gamma = replaceAll(gamma, var'g')
+
+
+	local vars = table{alpha, f, df}
+	for i=1,3 do
+		vars:insert(betaVars[i])
+	end
+	for i=1,3 do
+		for j=i,3 do
+			vars:insert(gammaUVars[i][j])
+		end
+	end
+	for i=1,3 do
+		for j=i,3 do
+			vars:insert(gammaLVars[i][j])
+		end
+	end
+	vars:insert(gamma)
+
+	print(require 'symmath.tostring.Mathematica'(A, vars))
+	os.exit()
+end
+--]]
+
+
+
 
 local lambda = var'\\lambda'
 local charpoly  = (A - Matrix.identity(n) * lambda):determinant()
