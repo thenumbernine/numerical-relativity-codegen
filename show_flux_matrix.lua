@@ -1396,7 +1396,7 @@ do
 			local u,v
 			if i < j then u,v = i,j else u,v = j,i end
 			gammaUVars[i][j] = replaceAll(gammaUVars[i][j], var('gU'..xs[i]..xs[j]))
-			gammaLVars[i][j] = replaceALl(gammaLVars[i][j], var('gL'..xs[i]..xs[j]))
+			gammaLVars[i][j] = replaceAll(gammaLVars[i][j], var('gL'..xs[i]..xs[j]))
 		end
 	end
 	gamma = replaceAll(gamma, var'g')
