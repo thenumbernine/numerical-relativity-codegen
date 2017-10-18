@@ -11,15 +11,16 @@ TensorRef:pushRule'Prune/replacePartial'
 symmath.debugSimplifyLoops = true
 symmath.simplifyMaxIter = 20
 
-local textOutput = false
+local textOutput = false		-- this will output a txt file instead of a html file
+local outputMathematica = false	-- this will output the flux as mathematica and exit
 local keepSourceTerms = false	-- this goes slow with 3D
-local use1D = false
+local use1D = false				-- consider spatially x instead of xyz
 local removeZeroRows = true		-- whether to keep variables whose dt rows are entirely zero
-local useShift = true			-- whether to include beta^i_,t
+local useShift = false			-- whether to include beta^i_,t
 -- these are all exclusive
-local useV = true				-- ADM Bona-Masso with V constraint.  Not needed with use1D
+local useV = false				-- ADM Bona-Masso with V constraint.  Not needed with use1D
 local useGamma = false			-- ADM Bona-Masso with Gamma^i_,t . Exclusive to useV ... 
-local useZ4 = false				-- Z4
+local useZ4 = true				-- Z4
 
 
 
@@ -1023,11 +1024,6 @@ local betaVars = Tensor('^i', function(i)
 	return var('\\beta^'..xs[i].name)
 end)
 
-local gammaVars = Tensor('_ij', function(i,j) 
-	if i > j then i,j = j,i end 
-	return var('\\gamma_{'..xs[i].name..xs[j].name..'}', depvars)
-end)
-
 local gammaUVars = Tensor('^ij', function(i,j) 
 	if i > j then i,j = j,i end 
 	return var('\\gamma^{'..xs[i].name..xs[j].name..'}', depvars)
@@ -1095,7 +1091,7 @@ local det_gamma_times_gammaUInv = not use1D and Matrix(
 
 -- by this point we're going to switch to expanded variables
 -- so defining a metric is safe
-Tensor.metric(gammaVars, gammaUVars)
+Tensor.metric(gammaLVars, gammaUVars)
 
 printbr('spelled out')
 local allLhs = table()
@@ -1298,6 +1294,7 @@ local function fixCell(A,i,j)
 			
 -- [[ 
 			local delta_kl = k == l and 1 or 0			
+			A[i][j] = A[i][j]()
 			A[i][j] = A[i][j]:replace(gammaLL[k][l], gammaLVars[k][l])()
 			A[i][j] = A[i][j]:replace(gammaUU[k][l], gammaUVars[k][l])()
 			A[i][j] = A[i][j]:replace(gammaLU[k][l], delta_kl)()
@@ -1322,6 +1319,7 @@ local function fixCell(A,i,j)
 	end
 end
 local function fixA(A, i, j, k, reason)
+-- NOTICE you have to do everything for useV useShift noZeroRows		
 	if not reason then -- just do everything
 		print('fixing everything in A...')
 		for i=1,#A do
@@ -1329,6 +1327,7 @@ local function fixA(A, i, j, k, reason)
 				fixCell(A,i,j)
 			end
 		end
+-- [[
 	else
 		if reason == 'scale' then 	-- scale row i
 			for x=1,#A do
@@ -1340,6 +1339,7 @@ local function fixA(A, i, j, k, reason)
 			end
 		end
 	end
+--]]
 end
 
 -- simplify the flux jacobian matrix
@@ -1358,22 +1358,6 @@ if useShift and useV then	-- idk how this happens
 	end
 end
 
---[[ testing how effective replace() works
-local expr = A[8][2]
-printbr'we have this'
-printbr(expr)
-printbr'we want to replace with this rule'
-printbr((gammaLL[1][1]):eq(gammaLVars[1][1]))
-printbr"here's how well it works"
-printbr(expr:replace(gammaLL[1][1], gammaLVars[1][1]))
-printbr("but are they equal?")
-printbr(expr == gammaLL[1][1])
-printbr("and here's the difference")
-printbr( (expr - gammaLL[1][1])() )
-os.exit()
---]]
-
-
 local dts = Matrix(allLhs):transpose()
 local dxs = Matrix(allDxs):transpose()
 if not useShift then
@@ -1384,13 +1368,13 @@ end
 
 
 -- [[ outputting to mathematica (particularly useV useShift noZeroRows
-do
+if outputMathematica then
 	-- make variables Mathematica-friendly
 	local function replaceAll(from, to)
 		A = A:replace(from, to)
 		return to
 	end
-	alpha = replaceAll(alpha, var'\\[alpha]')
+	alpha = replaceAll(alpha, var'\\[Alpha]')
 	for i=1,3 do
 		betaVars[i] = replaceAll(betaVars[i], var('bU'..xs[i].name))
 		for j=1,3 do
@@ -1426,12 +1410,14 @@ end
 --]]
 
 
-
-
+--[[ I don't have poly factoring so this doesn't matter
+-- it's also freezing for useV useShift noZeroRows
 local lambda = var'\\lambda'
 local charpoly  = (A - Matrix.identity(n) * lambda):determinant()
 printbr'characteristic polynomial:'
 printbr(charpoly)
+--]]
+
 
 --[[ this works fast enough without simplification
 A = A()
@@ -1489,7 +1475,10 @@ local lambdas = use1D and table{
 	-alpha * sqrt(f * gammaUjj),
 	0,
 	alpha * sqrt(f * gammaUjj),
-} or useZ4 and table{
+} or (
+	useZ4
+	or (useV and useShift)
+) and table{
 	0,
 	-alpha * sqrt(gammaUjj),
 	alpha * sqrt(gammaUjj),
@@ -1553,7 +1542,7 @@ io.stderr:write('finding eigenvector of eigenvalue '..tostring(lambda)..'\n') io
 		printbr(A)
 		printbr(AInv)
 		f:close()
---[=[
+--[=[ enable this to monitor the Gaussian elimination progress one step at a time
 io.write('generated '..i..', '..j..', '..k..' '..reason..' -- press enter ')
 io.flush()
 io.read'*l'
