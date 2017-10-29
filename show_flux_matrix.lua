@@ -20,7 +20,7 @@ local useShift = false			-- whether to include beta^i_,t
 -- these are all exclusive
 local useV = false				-- ADM Bona-Masso with V constraint.  Not needed with use1D
 local useGamma = false			-- ADM Bona-Masso with Gamma^i_,t . Exclusive to useV ... 
-local useZ4 = true				-- Z4
+local useZ4 = false				-- Z4.  shift isn't supported just yet.
 
 
 
@@ -1087,7 +1087,7 @@ else
 		defs:insert(dt_Z_def)
 
 	else
-
+		-- [[ primitives first, in greek order
 		defs:insert(dt_alpha_def)
 		defs:insert(dt_beta_def)
 		defs:insert(dt_gamma_def)
@@ -1095,6 +1095,16 @@ else
 		defs:insert(dt_b_def)
 		defs:insert(dt_B_def)
 		defs:insert(dt_d_def)
+		--]]
+		--[[ shifts first
+		defs:insert(dt_beta_def)
+		defs:insert(dt_b_def)
+		defs:insert(dt_B_def)
+		defs:insert(dt_alpha_def)
+		defs:insert(dt_a_def)
+		defs:insert(dt_gamma_def)
+		defs:insert(dt_d_def)
+		--]]
 		
 		if useV then
 			-- TODO just replace the V's in this
@@ -1251,7 +1261,6 @@ else
 			printbr(lhs..'$ + \\dots = $'..sourceTerms[i])
 		end
 	end
-
 
 
 
@@ -1509,7 +1518,7 @@ local n = #fluxJacobian
 
 
 
---[[ I don't have poly factoring so this doesn't matter
+-- [[ I don't have poly factoring so this doesn't matter
 -- it's also freezing for useV useShift noZeroRows
 local lambda = var'\\lambda'
 local charpoly  = (A - Matrix.identity(n) * lambda):determinant()

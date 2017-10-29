@@ -9,6 +9,12 @@ This is making use of symmath tensor index expressions.
 4) Next it factors the right eigenvectors of the flux matrix. Still working on eigenvalues. It is lacking a polynomial solver. But, with correctly provided eigenvalues, it does linearize the flux, represent it as a matrix, and calculate the right and left eigenvector matrices.
 5) Last it inverts the right eigenvector matrix to find the left eigenvectors.
 
+TODO with it
+- (I just adding caching of the flux jacobian so I don't have to re-derive it from index expressions every single time)
+- further split things up: 1 script to generate the expressions and save the flux matrix, another to process the flux matrix, another to generate eigenvectors.
+- rearrange filenames so it is unique prefix, section (expressions, flux matrix, char poly, eigenvectors), ext.
+
+
 [flux matrix.adm](https://htmlpreview.github.io/?https://github.com/thenumbernine/numerical-relativity-codegen/blob/master/flux_matrix_output/flux_matrix%2eadm%2ehtml)
 
 [flux matrix.adm 1D](https://htmlpreview.github.io/?https://github.com/thenumbernine/numerical-relativity-codegen/blob/master/flux_matrix_output/flux_matrix%2eadm_1D%2ehtml)
