@@ -18,7 +18,7 @@ local use1D = false				-- consider spatially x instead of xyz
 local removeZeroRows = true		-- whether to keep variables whose dt rows are entirely zero
 local useShift = false			-- whether to include beta^i_,t
 -- these are all exclusive
-local useV = false				-- ADM Bona-Masso with V constraint.  Not needed with use1D
+local useV = true				-- ADM Bona-Masso with V constraint.  Not needed with use1D
 local useGamma = false			-- ADM Bona-Masso with Gamma^i_,t . Exclusive to useV ... 
 local useZ4 = false				-- Z4.  shift isn't supported just yet.
 
@@ -227,7 +227,7 @@ local gammaUU = (gammaUVars'^ik' * gammaLU'_k^j')()
 -- g (delta^k_l - g^ka g_la) = g (g^kb g_lb + g^kc g_lc)
 local someMoreRules = table()
 do
---[[
+-- [[
 	if det_gamma_times_gammaUInv then
 		for k=1,3 do
 			someMoreRules[k] = table()
@@ -244,7 +244,7 @@ do
 					if op.unm.is(find) then find = find[1] sign = -1 end
 					local repl = (sign * gamma * (delta_kl - gammaUVars[k][a] * gammaLVars[l][a]))()
 					
-	--				printbr(k,',',l,',',find:eq(repl))
+					printbr(k,',',l,',',find:eq(repl))
 					
 					someMoreRules[k][l]:insert{find, repl}
 				end
@@ -252,7 +252,7 @@ do
 		end
 	end
 --]]
---[[
+-- [[
 	printbr()
 	for k=1,3 do
 		for l=1,3 do
@@ -260,7 +260,7 @@ do
 		end
 	end
 --]]
---[[
+-- [[
 	printbr()
 	for k=1,3 do
 		for l=1,3 do
@@ -296,7 +296,7 @@ local function fixJacobianCell(fluxJacobian,i,j)
 			fluxJacobian[i][j] = fluxJacobian[i][j]:replace(gammaLU[k][l], delta_kl)()
 --]]
 
---[[
+-- [[
 			local expr = det_gamma_times_gammaUInv[k][l]
 			local expr_eq = gamma * gammaLVars[k][l]
 			fluxJacobian[i][j] = fluxJacobian[i][j]:replace( expr(), expr_eq)()
@@ -306,7 +306,7 @@ local function fixJacobianCell(fluxJacobian,i,j)
 			local neg_eq = -gamma * gammaLVars[k][l]
 			fluxJacobian[i][j] = fluxJacobian[i][j]:replace( neg, neg_eq)()
 --]]	
---[[ this is causing an explosion of terms ...
+-- [[ this is causing an explosion of terms ...
 			for _,rule in ipairs(someMoreRules[k][l]) do
 				fluxJacobian[i][j] = fluxJacobian[i][j]:replace(rule[1], rule[2])
 			end

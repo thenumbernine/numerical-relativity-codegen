@@ -141,7 +141,10 @@ local sourceTerms = system:getSourceTerms()
 local QLs = table()
 local QRs = table()
 
-for dir=1,3 do
+--local maxdirs = 3
+local maxdirs = 1	-- only x
+
+for dir=1,maxdirs do
 	local eigenfields = system:getEigenfields(dir)
 
 	if #eigenfields ~= #varsFlattened then
@@ -281,7 +284,9 @@ for dir=1,3 do
 	--]]
 
 	-- [[
+	local scale = 1	-- symmath.gammaUU[1][1] ^ symmath.frac(1,2)
 	printbr('reconstruction of flux Jacobian')
+	printbr('(scaled by '..scale..')')
 	local n = #eigenfields
 	local Lambdas = symmath.Matrix(range(n):map(function(i)
 		return range(n):map(function(j)
@@ -289,9 +294,15 @@ for dir=1,3 do
 		end)
 	end):unpack())
 
-	local A = (QR * Lambdas * QL)()
+	local A = (QR * Lambdas * QL * scale)()
 	printbr( (tostring(A):gsub('0', '\\cdot')) )
 	printbr()
+	
+	printbr('reconstruction of flux times '..scale)
+	local eqns = (A * U)()
+	for i=1,#eqns do
+		printbr((U[i][1]:diff(symmath.var't') + eqns[i][1]:diff(symmath.var'x'))..'$ = ...$')
+	end
 	--]]
 
 	printbr('...done!')
@@ -388,7 +399,7 @@ if outputCode then
 		end
 	end	
 else
-	for dir=1,3 do
+	for dir=1,maxdirs do
 		local QL = QLs[dir]
 		local QR = QRs[dir]
 		
@@ -398,14 +409,14 @@ else
 			processGraph(QL,xNames[dir])
 			processGraph(QR,xNames[dir]..'inv')
 		else
+--[[ i'm printing these as they are computed, sooo ... no need to print them here	
 			printbr('inverse eigenvectors in '..xNames[dir]..' dir')
 			printbr((tostring((QL * U):eq(sourceTerms)):gsub('0','\\cdot')))
 			printbr()
 			printbr('eigenvectors in '..xNames[dir]..' dir')
 			printbr((tostring(QR * U):gsub('0','\\cdot')))
 			printbr()
-		
-		
+--]]	
 		end
 	end
 end
