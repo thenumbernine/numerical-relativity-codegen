@@ -1,3 +1,5 @@
+-- TODO remind me where again which paper this came from
+
 local class = require 'ext.class'
 local table = require 'ext.table'
 local range = require 'ext.range'
@@ -261,7 +263,7 @@ io.write'warning -- LambdaULL is only true for zeta=-1\n'
 	local eigenfields = table()
 	
 	-- timelike:
-	--[[
+	--[[	
 	the alpha and gamma don't have to be part of the flux, but i'm lazy so i'm adding them in with the rest of the lambda=0 eigenfields
 	however in doing so, it makes factoring the linear system a pain, because you're not supposed to factor out alphas or gammas
 	...except with the alpha and gamma eigenfields when you have to ...

@@ -15,13 +15,14 @@ local textOutput = false		-- this will output a txt file instead of a html file
 local outputMathematica = false	-- this will output the flux as mathematica and exit
 local keepSourceTerms = false	-- this goes slow with 3D
 local use1D = false				-- consider spatially x instead of xyz
-local removeZeroRows = true		-- whether to keep variables whose dt rows are entirely zero
+local removeZeroRows = false	-- whether to keep variables whose dt rows are entirely zero.  only really useful when shift is disabled.
 local useShift = false			-- whether to include beta^i_,t
 -- these are all exclusive
 local useV = true				-- ADM Bona-Masso with V constraint.  Not needed with use1D
 local useGamma = false			-- ADM Bona-Masso with Gamma^i_,t . Exclusive to useV ... 
-local useZ4 = false				-- Z4.  shift isn't supported just yet.
-
+local useZ4 = false				-- Z4
+local showEigenfields = true	-- my attempt at using eigenfields to deduce the left eigenvectors
+local forceRemakeHeader = true	
 
 
 local t,x,y,z = vars('t','x','y','z')
@@ -86,6 +87,7 @@ local Gamma = var'\\Gamma'
 local Z = var'Z'
 local Theta = var('\\Theta', depvars)
 local m = var'm'
+local Q = var'Q'
 
 Tensor.coords{
 	{variables=xs},
@@ -93,6 +95,14 @@ Tensor.coords{
 	{variables={x}, symbols='x'},
 	{variables={y}, symbols='y'},
 	{variables={z}, symbols='z'},
+
+	--[[
+	{variables={y,z}, symbols=
+		range('a':byte(), 'z':byte()):map(function(i)
+			return '\\bar{'..string.char(i)..'}'
+		end)
+	},
+	--]]
 }
 
 local function simplify(expr)
@@ -244,7 +254,7 @@ do
 					if op.unm.is(find) then find = find[1] sign = -1 end
 					local repl = (sign * gamma * (delta_kl - gammaUVars[k][a] * gammaLVars[l][a]))()
 					
-					printbr(k,',',l,',',find:eq(repl))
+--					printbr(k,',',l,',',find:eq(repl))
 					
 					someMoreRules[k][l]:insert{find, repl}
 				end
@@ -252,7 +262,7 @@ do
 		end
 	end
 --]]
--- [[
+--[[
 	printbr()
 	for k=1,3 do
 		for l=1,3 do
@@ -260,7 +270,7 @@ do
 		end
 	end
 --]]
--- [[
+--[[
 	printbr()
 	for k=1,3 do
 		for l=1,3 do
@@ -340,9 +350,6 @@ end
 
 
 
-
-
-
 -- if modify time of show_flux_matrix.lua is newer than the symmath A cache then rebuild
 -- otherwise use the cached prefix
 -- (TODO store the prefix in a separate file)
@@ -351,8 +358,9 @@ local headerExpressionFilename = 'flux_matrix_output/header.'..outputSuffix..'.h
 
 local fluxJacobian
 
-if io.fileexists(headerExpressionFilename) 
-or io.fileexists(symmathJacobianFilename) 
+if not forceRemakeHeader
+and (io.fileexists(headerExpressionFilename) 
+or io.fileexists(symmathJacobianFilename))
 then
 	if not (io.fileexists(headerExpressionFilename) 
 		and io.fileexists(symmathJacobianFilename))
@@ -373,13 +381,24 @@ else
 	local pushOutputFile = outputFile
 	outputFile = io.open(headerExpressionFilename, 'w')
 	
+	printbr[[gauge vars]]
+
+	local Q_def = Q:eq(alpha * f * K'^i_i')
+	printbr(Q_def)
+
+	local Qu_def 
+	if useShift then
+		Qu_def = Q'^i':eq( -1/alpha * beta'^k' * b'^i_k' - alpha * gamma'^ki' * (gamma'_jk,l' * gamma'^jl' - Gamma'^j_kj' - a'_k'))
+		printbr(Qu_def) 
+	end
+
 	-- TODO start with EFE, apply Gauss-Codazzi-Ricci, then automatically recast all higher order derivatives as new variables of 1st derivatives
 	printbr[[primitive $\partial_t$ defs]]
 
-	local dt_alpha_def = alpha',t':eq( 
-		- alpha^2 * f * K'^i_i' 
-		+ alpha'_,i' * beta'^i' 
-	)
+	local dt_alpha_def = alpha'_,t':eq(alpha'_,i' * beta'^i' - alpha * Q)
+	printbr(dt_alpha_def)
+
+	dt_alpha_def = dt_alpha_def:substIndex(Q_def)()
 	printbr(dt_alpha_def)
 
 	local dt_beta_def, dt_B_def
@@ -438,25 +457,75 @@ else
 	)
 	printbr(dt_gamma_def) 
 
+	local K_R_term = R'_ij'
+	if useZ4 then
+		K_R_term = K_R_term + Z'_j,i' - Gamma'^k_ji' * Z'_k' + Z'_i,j' - Gamma'^k_ij' * Z'_k'
+	end
+
+	local K_trK_term = K'^k_k'
+	if useZ4 then
+		K_trK_term = K_trK_term - 2 * Theta
+	end
+
 	local dt_K_def = K'_ij,t':eq(
 		K'_ij,k' * beta'^k' 
 		+ K'_ki' * beta'^k_,j'
 		+ K'_kj' * beta'^k_,i'
 		- alpha',ij'
 		+ Gamma'^k_ij' * alpha',k'
-		+ alpha * (R'_ij' + K'^k_k' * K'_ij' - 2 * K'_ik' * K'^k_j')
+		+ alpha * (
+			K_R_term
+			+ K_trK_term * K'_ij' 
+			- 2 * K'_ik' * K'^k_j'
+		)
 		-- stress-energy terms	
 		+ 4 * pi * alpha * (gamma'_ij' * (S - rho) - 2 * S'_ij')
 	)
 	printbr(dt_K_def)
 
-	printbr[[lapse]]
+	local dt_Theta_def, dt_Z_def 
+	if useZ4 then
+		dt_Theta_def = Theta'_,t':eq(
+			(beta'^k' * Theta)'_,k'
+			- (alpha * (d'^kj_j' - d'_j^jk' - Z'^k'))'_,k'
+			-- 2005 Bona et al eqn A.3 of S(Theta)
+			-Theta * b'^k_k'
+			+ alpha/2 * (
+				2 * a'_k' * (d'^kj_j' - d'_j^jk' - 2 * Z'^k')
+				+ d'_k^rs' * Gamma'^k_rs'
+				- d'^kj_j' * (d'_kl^l' - 2 * Z'_k')
+				- K'^k_r' * K'^r_k'
+				+ K'^k_k' * (K'^l_l' - 2 * Theta)
+			)
+			- 8 * pi * alpha * rho
+		)
+		printbr(dt_Theta_def) 
+
+		dt_Z_def = Z'_i,t':eq(
+			(beta'^k' * Z'_i')'_,k'
+			+ (alpha * K'^k_i')'_,k'
+			- (alpha * (K'^k_k' - Theta))'_,i'
+			-- 2005 Bona et al eqn A.2 S(Z_i)
+			- Z'_i' * b'^k_k'
+			+ Z'_k' * b'^k_i'
+			+ alpha * (
+				a'_i' * (K'^k_k' - 2 * Theta)
+				- a'_k' * K'^k_i'
+				- K'^k_r' * Gamma'^r_ki'
+				+ K'^k_i' * (d'kl^l' - 2 * Z'_k')
+			)
+			- 8 * pi * alpha * S'_i'
+		)
+		printbr(dt_Z_def)
+	end
+
+	printbr[[lapse vars]]
 
 	-- TODO functions, dependent variables, and total derivatives 
 	local df_def = f',k':eq(df * alpha * a'_k')
 	printbr(df_def)
 
-	printbr[[auxiliary variables]]
+	printbr[[hyperbolic state variables]]
 
 	local a_def = a'_k':eq(log(alpha)'_,k')
 	printbr(a_def)
@@ -800,8 +869,6 @@ else
 		printbr(dt_a_def)
 
 		defs:insert(dt_a_def)
-
-		local Q = var'Q'
 		
 		if useShift then
 		
@@ -902,7 +969,7 @@ else
 		printbr(dt_d_def)
 		defs:insert(dt_d_def)
 
-		local xi = var'\\xi'
+		local xi = 1	--var'\\xi'
 		dt_K_def = K'_ij,t':eq(
 			(beta'^k' * K'_ij')'_,k'
 		
@@ -993,23 +1060,6 @@ else
 
 		defs:insert(dt_K_def)
 		
-		
-		local dt_Theta_def = Theta'_,t':eq(
-			(beta'^k' * Theta)'_,k'
-			- (alpha * (d'^kj_j' - d'_j^jk' - Z'^k'))'_,k'
-			-- 2005 Bona et al eqn A.3 of S(Theta)
-			-Theta * b'^k_k'
-			+ alpha/2 * (
-				2 * a'_k' * (d'^kj_j' - d'_j^jk' - 2 * Z'^k')
-				+ d'_k^rs' * Gamma'^k_rs'
-				- d'^kj_j' * (d'_kl^l' - 2 * Z'_k')
-				- K'^k_r' * K'^r_k'
-				+ K'^k_k' * (K'^l_l' - 2 * Theta)
-			)
-			- 8 * pi * alpha * rho
-		)
-		printbr(dt_Theta_def) 
-		
 		dt_Theta_def = dt_Theta_def
 			:replaceIndex(Z'^i', gamma'^ij' * Z'_j')
 			:replaceIndex(d'^i_jk', gamma'^il' * d'_ljk')
@@ -1038,23 +1088,6 @@ else
 		printbr(dt_Theta_def)
 
 		defs:insert(dt_Theta_def)
-
-		local dt_Z_def = Z'_i,t':eq(
-			(beta'^k' * Z'_i')'_,k'
-			+ (alpha * K'^k_i')'_,k'
-			- (alpha * (K'^k_k' - Theta))'_,i'
-			-- 2005 Bona et al eqn A.2 S(Z_i)
-			- Z'_i' * b'^k_k'
-			+ Z'_k' * b'^k_i'
-			+ alpha * (
-				a'_i' * (K'^k_k' - 2 * Theta)
-				- a'_k' * K'^k_i'
-				- K'^k_r' * Gamma'^r_ki'
-				+ K'^k_i' * (d'kl^l' - 2 * Z'_k')
-			)
-			- 8 * pi * alpha * S'_i'
-		)
-		printbr(dt_Z_def)
 
 		printbr(dt_Z_def) 
 		
@@ -1262,6 +1295,35 @@ else
 		end
 	end
 
+	if showEigenfields then
+		printbr'separating x from other dimensions:'
+		for _,def in ipairs(defs) do
+			local lhs, rhs = table.unpack(def)
+			assert(TensorRef.is(lhs))
+			local indexes = table()
+			for i=2,#lhs do
+				if lhs[i].derivative then break end
+				indexes:insert(lhs[i].symbol)
+			end
+			if #indexes > 0 then
+				-- now cycle through all permutations of the indexes, substiting for either x or indexes not spanning x
+				local matrix = require 'matrix'
+				matrix(table{2}:rep(#indexes)):lambda(function(...)
+					local is = {...}
+					local from = ''
+					local to = ''
+					for i=1,#is do
+						if is[i] == 1 then 
+							from = from .. indexes[i]	-- TODO don't use the original index ... instead use a yz spanning index (which means I need to make these up)
+							to = to .. 'x'
+						end
+					end
+					printbr(def:reindex{[to]=from})
+					return 0
+				end)
+			end
+		end
+	end
 
 
 	printbr('spelled out')
@@ -1537,7 +1599,7 @@ printbr(sofar)
 printbr(reduce)
 --]]
 
-if not useV and not useGamma and not useZ4 and not use1D then
+do 	--if not useV and not useGamma and not useZ4 and not use1D then
 	io.stderr:write"I'm not going to eigendecompose without useV or useGamma set\n"
 	
 	closeFile() os.exit()
