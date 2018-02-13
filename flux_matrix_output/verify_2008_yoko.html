@@ -3,271 +3,853 @@
     <head>
         <meta charset='UTF-8'>
         <title>2008 Yano based implementation of Z4</title>
-		<script type='text/javascript' src='tryToFindMathJax.js'></script>
+		<script type='text/javascript' src='./tryToFindMathJax.js'></script>
     </head>
 	<body onload='tryToFindMathJax();'>
 
 $L = {\left[\matrix{0&0&{\frac{1}{2}}&0&0&0&0&0&0&0&0&0&0&{{\frac{1}{2}} {({{{\frac1{\gamma^{xx}}}{({{{\gamma^{xy}}}^{2}})}} - {\gamma^{yy}}})}}&{{\frac{1}{2}} {({{{\frac1{\gamma^{xx}}}{({{\gamma^{xy}} \cdot {\gamma^{xz}}})}} - {\gamma^{yz}}})}}&0&0&0&{{\frac{1}{2}} {({{{\frac1{\gamma^{xx}}}{({-{{{\gamma^{xy}}}^{2}}})}} + {\gamma^{yy}}})}}&{{\frac{1}{2}} {({{{\frac1{\gamma^{xx}}}{({{-{\gamma^{xy}}} {\gamma^{xz}}})}} + {\gamma^{yz}}})}}&0&0&0&0&0&0&0&0&0&0&0\\0&{\frac{1}{2}}&0&0&0&0&0&0&0&0&0&0&0&{{\frac{1}{2}} {({{{\frac1{\gamma^{xx}}}{({{-{\gamma^{xy}}} {\gamma^{xz}}})}} + {\gamma^{yz}}})}}&{{\frac{1}{2}} {({{{\frac1{\gamma^{xx}}}{({{-{\gamma^{xz}}} {\gamma^{xz}}})}} + {\gamma^{zz}}})}}&0&0&0&{{\frac{1}{2}} {({{{\frac1{\gamma^{xx}}}{({{\gamma^{xy}} \cdot {\gamma^{xz}}})}} - {\gamma^{yz}}})}}&{{\frac{1}{2}} {({{{\frac1{\gamma^{xx}}}{({{\gamma^{xz}} \cdot {\gamma^{xz}}})}} - {\gamma^{zz}}})}}&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&1&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&1&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&1&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&1&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&1&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&1&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&1&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&1&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&1&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&1&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&1&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&1&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&{\frac{-1}{2 {\gamma^{xx}}}}&0&0&1&0&{{\frac1{\gamma^{xx}}}{({{\gamma^{xy}}})}}&{{\frac1{\gamma^{xx}}}{({{\gamma^{xz}}})}}&0&0&{\frac{-{\gamma^{xy}}}{2 {\gamma^{xx}}}}&0&{\frac{{\gamma^{yy}}}{2 {\gamma^{xx}}}}&{\frac{{\gamma^{yz}}}{2 {\gamma^{xx}}}}&0&{\frac{-{\gamma^{xy}}}{2 {\gamma^{xx}}}}&{{\frac1{\gamma^{xx}}}{({-{\gamma^{xz}}})}}&{\frac{-{\gamma^{yy}}}{2 {\gamma^{xx}}}}&{\frac{-{\gamma^{yz}}}{2 {\gamma^{xx}}}}&0&0&0&0&0&0&0&0&0&0&{\frac{1}{{\gamma^{xx}}}}\\0&{\frac{-1}{2 {\gamma^{xx}}}}&0&0&1&0&{{\frac1{\gamma^{xx}}}{({{\gamma^{xy}}})}}&{{\frac1{\gamma^{xx}}}{({{\gamma^{xz}}})}}&0&0&{{\frac1{\gamma^{xx}}}{({-{\gamma^{xy}}})}}&{\frac{-{\gamma^{xz}}}{2 {\gamma^{xx}}}}&0&{\frac{-{\gamma^{yz}}}{2 {\gamma^{xx}}}}&{\frac{-{\gamma^{zz}}}{2 {\gamma^{xx}}}}&0&{\frac{-{\gamma^{xz}}}{2 {\gamma^{xx}}}}&0&{\frac{{\gamma^{yz}}}{2 {\gamma^{xx}}}}&{\frac{{\gamma^{zz}}}{2 {\gamma^{xx}}}}&0&0&0&0&0&0&0&0&0&{\frac{1}{{\gamma^{xx}}}}&0\\{\frac{-1}{f {\gamma^{xx}}}}&{\frac{{({{-1} + f})} {\gamma^{xy}}}{f {{{\gamma^{xx}}}^{2}}}}&{\frac{{({{-1} + f})} {\gamma^{xz}}}{f {{{\gamma^{xx}}}^{2}}}}&1&0&0&{\frac{{{{{\gamma^{xy}}}^{2}} {({{-2} + m})}} - {{{\gamma^{xx}} \cdot {\gamma^{yy}}} {({{-1} + m})}}}{{{\gamma^{xx}}}^{2}}}&{\frac{2 {({{{{\gamma^{xy}} \cdot {\gamma^{xz}}} {({{-2} + m})}} - {{{\gamma^{xx}} \cdot {\gamma^{yz}}} {({{-1} + m})}}})}}{{{\gamma^{xx}}}^{2}}}&{\frac{{{{{\gamma^{xz}}}^{2}} {({{-2} + m})}} - {{{\gamma^{xx}} \cdot {\gamma^{zz}}} {({{-1} + m})}}}{{{\gamma^{xx}}}^{2}}}&0&{\frac{{{{{\gamma^{xy}}}^{2}} {({2 - m})}} + {{{\gamma^{xx}} \cdot {\gamma^{yy}}} {({{-1} + m})}}}{{{\gamma^{xx}}}^{2}}}&{\frac{{{{\gamma^{xy}} \cdot {\gamma^{xz}}} {({2 - m})}} + {{{\gamma^{xx}} \cdot {\gamma^{yz}}} {({{-1} + m})}}}{{{\gamma^{xx}}}^{2}}}&0&{\frac{{({{{\gamma^{xz}} \cdot {\gamma^{yy}}} - {{\gamma^{xy}} \cdot {\gamma^{yz}}}})} {({{-2} + m})}}{{{\gamma^{xx}}}^{2}}}&{\frac{{({{{\gamma^{xz}} \cdot {\gamma^{yz}}} - {{\gamma^{xy}} \cdot {\gamma^{zz}}}})} {({{-2} + m})}}{{{\gamma^{xx}}}^{2}}}&0&{\frac{{{{\gamma^{xy}} \cdot {\gamma^{xz}}} {({2 - m})}} + {{{\gamma^{xx}} \cdot {\gamma^{yz}}} {({{-1} + m})}}}{{{\gamma^{xx}}}^{2}}}&{\frac{{{{{\gamma^{xz}}}^{2}} {({2 - m})}} + {{{\gamma^{xx}} \cdot {\gamma^{zz}}} {({{-1} + m})}}}{{{\gamma^{xx}}}^{2}}}&{\frac{{-{({{{\gamma^{xz}} \cdot {\gamma^{yy}}} - {{\gamma^{xy}} \cdot {\gamma^{yz}}}})}} {({{-2} + m})}}{{{\gamma^{xx}}}^{2}}}&{\frac{{-{({{{\gamma^{xz}} \cdot {\gamma^{yz}}} - {{\gamma^{xy}} \cdot {\gamma^{zz}}}})}} {({{-2} + m})}}{{{\gamma^{xx}}}^{2}}}&0&0&0&0&0&0&0&0&{{\frac1{\gamma^{xx}}}{({m})}}&{\frac{{\gamma^{xy}} \cdot {({{-2} + m})}}{{{\gamma^{xx}}}^{2}}}&{\frac{{\gamma^{xz}} \cdot {({{-2} + m})}}{{{\gamma^{xx}}}^{2}}}\\0&0&{-{\frac{1}{4}}}&0&0&0&0&0&0&0&0&0&0&{{\frac{1}{4}} {({{{\frac1{\gamma^{xx}}}{({-{{{\gamma^{xy}}}^{2}}})}} + {\gamma^{yy}}})}}&{{\frac{1}{4}} {({{{\frac1{\gamma^{xx}}}{({{-{\gamma^{xy}}} {\gamma^{xz}}})}} + {\gamma^{yz}}})}}&0&0&0&{{\frac{1}{4}} {({{{\frac1{\gamma^{xx}}}{({{{\gamma^{xy}}}^{2}})}} - {\gamma^{yy}}})}}&{{\frac{1}{4}} {({{{\frac1{\gamma^{xx}}}{({{\gamma^{xy}} \cdot {\gamma^{xz}}})}} - {\gamma^{yz}}})}}&0&0&0&{{\frac12}{({\sqrt{\gamma^{xx}}})}}&0&{\frac{{\gamma^{xy}}}{2 {\sqrt{\gamma^{xx}}}}}&{\frac{{\gamma^{xz}}}{2 {\sqrt{\gamma^{xx}}}}}&0&0&0&{\frac{1}{2}}\\0&{-{\frac{1}{4}}}&0&0&0&0&0&0&0&0&0&0&0&{{\frac{1}{4}} {({{{\frac1{\gamma^{xx}}}{({{\gamma^{xy}} \cdot {\gamma^{xz}}})}} - {\gamma^{yz}}})}}&{{\frac{1}{4}} {({{{\frac1{\gamma^{xx}}}{({{{\gamma^{xz}}}^{2}})}} - {\gamma^{zz}}})}}&0&0&0&{{\frac{1}{4}} {({{{\frac1{\gamma^{xx}}}{({{-{\gamma^{xy}}} {\gamma^{xz}}})}} + {\gamma^{yz}}})}}&{{\frac{1}{4}} {({{{\frac1{\gamma^{xx}}}{({-{{{\gamma^{xz}}}^{2}}})}} + {\gamma^{zz}}})}}&0&0&{{\frac12}{({\sqrt{\gamma^{xx}}})}}&0&{\frac{{\gamma^{xy}}}{2 {\sqrt{\gamma^{xx}}}}}&{\frac{{\gamma^{xz}}}{2 {\sqrt{\gamma^{xx}}}}}&0&0&0&{\frac{1}{2}}&0\\0&{\frac{{\gamma^{xy}}}{4 {\gamma^{xx}}}}&{\frac{{\gamma^{xz}}}{4 {\gamma^{xx}}}}&0&0&0&0&0&0&0&0&0&0&{\frac{{{-{\gamma^{xz}}} {\gamma^{yy}}} + {{\gamma^{xy}} \cdot {\gamma^{yz}}}}{4 {\gamma^{xx}}}}&{\frac{{{-{\gamma^{xz}}} {\gamma^{yz}}} + {{\gamma^{xy}} \cdot {\gamma^{zz}}}}{4 {\gamma^{xx}}}}&0&0&0&{\frac{{{\gamma^{xz}} \cdot {\gamma^{yy}}} - {{\gamma^{xy}} \cdot {\gamma^{yz}}}}{4 {\gamma^{xx}}}}&{\frac{{{\gamma^{xz}} \cdot {\gamma^{yz}}} - {{\gamma^{xy}} \cdot {\gamma^{zz}}}}{4 {\gamma^{xx}}}}&0&0&{\frac{-{\gamma^{xy}}}{2 {\sqrt{\gamma^{xx}}}}}&{\frac{-{\gamma^{xz}}}{2 {\sqrt{\gamma^{xx}}}}}&{\frac{-{\gamma^{yy}}}{2 {\sqrt{\gamma^{xx}}}}}&{\frac{-{\gamma^{yz}}}{\sqrt{\gamma^{xx}}}}&{\frac{-{\gamma^{zz}}}{2 {\sqrt{\gamma^{xx}}}}}&{\frac{1}{2 {\sqrt{\gamma^{xx}}}}}&{\frac{1}{2}}&0&0\\0&0&0&0&0&0&{\frac{{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}}{2 {\sqrt{\gamma^{xx}}}}}&{\frac{{{\gamma^{xy}} \cdot {\gamma^{xz}}} - {{\gamma^{xx}} \cdot {\gamma^{yz}}}}{\sqrt{\gamma^{xx}}}}&{\frac{{{{\gamma^{xz}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{zz}}}}{2 {\sqrt{\gamma^{xx}}}}}&0&{\frac{{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}}{2 {\sqrt{\gamma^{xx}}}}}&{\frac{{{-{\gamma^{xy}}} {\gamma^{xz}}} + {{\gamma^{xx}} \cdot {\gamma^{yz}}}}{2 {\sqrt{\gamma^{xx}}}}}&0&{\frac{{{\gamma^{xz}} \cdot {\gamma^{yy}}} - {{\gamma^{xy}} \cdot {\gamma^{yz}}}}{2 {\sqrt{\gamma^{xx}}}}}&{\frac{{{\gamma^{xz}} \cdot {\gamma^{yz}}} - {{\gamma^{xy}} \cdot {\gamma^{zz}}}}{2 {\sqrt{\gamma^{xx}}}}}&0&{\frac{{{-{\gamma^{xy}}} {\gamma^{xz}}} + {{\gamma^{xx}} \cdot {\gamma^{yz}}}}{2 {\sqrt{\gamma^{xx}}}}}&{\frac{{-{{{\gamma^{xz}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{zz}}}}{2 {\sqrt{\gamma^{xx}}}}}&{\frac{{{-{\gamma^{xz}}} {\gamma^{yy}}} + {{\gamma^{xy}} \cdot {\gamma^{yz}}}}{2 {\sqrt{\gamma^{xx}}}}}&{\frac{{{-{\gamma^{xz}}} {\gamma^{yz}}} + {{\gamma^{xy}} \cdot {\gamma^{zz}}}}{2 {\sqrt{\gamma^{xx}}}}}&0&0&0&0&0&0&0&{\frac{1}{2}}&{{\frac12}{({\sqrt{\gamma^{xx}}})}}&{\frac{{\gamma^{xy}}}{2 {\sqrt{\gamma^{xx}}}}}&{\frac{{\gamma^{xz}}}{2 {\sqrt{\gamma^{xx}}}}}\\0&0&0&0&0&0&0&0&{{\frac12}{({-{\sqrt{\gamma^{xx}}}})}}&0&0&0&0&0&{\frac{-{\gamma^{xy}}}{2 {\sqrt{\gamma^{xx}}}}}&0&0&{{\frac12}{({\sqrt{\gamma^{xx}}})}}&0&{\frac{{\gamma^{xy}}}{2 {\sqrt{\gamma^{xx}}}}}&0&0&0&0&0&0&{\frac{1}{2}}&0&0&0&0\\0&0&0&0&0&0&0&{{\frac12}{({-{\sqrt{\gamma^{xx}}}})}}&0&0&0&{{\frac14}{({\sqrt{\gamma^{xx}}})}}&0&{\frac{-{\gamma^{xy}}}{4 {\sqrt{\gamma^{xx}}}}}&{\frac{{\gamma^{xz}}}{4 {\sqrt{\gamma^{xx}}}}}&0&{{\frac14}{({\sqrt{\gamma^{xx}}})}}&0&{\frac{{\gamma^{xy}}}{4 {\sqrt{\gamma^{xx}}}}}&{\frac{-{\gamma^{xz}}}{4 {\sqrt{\gamma^{xx}}}}}&0&0&0&0&0&{\frac{1}{2}}&0&0&0&0&0\\0&0&{-{\frac{1}{4}}}&0&0&0&0&0&0&0&0&0&0&{{\frac{1}{4}} {({{{\frac1{\gamma^{xx}}}{({-{{{\gamma^{xy}}}^{2}}})}} + {\gamma^{yy}}})}}&{{\frac{1}{4}} {({{{\frac1{\gamma^{xx}}}{({{-{\gamma^{xy}}} {\gamma^{xz}}})}} + {\gamma^{yz}}})}}&0&0&0&{{\frac{1}{4}} {({{{\frac1{\gamma^{xx}}}{({{{\gamma^{xy}}}^{2}})}} - {\gamma^{yy}}})}}&{{\frac{1}{4}} {({{{\frac1{\gamma^{xx}}}{({{\gamma^{xy}} \cdot {\gamma^{xz}}})}} - {\gamma^{yz}}})}}&0&0&0&{{\frac12}{({-{\sqrt{\gamma^{xx}}}})}}&0&{\frac{-{\gamma^{xy}}}{2 {\sqrt{\gamma^{xx}}}}}&{\frac{-{\gamma^{xz}}}{2 {\sqrt{\gamma^{xx}}}}}&0&0&0&{\frac{1}{2}}\\0&{-{\frac{1}{4}}}&0&0&0&0&0&0&0&0&0&0&0&{{\frac{1}{4}} {({{{\frac1{\gamma^{xx}}}{({{\gamma^{xy}} \cdot {\gamma^{xz}}})}} - {\gamma^{yz}}})}}&{{\frac{1}{4}} {({{{\frac1{\gamma^{xx}}}{({{{\gamma^{xz}}}^{2}})}} - {\gamma^{zz}}})}}&0&0&0&{{\frac{1}{4}} {({{{\frac1{\gamma^{xx}}}{({{-{\gamma^{xy}}} {\gamma^{xz}}})}} + {\gamma^{yz}}})}}&{{\frac{1}{4}} {({{{\frac1{\gamma^{xx}}}{({-{{{\gamma^{xz}}}^{2}}})}} + {\gamma^{zz}}})}}&0&0&{{\frac12}{({-{\sqrt{\gamma^{xx}}}})}}&0&{\frac{-{\gamma^{xy}}}{2 {\sqrt{\gamma^{xx}}}}}&{\frac{-{\gamma^{xz}}}{2 {\sqrt{\gamma^{xx}}}}}&0&0&0&{\frac{1}{2}}&0\\0&{\frac{{\gamma^{xy}}}{4 {\gamma^{xx}}}}&{\frac{{\gamma^{xz}}}{4 {\gamma^{xx}}}}&0&0&0&0&0&0&0&0&0&0&{\frac{{{-{\gamma^{xz}}} {\gamma^{yy}}} + {{\gamma^{xy}} \cdot {\gamma^{yz}}}}{4 {\gamma^{xx}}}}&{\frac{{{-{\gamma^{xz}}} {\gamma^{yz}}} + {{\gamma^{xy}} \cdot {\gamma^{zz}}}}{4 {\gamma^{xx}}}}&0&0&0&{\frac{{{\gamma^{xz}} \cdot {\gamma^{yy}}} - {{\gamma^{xy}} \cdot {\gamma^{yz}}}}{4 {\gamma^{xx}}}}&{\frac{{{\gamma^{xz}} \cdot {\gamma^{yz}}} - {{\gamma^{xy}} \cdot {\gamma^{zz}}}}{4 {\gamma^{xx}}}}&0&0&{\frac{{\gamma^{xy}}}{2 {\sqrt{\gamma^{xx}}}}}&{\frac{{\gamma^{xz}}}{2 {\sqrt{\gamma^{xx}}}}}&{\frac{{\gamma^{yy}}}{2 {\sqrt{\gamma^{xx}}}}}&{\frac{{\gamma^{yz}}}{\sqrt{\gamma^{xx}}}}&{\frac{{\gamma^{zz}}}{2 {\sqrt{\gamma^{xx}}}}}&{\frac{-1}{2 {\sqrt{\gamma^{xx}}}}}&{\frac{1}{2}}&0&0\\0&0&0&0&0&0&{\frac{{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}}{2 {\sqrt{\gamma^{xx}}}}}&{\frac{{{-{\gamma^{xy}}} {\gamma^{xz}}} + {{\gamma^{xx}} \cdot {\gamma^{yz}}}}{\sqrt{\gamma^{xx}}}}&{\frac{{-{{{\gamma^{xz}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{zz}}}}{2 {\sqrt{\gamma^{xx}}}}}&0&{\frac{{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}}{2 {\sqrt{\gamma^{xx}}}}}&{\frac{{{\gamma^{xy}} \cdot {\gamma^{xz}}} - {{\gamma^{xx}} \cdot {\gamma^{yz}}}}{2 {\sqrt{\gamma^{xx}}}}}&0&{\frac{{{-{\gamma^{xz}}} {\gamma^{yy}}} + {{\gamma^{xy}} \cdot {\gamma^{yz}}}}{2 {\sqrt{\gamma^{xx}}}}}&{\frac{{{-{\gamma^{xz}}} {\gamma^{yz}}} + {{\gamma^{xy}} \cdot {\gamma^{zz}}}}{2 {\sqrt{\gamma^{xx}}}}}&0&{\frac{{{\gamma^{xy}} \cdot {\gamma^{xz}}} - {{\gamma^{xx}} \cdot {\gamma^{yz}}}}{2 {\sqrt{\gamma^{xx}}}}}&{\frac{{{{\gamma^{xz}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{zz}}}}{2 {\sqrt{\gamma^{xx}}}}}&{\frac{{{\gamma^{xz}} \cdot {\gamma^{yy}}} - {{\gamma^{xy}} \cdot {\gamma^{yz}}}}{2 {\sqrt{\gamma^{xx}}}}}&{\frac{{{\gamma^{xz}} \cdot {\gamma^{yz}}} - {{\gamma^{xy}} \cdot {\gamma^{zz}}}}{2 {\sqrt{\gamma^{xx}}}}}&0&0&0&0&0&0&0&{\frac{1}{2}}&{{\frac12}{({-{\sqrt{\gamma^{xx}}}})}}&{\frac{-{\gamma^{xy}}}{2 {\sqrt{\gamma^{xx}}}}}&{\frac{-{\gamma^{xz}}}{2 {\sqrt{\gamma^{xx}}}}}\\0&0&0&0&0&0&0&0&{{\frac12}{({\sqrt{\gamma^{xx}}})}}&0&0&0&0&0&{\frac{{\gamma^{xy}}}{2 {\sqrt{\gamma^{xx}}}}}&0&0&{{\frac12}{({-{\sqrt{\gamma^{xx}}}})}}&0&{\frac{-{\gamma^{xy}}}{2 {\sqrt{\gamma^{xx}}}}}&0&0&0&0&0&0&{\frac{1}{2}}&0&0&0&0\\0&0&0&0&0&0&0&{{\frac12}{({\sqrt{\gamma^{xx}}})}}&0&0&0&{{\frac14}{({-{\sqrt{\gamma^{xx}}}})}}&0&{\frac{{\gamma^{xy}}}{4 {\sqrt{\gamma^{xx}}}}}&{\frac{-{\gamma^{xz}}}{4 {\sqrt{\gamma^{xx}}}}}&0&{{\frac14}{({-{\sqrt{\gamma^{xx}}}})}}&0&{\frac{-{\gamma^{xy}}}{4 {\sqrt{\gamma^{xx}}}}}&{\frac{{\gamma^{xz}}}{4 {\sqrt{\gamma^{xx}}}}}&0&0&0&0&0&{\frac{1}{2}}&0&0&0&0&0\\{\frac{-1}{2 {\sqrt{f {\gamma^{xx}}}}}}&{\frac{-{\gamma^{xy}}}{{2 {\gamma^{xx}}} {\sqrt{f {\gamma^{xx}}}}}}&{\frac{-{\gamma^{xz}}}{{2 {\gamma^{xx}}} {\sqrt{f {\gamma^{xx}}}}}}&0&0&0&{\frac{{\sqrt f} {{({{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}})} {({{-2} + m})}}}{{{2 {({{-1} + f})}} {\gamma^{xx}}} {\sqrt{\gamma^{xx}}}}}&{\frac{{\sqrt f} {{({{{-{\gamma^{xy}}} {\gamma^{xz}}} + {{\gamma^{xx}} \cdot {\gamma^{yz}}}})} {({{-2} + m})}}}{{{({{-1} + f})} {\gamma^{xx}}} {\sqrt{\gamma^{xx}}}}}&{\frac{{\sqrt f} {{({{-{{{\gamma^{xz}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{zz}}}})} {({{-2} + m})}}}{{{2 {({{-1} + f})}} {\gamma^{xx}}} {\sqrt{\gamma^{xx}}}}}&0&{\frac{{\sqrt f} {{({{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}})} {({{-2} + m})}}}{{{2 {({{-1} + f})}} {\gamma^{xx}}} {\sqrt{\gamma^{xx}}}}}&{\frac{{\sqrt f} {{({{{\gamma^{xy}} \cdot {\gamma^{xz}}} - {{\gamma^{xx}} \cdot {\gamma^{yz}}}})} {({{-2} + m})}}}{{{2 {({{-1} + f})}} {\gamma^{xx}}} {\sqrt{\gamma^{xx}}}}}&0&{\frac{{\sqrt f} {{({{{-{\gamma^{xz}}} {\gamma^{yy}}} + {{\gamma^{xy}} \cdot {\gamma^{yz}}}})} {({{-2} + m})}}}{{{2 {({{-1} + f})}} {\gamma^{xx}}} {\sqrt{\gamma^{xx}}}}}&{\frac{{\sqrt f} {{({{{-{\gamma^{xz}}} {\gamma^{yz}}} + {{\gamma^{xy}} \cdot {\gamma^{zz}}}})} {({{-2} + m})}}}{{{2 {({{-1} + f})}} {\gamma^{xx}}} {\sqrt{\gamma^{xx}}}}}&0&{\frac{{\sqrt f} {{({{{\gamma^{xy}} \cdot {\gamma^{xz}}} - {{\gamma^{xx}} \cdot {\gamma^{yz}}}})} {({{-2} + m})}}}{{{2 {({{-1} + f})}} {\gamma^{xx}}} {\sqrt{\gamma^{xx}}}}}&{\frac{{\sqrt f} {{({{{{\gamma^{xz}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{zz}}}})} {({{-2} + m})}}}{{{2 {({{-1} + f})}} {\gamma^{xx}}} {\sqrt{\gamma^{xx}}}}}&{\frac{{\sqrt f} {{({{{\gamma^{xz}} \cdot {\gamma^{yy}}} - {{\gamma^{xy}} \cdot {\gamma^{yz}}}})} {({{-2} + m})}}}{{{2 {({{-1} + f})}} {\gamma^{xx}}} {\sqrt{\gamma^{xx}}}}}&{\frac{{\sqrt f} {{({{{\gamma^{xz}} \cdot {\gamma^{yz}}} - {{\gamma^{xy}} \cdot {\gamma^{zz}}}})} {({{-2} + m})}}}{{{2 {({{-1} + f})}} {\gamma^{xx}}} {\sqrt{\gamma^{xx}}}}}&0&{\frac{1}{2}}&{{\frac1{\gamma^{xx}}}{({{\gamma^{xy}}})}}&{{\frac1{\gamma^{xx}}}{({{\gamma^{xz}}})}}&{\frac{{\gamma^{yy}}}{2 {\gamma^{xx}}}}&{{\frac1{\gamma^{xx}}}{({{\gamma^{yz}}})}}&{\frac{{\gamma^{zz}}}{2 {\gamma^{xx}}}}&{\frac{2 - {f m}}{{{-2} {\gamma^{xx}}} + {{2 f} {\gamma^{xx}}}}}&{\frac{{-{\sqrt f}} {({{-2} + m})}}{{2 {({{-1} + f})}} {\sqrt{\gamma^{xx}}}}}&{\frac{{{-{\sqrt f}} {\gamma^{xy}}} {({{-2} + m})}}{{{2 {({{-1} + f})}} {\gamma^{xx}}} {\sqrt{\gamma^{xx}}}}}&{\frac{{{-{\sqrt f}} {\gamma^{xz}}} {({{-2} + m})}}{{{2 {({{-1} + f})}} {\gamma^{xx}}} {\sqrt{\gamma^{xx}}}}}\\{\frac{1}{2 {\sqrt{f {\gamma^{xx}}}}}}&{\frac{{\gamma^{xy}}}{{2 {\gamma^{xx}}} {\sqrt{f {\gamma^{xx}}}}}}&{\frac{{\gamma^{xz}}}{{2 {\gamma^{xx}}} {\sqrt{f {\gamma^{xx}}}}}}&0&0&0&{\frac{{{\sqrt f} {({{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}} {({{-2} + m})}}{{{2 {({{-1} + f})}} {\gamma^{xx}}} {\sqrt{\gamma^{xx}}}}}&{\frac{{{\sqrt f} {({{{\gamma^{xy}} \cdot {\gamma^{xz}}} - {{\gamma^{xx}} \cdot {\gamma^{yz}}}})}} {({{-2} + m})}}{{{({{-1} + f})} {\gamma^{xx}}} {\sqrt{\gamma^{xx}}}}}&{\frac{{{\sqrt f} {({{{{\gamma^{xz}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{zz}}}})}} {({{-2} + m})}}{{{2 {({{-1} + f})}} {\gamma^{xx}}} {\sqrt{\gamma^{xx}}}}}&0&{\frac{{{\sqrt f} {({{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}} {({{-2} + m})}}{{{2 {({{-1} + f})}} {\gamma^{xx}}} {\sqrt{\gamma^{xx}}}}}&{\frac{{{\sqrt f} {({{{-{\gamma^{xy}}} {\gamma^{xz}}} + {{\gamma^{xx}} \cdot {\gamma^{yz}}}})}} {({{-2} + m})}}{{{2 {({{-1} + f})}} {\gamma^{xx}}} {\sqrt{\gamma^{xx}}}}}&0&{\frac{{{\sqrt f} {({{{\gamma^{xz}} \cdot {\gamma^{yy}}} - {{\gamma^{xy}} \cdot {\gamma^{yz}}}})}} {({{-2} + m})}}{{{2 {({{-1} + f})}} {\gamma^{xx}}} {\sqrt{\gamma^{xx}}}}}&{\frac{{{\sqrt f} {({{{\gamma^{xz}} \cdot {\gamma^{yz}}} - {{\gamma^{xy}} \cdot {\gamma^{zz}}}})}} {({{-2} + m})}}{{{2 {({{-1} + f})}} {\gamma^{xx}}} {\sqrt{\gamma^{xx}}}}}&0&{\frac{{{\sqrt f} {({{{-{\gamma^{xy}}} {\gamma^{xz}}} + {{\gamma^{xx}} \cdot {\gamma^{yz}}}})}} {({{-2} + m})}}{{{2 {({{-1} + f})}} {\gamma^{xx}}} {\sqrt{\gamma^{xx}}}}}&{\frac{{{\sqrt f} {({{-{{{\gamma^{xz}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{zz}}}})}} {({{-2} + m})}}{{{2 {({{-1} + f})}} {\gamma^{xx}}} {\sqrt{\gamma^{xx}}}}}&{\frac{{{\sqrt f} {({{{-{\gamma^{xz}}} {\gamma^{yy}}} + {{\gamma^{xy}} \cdot {\gamma^{yz}}}})}} {({{-2} + m})}}{{{2 {({{-1} + f})}} {\gamma^{xx}}} {\sqrt{\gamma^{xx}}}}}&{\frac{{{\sqrt f} {({{{-{\gamma^{xz}}} {\gamma^{yz}}} + {{\gamma^{xy}} \cdot {\gamma^{zz}}}})}} {({{-2} + m})}}{{{2 {({{-1} + f})}} {\gamma^{xx}}} {\sqrt{\gamma^{xx}}}}}&0&{\frac{1}{2}}&{{\frac1{\gamma^{xx}}}{({{\gamma^{xy}}})}}&{{\frac1{\gamma^{xx}}}{({{\gamma^{xz}}})}}&{\frac{{\gamma^{yy}}}{2 {\gamma^{xx}}}}&{{\frac1{\gamma^{xx}}}{({{\gamma^{yz}}})}}&{\frac{{\gamma^{zz}}}{2 {\gamma^{xx}}}}&{\frac{2 - {f m}}{{{-2} {\gamma^{xx}}} + {{2 f} {\gamma^{xx}}}}}&{\frac{{\sqrt f} {({{-2} + m})}}{{2 {({{-1} + f})}} {\sqrt{\gamma^{xx}}}}}&{\frac{{{\sqrt f} {\gamma^{xy}}} {({{-2} + m})}}{{{2 {({{-1} + f})}} {\gamma^{xx}}} {\sqrt{\gamma^{xx}}}}}&{\frac{{{\sqrt f} {\gamma^{xz}}} {({{-2} + m})}}{{{2 {({{-1} + f})}} {\gamma^{xx}}} {\sqrt{\gamma^{xx}}}}}}\right]}$
 <br>
-$R = {\left[\matrix{{{\frac1{\gamma^{xx}}}{({{-2} {\gamma^{xz}}})}}&{{\frac1{\gamma^{xx}}}{({{-2} {\gamma^{xy}}})}}&0&{{\frac1{\gamma^{xx}}}{({{{\gamma^{xz}} \cdot {\gamma^{yz}}} - {{\gamma^{xy}} \cdot {\gamma^{zz}}}})}}&{{\frac1{\gamma^{xx}}}{({{{\gamma^{xz}} \cdot {\gamma^{yy}}} - {{\gamma^{xy}} \cdot {\gamma^{yz}}}})}}&0&0&0&{{\frac1{\gamma^{xx}}}{({{{-{\gamma^{xz}}} {\gamma^{yz}}} + {{\gamma^{xy}} \cdot {\gamma^{zz}}}})}}&{{\frac1{\gamma^{xx}}}{({{{-{\gamma^{xz}}} {\gamma^{yy}}} + {{\gamma^{xy}} \cdot {\gamma^{yz}}}})}}&0&0&0&0&0&0&0&0&0&0&{\frac{{-f} {({{-2} + m})}}{{({{-1} + f})} {\sqrt{\gamma^{xx}}}}}&0&0&0&0&0&{\frac{f {({{-2} + m})}}{{({{-1} + f})} {\sqrt{\gamma^{xx}}}}}&0&0&{-{\sqrt{f {\gamma^{xx}}}}}&{\sqrt{f {\gamma^{xx}}}}\\0&2&0&{{{\frac1{\gamma^{xx}}}{({-{{{\gamma^{xz}}}^{2}}})}} + {\gamma^{zz}}}&{{{\frac1{\gamma^{xx}}}{({{-{\gamma^{xy}}} {\gamma^{xz}}})}} + {\gamma^{yz}}}&0&0&0&{{{\frac1{\gamma^{xx}}}{({{{\gamma^{xz}}}^{2}})}} - {\gamma^{zz}}}&{{{\frac1{\gamma^{xx}}}{({{\gamma^{xy}} \cdot {\gamma^{xz}}})}} - {\gamma^{yz}}}&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\2&0&0&{{{\frac1{\gamma^{xx}}}{({{\gamma^{xy}} \cdot {\gamma^{xz}}})}} - {\gamma^{yz}}}&{{{\frac1{\gamma^{xx}}}{({{{\gamma^{xy}}}^{2}})}} - {\gamma^{yy}}}&0&0&0&{{{\frac1{\gamma^{xx}}}{({{-{\gamma^{xy}}} {\gamma^{xz}}})}} + {\gamma^{yz}}}&{{{\frac1{\gamma^{xx}}}{({-{{{\gamma^{xy}}}^{2}}})}} + {\gamma^{yy}}}&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&1&{\frac{{\gamma^{xz}} \cdot {\gamma^{yy}}}{{{-{\gamma^{xx}}} {{{\gamma^{xy}}}^{2}}} + {{{{\gamma^{xx}}}^{2}} {\gamma^{yy}}}}}&{\frac{{\gamma^{xy}} \cdot {\gamma^{yy}}}{{{-{\gamma^{xx}}} {{{\gamma^{xy}}}^{2}}} + {{{{\gamma^{xx}}}^{2}} {\gamma^{yy}}}}}&{{\frac1{\gamma^{xx}}}{({{-1} + {\frac{{{\gamma^{xy}}}^{2}}{{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}}}})}}&{\frac{{{f {{{\gamma^{xy}}}^{2}}} {({m - 2})}} + {{{\gamma^{xx}} \cdot {\gamma^{yy}}} {({1 + {f {({1 - m})}}})}}}{{{{({f - 1})} {\gamma^{xx}}} {\sqrt{\gamma^{xx}}}} {({{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}}&{\frac{{{-{{{\gamma^{xz}}}^{2}}} {\gamma^{yy}}} + {{{{\gamma^{xy}}}^{2}} {\gamma^{zz}}}}{{{\gamma^{xx}} \cdot {\sqrt{\gamma^{xx}}}} {({{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}}&{\frac{{2 {\gamma^{xy}}} {({{{-{\gamma^{xz}}} {\gamma^{yy}}} + {{\gamma^{xy}} \cdot {\gamma^{yz}}}})}}{{{\gamma^{xx}} \cdot {\sqrt{\gamma^{xx}}}} {({{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}}&{\frac{{\gamma^{xz}} \cdot {\gamma^{yy}}}{{{-{\gamma^{xx}}} {{{\gamma^{xy}}}^{2}}} + {{{{\gamma^{xx}}}^{2}} {\gamma^{yy}}}}}&{\frac{{\gamma^{xy}} \cdot {\gamma^{yy}}}{{{-{\gamma^{xx}}} {{{\gamma^{xy}}}^{2}}} + {{{{\gamma^{xx}}}^{2}} {\gamma^{yy}}}}}&{{\frac1{\gamma^{xx}}}{({{-1} + {\frac{{{\gamma^{xy}}}^{2}}{{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}}}})}}&{\frac{{\frac{{{\gamma^{xy}}}^{2}}{{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}}} + {\frac{{-1} + {f {({{-1} + m})}}}{{-1} + f}}}{{\gamma^{xx}} \cdot {\sqrt{\gamma^{xx}}}}}&{\frac{{{{{\gamma^{xz}}}^{2}} {\gamma^{yy}}} - {{{{\gamma^{xy}}}^{2}} {\gamma^{zz}}}}{{{\gamma^{xx}} \cdot {\sqrt{\gamma^{xx}}}} {({{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}}&{\frac{{2 {\gamma^{xy}}} {({{{\gamma^{xz}} \cdot {\gamma^{yy}}} - {{\gamma^{xy}} \cdot {\gamma^{yz}}}})}}{{{\gamma^{xx}} \cdot {\sqrt{\gamma^{xx}}}} {({{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}}&{\frac{-1}{\sqrt{f {\gamma^{xx}}}}}&{\frac{1}{\sqrt{f {\gamma^{xx}}}}}\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&1&0&{\frac{{\gamma^{xy}} \cdot {\gamma^{xz}}}{{\gamma^{xx}} \cdot {({{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}}&{\frac{{\gamma^{yy}}}{{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}}}&{\frac{{\gamma^{xy}}}{{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}}}&{\frac{{\gamma^{xy}}}{{\sqrt{\gamma^{xx}}} {({{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}}&{\frac{{\gamma^{xy}} \cdot {({{{{\gamma^{xz}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{zz}}}})}}{{{\gamma^{xx}} \cdot {\sqrt{\gamma^{xx}}}} {({{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}}&{\frac{{{\gamma^{xz}} \cdot {({{{{\gamma^{xy}}}^{2}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}} - {2 {{{\gamma^{xx}} \cdot {\gamma^{xy}}} {\gamma^{yz}}}}}{{{\gamma^{xx}} \cdot {\sqrt{\gamma^{xx}}}} {({{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}}&{\frac{{{\gamma^{xy}}}^{2}}{{\gamma^{xx}} \cdot {({{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}}&{\frac{{\gamma^{yy}}}{{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}}}&{\frac{{\gamma^{xy}}}{{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}}}&{\frac{{\gamma^{xy}}}{{\sqrt{\gamma^{xx}}} {({{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}}&{\frac{{\gamma^{xy}} \cdot {({{-{{{\gamma^{xz}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{zz}}}})}}{{{\gamma^{xx}} \cdot {\sqrt{\gamma^{xx}}}} {({{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}}&{\frac{{{-{\gamma^{xz}}} {({{{{\gamma^{xy}}}^{2}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}} + {{{2 {\gamma^{xx}}} {\gamma^{xy}}} {\gamma^{yz}}}}{{{\gamma^{xx}} \cdot {\sqrt{\gamma^{xx}}}} {({{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}}&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&1&0&0&{\frac{-1}{{\gamma^{xx}}}}&0&0&0&{\frac{{\gamma^{xz}}}{{\gamma^{xx}} \cdot {\sqrt{\gamma^{xx}}}}}&{\frac{{\gamma^{xy}}}{{\gamma^{xx}} \cdot {\sqrt{\gamma^{xx}}}}}&{\frac{-1}{{\gamma^{xx}}}}&0&0&0&{\frac{-{\gamma^{xz}}}{{\gamma^{xx}} \cdot {\sqrt{\gamma^{xx}}}}}&{\frac{-{\gamma^{xy}}}{{\gamma^{xx}} \cdot {\sqrt{\gamma^{xx}}}}}&0&0\\0&0&0&0&{{\frac1{\gamma^{xx}}}{({-{\gamma^{xz}}})}}&0&0&0&0&{{\frac1{\gamma^{xx}}}{({{\gamma^{xz}}})}}&0&0&1&0&0&0&0&{\frac{{\gamma^{xz}}}{{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}}}&{\frac{{\gamma^{xy}}}{{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}}}&{\frac{{\gamma^{xx}}}{{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}}}&{\frac{\sqrt{\gamma^{xx}}}{{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}}}&{\frac{{{{\gamma^{xz}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{zz}}}}{{\sqrt{\gamma^{xx}}} {({{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}}&{\frac{2 {({{{\gamma^{xy}} \cdot {\gamma^{xz}}} - {{\gamma^{xx}} \cdot {\gamma^{yz}}}})}}{{\sqrt{\gamma^{xx}}} {({{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}}&{\frac{{\gamma^{xz}}}{{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}}}&{\frac{{\gamma^{xy}}}{{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}}}&{\frac{{\gamma^{xx}}}{{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}}}&{\frac{\sqrt{\gamma^{xx}}}{{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}}}&{\frac{{{{\gamma^{xz}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{zz}}}}{{\sqrt{\gamma^{xx}}} {({{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}}&{\frac{{-2} {({{{\gamma^{xy}} \cdot {\gamma^{xz}}} - {{\gamma^{xx}} \cdot {\gamma^{yz}}}})}}{{\sqrt{\gamma^{xx}}} {({{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}}&0&0\\0&0&0&{\frac{-{\gamma^{xz}}}{2 {\gamma^{xx}}}}&{\frac{{\gamma^{xy}}}{2 {\gamma^{xx}}}}&0&0&0&{\frac{{\gamma^{xz}}}{2 {\gamma^{xx}}}}&{\frac{-{\gamma^{xy}}}{2 {\gamma^{xx}}}}&0&{\frac{1}{2}}&0&0&0&0&0&0&0&0&0&0&{\frac{-1}{\sqrt{\gamma^{xx}}}}&0&0&0&0&0&{\frac{1}{\sqrt{\gamma^{xx}}}}&0&0\\0&0&0&{{\frac1{\gamma^{xx}}}{({{\gamma^{xy}}})}}&0&1&0&0&{{\frac1{\gamma^{xx}}}{({-{\gamma^{xy}}})}}&0&0&0&0&0&0&0&0&0&0&0&0&{\frac{-1}{\sqrt{\gamma^{xx}}}}&0&0&0&0&0&{\frac{1}{\sqrt{\gamma^{xx}}}}&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&1&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&1&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&1&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&1&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&1&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&1&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&1&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&1&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&1&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&1&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&1&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&1&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&{\frac{{\gamma^{xz}} \cdot {\gamma^{yy}}}{{\sqrt{\gamma^{xx}}} {({{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}}&{\frac{{\gamma^{xy}} \cdot {\gamma^{yy}}}{{\sqrt{\gamma^{xx}}} {({{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}}&{\frac{1 + {\frac{{{\gamma^{xy}}}^{2}}{{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}}}}{\sqrt{\gamma^{xx}}}}&{{\frac1{\gamma^{xx}}}{({{\frac{{{\gamma^{xy}}}^{2}}{{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}}} + {\frac{{-1} + {f {({{-1} + m})}}}{{-1} + f}}})}}&{\frac{{{{{\gamma^{xz}}}^{2}} {\gamma^{yy}}} - {{{{\gamma^{xy}}}^{2}} {\gamma^{zz}}}}{{{-{\gamma^{xx}}} {{{\gamma^{xy}}}^{2}}} + {{{{\gamma^{xx}}}^{2}} {\gamma^{yy}}}}}&{\frac{{2 {\gamma^{xy}}} {({{{\gamma^{xz}} \cdot {\gamma^{yy}}} - {{\gamma^{xy}} \cdot {\gamma^{yz}}}})}}{{\gamma^{xx}} \cdot {({{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}}&{\frac{{\gamma^{xz}} \cdot {\gamma^{yy}}}{{\sqrt{\gamma^{xx}}} {({{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}}&{\frac{{\gamma^{xy}} \cdot {\gamma^{yy}}}{{\sqrt{\gamma^{xx}}} {({{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}}&{\frac{{2 {{{\gamma^{xy}}}^{2}}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}}{{\sqrt{\gamma^{xx}}} {({{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}}&{{\frac1{\gamma^{xx}}}{({{\frac{{{\gamma^{xy}}}^{2}}{{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}}} + {\frac{{-1} + {f {({{-1} + m})}}}{{-1} + f}}})}}&{\frac{{{{{\gamma^{xz}}}^{2}} {\gamma^{yy}}} - {{{{\gamma^{xy}}}^{2}} {\gamma^{zz}}}}{{{-{\gamma^{xx}}} {{{\gamma^{xy}}}^{2}}} + {{{{\gamma^{xx}}}^{2}} {\gamma^{yy}}}}}&{\frac{{2 {\gamma^{xy}}} {({{{\gamma^{xz}} \cdot {\gamma^{yy}}} - {{\gamma^{xy}} \cdot {\gamma^{yz}}}})}}{{\gamma^{xx}} \cdot {({{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}}&1&1\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&{\frac{{\gamma^{xy}} \cdot {\gamma^{xz}}}{{\sqrt{\gamma^{xx}}} {({{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}}&{\frac{{\sqrt{\gamma^{xx}}} {\gamma^{yy}}}{{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}}}&{\frac{{\sqrt{\gamma^{xx}}} {\gamma^{xy}}}{{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}}}&{\frac{{\gamma^{xy}}}{{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}}}&{\frac{{\gamma^{xy}} \cdot {({{-{{{\gamma^{xz}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{zz}}}})}}{{\gamma^{xx}} \cdot {({{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}}&{\frac{{{\gamma^{xz}} \cdot {({{{{\gamma^{xy}}}^{2}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}} - {{{2 {\gamma^{xx}}} {\gamma^{xy}}} {\gamma^{yz}}}}{{\gamma^{xx}} \cdot {({{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}}&{\frac{{\gamma^{xy}} \cdot {\gamma^{xz}}}{{\sqrt{\gamma^{xx}}} {({{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}}&{\frac{{\sqrt{\gamma^{xx}}} {\gamma^{yy}}}{{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}}}&{\frac{{\sqrt{\gamma^{xx}}} {\gamma^{xy}}}{{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}}}&{\frac{{\gamma^{xy}}}{{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}}}&{\frac{{\gamma^{xy}} \cdot {({{-{{{\gamma^{xz}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{zz}}}})}}{{\gamma^{xx}} \cdot {({{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}}&{\frac{{{\gamma^{xz}} \cdot {({{{{\gamma^{xy}}}^{2}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}} - {{{2 {\gamma^{xx}}} {\gamma^{xy}}} {\gamma^{yz}}}}{{\gamma^{xx}} \cdot {({{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}}&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&{\frac{1}{\sqrt{\gamma^{xx}}}}&0&0&0&{{\frac1{\gamma^{xx}}}{({-{\gamma^{xz}}})}}&{{\frac1{\gamma^{xx}}}{({-{\gamma^{xy}}})}}&{\frac{-1}{\sqrt{\gamma^{xx}}}}&0&0&0&{{\frac1{\gamma^{xx}}}{({-{\gamma^{xz}}})}}&{{\frac1{\gamma^{xx}}}{({-{\gamma^{xy}}})}}&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&{\frac{{\sqrt{\gamma^{xx}}} {\gamma^{xz}}}{{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}}}&{\frac{{\sqrt{\gamma^{xx}}} {\gamma^{xy}}}{{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}}}&{\frac{{\gamma^{xx}} \cdot {\sqrt{\gamma^{xx}}}}{{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}}}&{\frac{{\gamma^{xx}}}{{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}}}&{\frac{{{{\gamma^{xz}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{zz}}}}{{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}}}&{\frac{{{2 {\gamma^{xy}}} {\gamma^{xz}}} - {{2 {\gamma^{xx}}} {\gamma^{yz}}}}{{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}}}&{\frac{{\sqrt{\gamma^{xx}}} {\gamma^{xz}}}{{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}}}&{\frac{{\sqrt{\gamma^{xx}}} {\gamma^{xy}}}{{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}}}&{\frac{{\gamma^{xx}} \cdot {\sqrt{\gamma^{xx}}}}{{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}}}&{\frac{{\gamma^{xx}}}{{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}}}&{\frac{{{{\gamma^{xz}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{zz}}}}{{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}}}&{\frac{{{2 {\gamma^{xy}}} {\gamma^{xz}}} - {{2 {\gamma^{xx}}} {\gamma^{yz}}}}{{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}}}&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&1&0&0&0&0&0&1&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&1&0&0&0&0&0&1&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&1&0&0&0&0&0&1&0&0&0&0\\{{\frac1{\gamma^{xx}}}{({-{\gamma^{xz}}})}}&{{\frac1{\gamma^{xx}}}{({-{\gamma^{xy}}})}}&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&1&0&0&0&0&0&1&0&0&0&0&0\\0&1&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&1&0&0&0&0&0&1&0&0&0&0&0&0\\1&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&1&0&0&0&0&0&1&0&0&0&0&0&0&0}\right]}$
+$R = {\left[\matrix{{{\frac1{\gamma^{xx}}}{({{-2} {\gamma^{xz}}})}}&{{\frac1{\gamma^{xx}}}{({{-2} {\gamma^{xy}}})}}&0&{{\frac1{\gamma^{xx}}}{({{{\gamma^{xz}} \cdot {\gamma^{yz}}} - {{\gamma^{xy}} \cdot {\gamma^{zz}}}})}}&{{\frac1{\gamma^{xx}}}{({{{\gamma^{xz}} \cdot {\gamma^{yy}}} - {{\gamma^{xy}} \cdot {\gamma^{yz}}}})}}&0&0&0&{{\frac1{\gamma^{xx}}}{({{{-{\gamma^{xz}}} {\gamma^{yz}}} + {{\gamma^{xy}} \cdot {\gamma^{zz}}}})}}&{{\frac1{\gamma^{xx}}}{({{{-{\gamma^{xz}}} {\gamma^{yy}}} + {{\gamma^{xy}} \cdot {\gamma^{yz}}}})}}&0&0&0&0&0&0&0&0&0&0&{\frac{{-f} {({{-2} + m})}}{{({{-1} + f})} {\sqrt{\gamma^{xx}}}}}&0&0&0&0&0&{\frac{f {({{-2} + m})}}{{({{-1} + f})} {\sqrt{\gamma^{xx}}}}}&0&0&{-{\sqrt{f {\gamma^{xx}}}}}&{\sqrt{f {\gamma^{xx}}}}\\0&2&0&{{{\frac1{\gamma^{xx}}}{({-{{{\gamma^{xz}}}^{2}}})}} + {\gamma^{zz}}}&{{{\frac1{\gamma^{xx}}}{({{-{\gamma^{xy}}} {\gamma^{xz}}})}} + {\gamma^{yz}}}&0&0&0&{{{\frac1{\gamma^{xx}}}{({{{\gamma^{xz}}}^{2}})}} - {\gamma^{zz}}}&{{{\frac1{\gamma^{xx}}}{({{\gamma^{xy}} \cdot {\gamma^{xz}}})}} - {\gamma^{yz}}}&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\2&0&0&{{{\frac1{\gamma^{xx}}}{({{\gamma^{xy}} \cdot {\gamma^{xz}}})}} - {\gamma^{yz}}}&{{{\frac1{\gamma^{xx}}}{({{{\gamma^{xy}}}^{2}})}} - {\gamma^{yy}}}&0&0&0&{{{\frac1{\gamma^{xx}}}{({{-{\gamma^{xy}}} {\gamma^{xz}}})}} + {\gamma^{yz}}}&{{{\frac1{\gamma^{xx}}}{({-{{{\gamma^{xy}}}^{2}}})}} + {\gamma^{yy}}}&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&1&{\frac{{\gamma^{xz}} \cdot {\gamma^{yy}}}{{{-{\gamma^{xx}}} {{{\gamma^{xy}}}^{2}}} + {{{{\gamma^{xx}}}^{2}} {\gamma^{yy}}}}}&{\frac{{\gamma^{xy}} \cdot {\gamma^{yy}}}{{{-{\gamma^{xx}}} {{{\gamma^{xy}}}^{2}}} + {{{{\gamma^{xx}}}^{2}} {\gamma^{yy}}}}}&{{\frac1{\gamma^{xx}}}{({{-1} + {\frac{{{\gamma^{xy}}}^{2}}{{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}}}})}}&{\frac{{{f {{{\gamma^{xy}}}^{2}}} {({m - 2})}} + {{{\gamma^{xx}} \cdot {\gamma^{yy}}} {({1 + {f {({1 - m})}}})}}}{{{{({f - 1})} {\gamma^{xx}}} {\sqrt{\gamma^{xx}}}} {({{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}}&{\frac{{{-{{{\gamma^{xz}}}^{2}}} {\gamma^{yy}}} + {{{{\gamma^{xy}}}^{2}} {\gamma^{zz}}}}{{{\gamma^{xx}} \cdot {\sqrt{\gamma^{xx}}}} {({{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}}&{\frac{{2 {\gamma^{xy}}} {({{{-{\gamma^{xz}}} {\gamma^{yy}}} + {{\gamma^{xy}} \cdot {\gamma^{yz}}}})}}{{{\gamma^{xx}} \cdot {\sqrt{\gamma^{xx}}}} {({{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}}&{\frac{{\gamma^{xz}} \cdot {\gamma^{yy}}}{{{-{\gamma^{xx}}} {{{\gamma^{xy}}}^{2}}} + {{{{\gamma^{xx}}}^{2}} {\gamma^{yy}}}}}&{\frac{{\gamma^{xy}} \cdot {\gamma^{yy}}}{{{-{\gamma^{xx}}} {{{\gamma^{xy}}}^{2}}} + {{{{\gamma^{xx}}}^{2}} {\gamma^{yy}}}}}&{{\frac1{\gamma^{xx}}}{({{-1} + {\frac{{{\gamma^{xy}}}^{2}}{{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}}}})}}&{\frac{{\frac{{{\gamma^{xy}}}^{2}}{{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}}} + {\frac{{-1} + {f {({{-1} + m})}}}{{-1} + f}}}{{\gamma^{xx}} \cdot {\sqrt{\gamma^{xx}}}}}&{\frac{{{{{\gamma^{xz}}}^{2}} {\gamma^{yy}}} - {{{{\gamma^{xy}}}^{2}} {\gamma^{zz}}}}{{{\gamma^{xx}} \cdot {\sqrt{\gamma^{xx}}}} {({{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}}&{\frac{{2 {\gamma^{xy}}} {({{{\gamma^{xz}} \cdot {\gamma^{yy}}} - {{\gamma^{xy}} \cdot {\gamma^{yz}}}})}}{{{\gamma^{xx}} \cdot {\sqrt{\gamma^{xx}}}} {({{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}}&{\frac{-1}{\sqrt{f {\gamma^{xx}}}}}&{\frac{1}{\sqrt{f {\gamma^{xx}}}}}\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&1&0&{\frac{{\gamma^{xy}} \cdot {\gamma^{xz}}}{{\gamma^{xx}} \cdot {({{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}}&{\frac{{\gamma^{yy}}}{{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}}}&{\frac{{\gamma^{xy}}}{{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}}}&{\frac{{\gamma^{xy}}}{{\sqrt{\gamma^{xx}}} {({{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}}&{\frac{{\gamma^{xy}} \cdot {({{{{\gamma^{xz}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{zz}}}})}}{{{\gamma^{xx}} \cdot {\sqrt{\gamma^{xx}}}} {({{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}}&{\frac{{{\gamma^{xz}} \cdot {({{{{\gamma^{xy}}}^{2}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}} - {2 {{{\gamma^{xx}} \cdot {\gamma^{xy}}} {\gamma^{yz}}}}}{{{\gamma^{xx}} \cdot {\sqrt{\gamma^{xx}}}} {({{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}}&{\frac{{\gamma^{xy}} \cdot {\gamma^{xz}}}{{\gamma^{xx}} \cdot {({{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}}&{\frac{{\gamma^{yy}}}{{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}}}&{\frac{{\gamma^{xy}}}{{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}}}&{\frac{{\gamma^{xy}}}{{\sqrt{\gamma^{xx}}} {({{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}}&{\frac{{\gamma^{xy}} \cdot {({{-{{{\gamma^{xz}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{zz}}}})}}{{{\gamma^{xx}} \cdot {\sqrt{\gamma^{xx}}}} {({{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}}&{\frac{{{-{\gamma^{xz}}} {({{{{\gamma^{xy}}}^{2}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}} + {{{2 {\gamma^{xx}}} {\gamma^{xy}}} {\gamma^{yz}}}}{{{\gamma^{xx}} \cdot {\sqrt{\gamma^{xx}}}} {({{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}}&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&1&0&0&{\frac{-1}{{\gamma^{xx}}}}&0&0&0&{\frac{{\gamma^{xz}}}{{\gamma^{xx}} \cdot {\sqrt{\gamma^{xx}}}}}&{\frac{{\gamma^{xy}}}{{\gamma^{xx}} \cdot {\sqrt{\gamma^{xx}}}}}&{\frac{-1}{{\gamma^{xx}}}}&0&0&0&{\frac{-{\gamma^{xz}}}{{\gamma^{xx}} \cdot {\sqrt{\gamma^{xx}}}}}&{\frac{-{\gamma^{xy}}}{{\gamma^{xx}} \cdot {\sqrt{\gamma^{xx}}}}}&0&0\\0&0&0&0&{{\frac1{\gamma^{xx}}}{({-{\gamma^{xz}}})}}&0&0&0&0&{{\frac1{\gamma^{xx}}}{({{\gamma^{xz}}})}}&0&0&1&0&0&0&0&{\frac{{\gamma^{xz}}}{{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}}}&{\frac{{\gamma^{xy}}}{{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}}}&{\frac{{\gamma^{xx}}}{{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}}}&{\frac{\sqrt{\gamma^{xx}}}{{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}}}&{\frac{{{{\gamma^{xz}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{zz}}}}{{\sqrt{\gamma^{xx}}} {({{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}}&{\frac{2 {({{{\gamma^{xy}} \cdot {\gamma^{xz}}} - {{\gamma^{xx}} \cdot {\gamma^{yz}}}})}}{{\sqrt{\gamma^{xx}}} {({{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}}&{\frac{{\gamma^{xz}}}{{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}}}&{\frac{{\gamma^{xy}}}{{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}}}&{\frac{{\gamma^{xx}}}{{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}}}&{\frac{\sqrt{\gamma^{xx}}}{{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}}}&{\frac{{{{\gamma^{xz}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{zz}}}}{{\sqrt{\gamma^{xx}}} {({{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}}&{\frac{{-2} {({{{\gamma^{xy}} \cdot {\gamma^{xz}}} - {{\gamma^{xx}} \cdot {\gamma^{yz}}}})}}{{\sqrt{\gamma^{xx}}} {({{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}}&0&0\\0&0&0&{\frac{-{\gamma^{xz}}}{2 {\gamma^{xx}}}}&{\frac{{\gamma^{xy}}}{2 {\gamma^{xx}}}}&0&0&0&{\frac{{\gamma^{xz}}}{2 {\gamma^{xx}}}}&{\frac{-{\gamma^{xy}}}{2 {\gamma^{xx}}}}&0&{\frac{1}{2}}&0&0&0&0&0&0&0&0&0&0&{\frac{-1}{\sqrt{\gamma^{xx}}}}&0&0&0&0&0&{\frac{1}{\sqrt{\gamma^{xx}}}}&0&0\\0&0&0&{{\frac1{\gamma^{xx}}}{({{\gamma^{xy}}})}}&0&1&0&0&{{\frac1{\gamma^{xx}}}{({-{\gamma^{xy}}})}}&0&0&0&0&0&0&0&0&0&0&0&0&{\frac{-1}{\sqrt{\gamma^{xx}}}}&0&0&0&0&0&{\frac{1}{\sqrt{\gamma^{xx}}}}&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&1&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&1&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&1&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&1&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&1&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&1&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&1&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&1&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&1&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&1&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&1&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&1&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&{\frac{{\gamma^{xz}} \cdot {\gamma^{yy}}}{{\sqrt{\gamma^{xx}}} {({{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}}&{\frac{{\gamma^{xy}} \cdot {\gamma^{yy}}}{{\sqrt{\gamma^{xx}}} {({{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}}&{\frac{1 + {\frac{{{\gamma^{xy}}}^{2}}{{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}}}}{\sqrt{\gamma^{xx}}}}&{{\frac1{\gamma^{xx}}}{({{\frac{{{\gamma^{xy}}}^{2}}{{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}}} + {\frac{{-1} + {f {({{-1} + m})}}}{{-1} + f}}})}}&{\frac{{{{{\gamma^{xz}}}^{2}} {\gamma^{yy}}} - {{{{\gamma^{xy}}}^{2}} {\gamma^{zz}}}}{{{-{\gamma^{xx}}} {{{\gamma^{xy}}}^{2}}} + {{{{\gamma^{xx}}}^{2}} {\gamma^{yy}}}}}&{\frac{{2 {\gamma^{xy}}} {({{{\gamma^{xz}} \cdot {\gamma^{yy}}} - {{\gamma^{xy}} \cdot {\gamma^{yz}}}})}}{{\gamma^{xx}} \cdot {({{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}}&{\frac{{\gamma^{xz}} \cdot {\gamma^{yy}}}{{\sqrt{\gamma^{xx}}} {({{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}}&{\frac{{\gamma^{xy}} \cdot {\gamma^{yy}}}{{\sqrt{\gamma^{xx}}} {({{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}}&{\frac{{2 {{{\gamma^{xy}}}^{2}}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}}{{\sqrt{\gamma^{xx}}} {({{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}}&{{\frac1{\gamma^{xx}}}{({{\frac{{{\gamma^{xy}}}^{2}}{{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}}} + {\frac{{-1} + {f {({{-1} + m})}}}{{-1} + f}}})}}&{\frac{{{{{\gamma^{xz}}}^{2}} {\gamma^{yy}}} - {{{{\gamma^{xy}}}^{2}} {\gamma^{zz}}}}{{{-{\gamma^{xx}}} {{{\gamma^{xy}}}^{2}}} + {{{{\gamma^{xx}}}^{2}} {\gamma^{yy}}}}}&{\frac{{2 {\gamma^{xy}}} {({{{\gamma^{xz}} \cdot {\gamma^{yy}}} - {{\gamma^{xy}} \cdot {\gamma^{yz}}}})}}{{\gamma^{xx}} \cdot {({{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}}&1&1\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&{\frac{{\gamma^{xy}} \cdot {\gamma^{xz}}}{{\sqrt{\gamma^{xx}}} {({{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}}&{\frac{{\sqrt{\gamma^{xx}}} {\gamma^{yy}}}{{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}}}&{\frac{{\sqrt{\gamma^{xx}}} {\gamma^{xy}}}{{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}}}&{\frac{{\gamma^{xy}}}{{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}}}&{\frac{{\gamma^{xy}} \cdot {({{-{{{\gamma^{xz}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{zz}}}})}}{{\gamma^{xx}} \cdot {({{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}}&{\frac{{{\gamma^{xz}} \cdot {({{{{\gamma^{xy}}}^{2}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}} - {{{2 {\gamma^{xx}}} {\gamma^{xy}}} {\gamma^{yz}}}}{{\gamma^{xx}} \cdot {({{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}}&{\frac{{\gamma^{xy}} \cdot {\gamma^{xz}}}{{\sqrt{\gamma^{xx}}} {({{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}}&{\frac{{\sqrt{\gamma^{xx}}} {\gamma^{yy}}}{{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}}}&{\frac{{\sqrt{\gamma^{xx}}} {\gamma^{xy}}}{{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}}}&{\frac{{\gamma^{xy}}}{{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}}}&{\frac{{\gamma^{xy}} \cdot {({{-{{{\gamma^{xz}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{zz}}}})}}{{\gamma^{xx}} \cdot {({{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}}&{\frac{{{\gamma^{xz}} \cdot {({{{{\gamma^{xy}}}^{2}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}} - {{{2 {\gamma^{xx}}} {\gamma^{xy}}} {\gamma^{yz}}}}{{\gamma^{xx}} \cdot {({{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}}&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&{\frac{1}{\sqrt{\gamma^{xx}}}}&0&0&0&{{\frac1{\gamma^{xx}}}{({-{\gamma^{xz}}})}}&{{\frac1{\gamma^{xx}}}{({-{\gamma^{xy}}})}}&{\frac{-1}{\sqrt{\gamma^{xx}}}}&0&0&0&{{\frac1{\gamma^{xx}}}{({-{\gamma^{xz}}})}}&{{\frac1{\gamma^{xx}}}{({-{\gamma^{xy}}})}}&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&{\frac{{\sqrt{\gamma^{xx}}} {\gamma^{xz}}}{{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}}}&{\frac{{\sqrt{\gamma^{xx}}} {\gamma^{xy}}}{{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}}}&{\frac{{\gamma^{xx}} \cdot {\sqrt{\gamma^{xx}}}}{{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}}}&{\frac{{\gamma^{xx}}}{{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}}}&{\frac{{{{\gamma^{xz}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{zz}}}}{{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}}}&{\frac{{{2 {\gamma^{xy}}} {\gamma^{xz}}} - {{2 {\gamma^{xx}}} {\gamma^{yz}}}}{{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}}}&{\frac{{\sqrt{\gamma^{xx}}} {\gamma^{xz}}}{{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}}}&{\frac{{\sqrt{\gamma^{xx}}} {\gamma^{xy}}}{{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}}}&{\frac{{\gamma^{xx}} \cdot {\sqrt{\gamma^{xx}}}}{{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}}}&{\frac{{\gamma^{xx}}}{{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}}}&{\frac{{{{\gamma^{xz}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{zz}}}}{{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}}}&{\frac{{{2 {\gamma^{xy}}} {\gamma^{xz}}} - {{2 {\gamma^{xx}}} {\gamma^{yz}}}}{{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}}}&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&1&0&0&0&0&0&1&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&1&0&0&0&0&0&1&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&1&0&0&0&0&0&1&0&0&0&0\\{{\frac1{\gamma^{xx}}}{({-{\gamma^{xz}}})}}&{{\frac1{\gamma^{xx}}}{({-{\gamma^{xy}}})}}&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&1&0&0&0&0&0&1&0&0&0&0&0\\0&1&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&1&0&0&0&0&0&1&0&0&0&0&0&0\\1&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&1&0&0&0&0&0&1&0&0&0&0&0&0&0}\right]}$
 <br>
-${R L} = {\left[\matrix{1&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&1&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&1&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&1&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&{\frac{-{{\gamma^{xy}} \cdot {({{\gamma^{xy}} - {\gamma^{xz}}})}}}{4 {\gamma^{xx}} \cdot {({{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}}&0&1&0&0&0&0&0&0&0&0&{\frac{{\gamma^{xy}} \cdot {({{{{{\gamma^{xy}}}^{5}} - {{{{\gamma^{xy}}}^{4}} {\gamma^{xz}}}} + {{{2 {{{\gamma^{xy}}}^{2}} {\gamma^{xz}} \cdot {\gamma^{yy}} \cdot {\gamma^{xx}}} - {{\gamma^{xz}} \cdot {{{\gamma^{yy}}}^{2}} {{{\gamma^{xx}}}^{2}}}} - {2 {{{\gamma^{xy}}}^{3}} {\gamma^{yy}} \cdot {\gamma^{xx}}}} + {{\gamma^{xy}} \cdot {{{\gamma^{yy}}}^{2}} {{{\gamma^{xx}}}^{2}}}})}}{-{{{{\gamma^{xx}}}^{2}} {({{{4 {{{\gamma^{xy}}}^{4}}} - {8 {\gamma^{xx}} \cdot {{{\gamma^{xy}}}^{2}} {\gamma^{yy}}}} + {4 {{{\gamma^{xx}}}^{2}} {{{\gamma^{yy}}}^{2}}}})}}}}&{\frac{{\gamma^{xy}} \cdot {({{{{{{\gamma^{xy}}}^{2}} {\gamma^{xx}} \cdot {\gamma^{yz}} \cdot {\gamma^{xz}}} - {{{{\gamma^{xx}}}^{2}} {\gamma^{yz}} \cdot {\gamma^{xz}} \cdot {\gamma^{yy}}}} + {{{{{\gamma^{xy}}}^{4}} {\gamma^{xz}}} - {{{{\gamma^{xy}}}^{3}} {{{\gamma^{xz}}}^{2}}}} + {{{{\gamma^{xy}} \cdot {{{\gamma^{xz}}}^{2}} {\gamma^{xx}} \cdot {\gamma^{yy}}} - {{{{\gamma^{xy}}}^{2}} {\gamma^{xz}} \cdot {\gamma^{xx}} \cdot {\gamma^{yy}}}} - {{{{\gamma^{xy}}}^{3}} {\gamma^{yz}} \cdot {\gamma^{xx}}}} + {{\gamma^{xy}} \cdot {\gamma^{yz}} \cdot {{{\gamma^{xx}}}^{2}} {\gamma^{yy}}}})}}{-{{{{\gamma^{xx}}}^{2}} {({{{4 {{{\gamma^{xy}}}^{4}}} - {8 {\gamma^{xx}} \cdot {{{\gamma^{xy}}}^{2}} {\gamma^{yy}}}} + {4 {{{\gamma^{xx}}}^{2}} {{{\gamma^{yy}}}^{2}}}})}}}}&0&0&0&{\frac{{\gamma^{xy}} \cdot {({{{{{\gamma^{xy}}}^{5}} - {2 {{{\gamma^{xy}}}^{3}} {\gamma^{xx}} \cdot {\gamma^{yy}}}} + {{{\gamma^{xy}} \cdot {{{\gamma^{xx}}}^{2}} {{{\gamma^{yy}}}^{2}}} - {{{{\gamma^{xy}}}^{4}} {\gamma^{xz}}}} + {{2 {{{\gamma^{xy}}}^{2}} {\gamma^{xz}} \cdot {\gamma^{yy}} \cdot {\gamma^{xx}}} - {{{{\gamma^{yy}}}^{2}} {\gamma^{xz}} \cdot {{{\gamma^{xx}}}^{2}}}}})}}{{{{\gamma^{xx}}}^{2}} {({{{4 {{{\gamma^{xy}}}^{4}}} - {8 {\gamma^{xx}} \cdot {{{\gamma^{xy}}}^{2}} {\gamma^{yy}}}} + {4 {{{\gamma^{xx}}}^{2}} {{{\gamma^{yy}}}^{2}}}})}}}&{\frac{{\gamma^{xy}} \cdot {({{{{{{\gamma^{xy}}}^{2}} {\gamma^{xx}} \cdot {\gamma^{yz}} \cdot {\gamma^{xz}}} - {{{{\gamma^{xx}}}^{2}} {\gamma^{yz}} \cdot {\gamma^{xz}} \cdot {\gamma^{yy}}}} + {{{{{\gamma^{xy}}}^{4}} {\gamma^{xz}}} - {{{{\gamma^{xy}}}^{3}} {{{\gamma^{xz}}}^{2}}}} + {{{{\gamma^{xy}} \cdot {{{\gamma^{xz}}}^{2}} {\gamma^{xx}} \cdot {\gamma^{yy}}} - {{{{\gamma^{xy}}}^{2}} {\gamma^{xz}} \cdot {\gamma^{xx}} \cdot {\gamma^{yy}}}} - {{{{\gamma^{xy}}}^{3}} {\gamma^{yz}} \cdot {\gamma^{xx}}}} + {{\gamma^{xy}} \cdot {\gamma^{yz}} \cdot {{{\gamma^{xx}}}^{2}} {\gamma^{yy}}}})}}{{{{\gamma^{xx}}}^{2}} {({{{4 {{{\gamma^{xy}}}^{4}}} - {8 {\gamma^{xx}} \cdot {{{\gamma^{xy}}}^{2}} {\gamma^{yy}}}} + {4 {{{\gamma^{xx}}}^{2}} {{{\gamma^{yy}}}^{2}}}})}}}&0&0&0&{\frac{-{{\gamma^{xy}} \cdot {({{\gamma^{xy}} - {\gamma^{xz}}})}}}{2 {\sqrt{\gamma^{xx}}} {({{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}}&0&{\frac{{{{\gamma^{xy}}}^{2}} {({{{{{{\gamma^{xy}}}^{3}} - {{\gamma^{xy}} \cdot {\gamma^{xx}} \cdot {\gamma^{yy}}}} - {{{{\gamma^{xy}}}^{2}} {\gamma^{xz}}}} + {{\gamma^{yy}} \cdot {\gamma^{xz}} \cdot {\gamma^{xx}}}})}}{-{{{{\gamma^{xx}}}^{{({\frac{3}{2}})}}} {({{{2 {{{\gamma^{xy}}}^{4}}} - {4 {\gamma^{xx}} \cdot {{{\gamma^{xy}}}^{2}} {\gamma^{yy}}}} + {2 {{{\gamma^{xx}}}^{2}} {{{\gamma^{yy}}}^{2}}}})}}}}&{\frac{{\gamma^{xy}} \cdot {\gamma^{xz}} \cdot {({{{{{{{\gamma^{xy}}}^{2}} {\gamma^{xz}}} - {{{\gamma^{xy}}}^{3}}} - {{\gamma^{xz}} \cdot {\gamma^{xx}} \cdot {\gamma^{yy}}}} + {{\gamma^{xy}} \cdot {\gamma^{xx}} \cdot {\gamma^{yy}}}})}}{{{{\gamma^{xx}}}^{{({\frac{3}{2}})}}} {({{{2 {{{\gamma^{xy}}}^{4}}} - {4 {\gamma^{xx}} \cdot {{{\gamma^{xy}}}^{2}} {\gamma^{yy}}}} + {2 {{{\gamma^{xx}}}^{2}} {{{\gamma^{yy}}}^{2}}}})}}}&0&0&0&{\frac{{\gamma^{xy}} \cdot {({{{{{{\gamma^{xy}}}^{3}} - {{\gamma^{xy}} \cdot {\gamma^{xx}} \cdot {\gamma^{yy}}}} - {{{{\gamma^{xy}}}^{2}} {\gamma^{xz}}}} + {{\gamma^{xz}} \cdot {\gamma^{xx}} \cdot {\gamma^{yy}}}})}}{{\gamma^{xx}} \cdot {({{{2 {{{\gamma^{xy}}}^{4}}} - {4 {\gamma^{xx}} \cdot {{{\gamma^{xy}}}^{2}} {\gamma^{yy}}}} + {2 {{{\gamma^{xx}}}^{2}} {{{\gamma^{yy}}}^{2}}}})}}}\\0&0&0&0&0&1&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&1&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&1&0&0&0&0&0&0&0&0&{-{\frac{1}{2}}}&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&1&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&1&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&1&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&1&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&1&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&1&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&1&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&1&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&1&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&1&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&1&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&1&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&1&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&1&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&1&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&1&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&1&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&1&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&1&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&1&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&1&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&1&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&1}\right]}$
-<br>
-for 5,3 expected $0$ but found $\frac{-{{\gamma^{xy}} \cdot {({{\gamma^{xy}} - {\gamma^{xz}}})}}}{4 {\gamma^{xx}} \cdot {({{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}$
-<br>
-...influenced by ($R_{5,18} = $$\frac{{\gamma^{xy}} \cdot {\gamma^{xz}}}{{\gamma^{xx}} \cdot {({{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}$) * ($L_{18,3} = $$-{\frac{1}{4}}$)
-<br>
-...influenced by ($R_{5,20} = $$\frac{{\gamma^{xy}}}{{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}}$) * ($L_{20,3} = $$\frac{{\gamma^{xz}}}{4 {\gamma^{xx}}}$)
-<br>
-...influenced by ($R_{5,24} = $$\frac{{{\gamma^{xy}}}^{2}}{{\gamma^{xx}} \cdot {({{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}$) * ($L_{24,3} = $$-{\frac{1}{4}}$)
-<br>
-...influenced by ($R_{5,26} = $$\frac{{\gamma^{xy}}}{{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}}$) * ($L_{26,3} = $$\frac{{\gamma^{xz}}}{4 {\gamma^{xx}}}$)
-<br>
-
-<br>
-for 5,14 expected $0$ but found $\frac{{\gamma^{xy}} \cdot {({{{{{\gamma^{xy}}}^{5}} - {{{{\gamma^{xy}}}^{4}} {\gamma^{xz}}}} + {{{2 {{{\gamma^{xy}}}^{2}} {\gamma^{xz}} \cdot {\gamma^{yy}} \cdot {\gamma^{xx}}} - {{\gamma^{xz}} \cdot {{{\gamma^{yy}}}^{2}} {{{\gamma^{xx}}}^{2}}}} - {2 {{{\gamma^{xy}}}^{3}} {\gamma^{yy}} \cdot {\gamma^{xx}}}} + {{\gamma^{xy}} \cdot {{{\gamma^{yy}}}^{2}} {{{\gamma^{xx}}}^{2}}}})}}{-{{{{\gamma^{xx}}}^{2}} {({{{4 {{{\gamma^{xy}}}^{4}}} - {8 {\gamma^{xx}} \cdot {{{\gamma^{xy}}}^{2}} {\gamma^{yy}}}} + {4 {{{\gamma^{xx}}}^{2}} {{{\gamma^{yy}}}^{2}}}})}}}$
-<br>
-...influenced by ($R_{5,16} = $1) * ($L_{16,14} = $$\frac{-{\gamma^{yz}}}{2 {\gamma^{xx}}}$)
-<br>
-...influenced by ($R_{5,18} = $$\frac{{\gamma^{xy}} \cdot {\gamma^{xz}}}{{\gamma^{xx}} \cdot {({{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}$) * ($L_{18,14} = $${\frac{1}{4}} {({{{\frac1{\gamma^{xx}}}{({-{{{\gamma^{xy}}}^{2}}})}} + {\gamma^{yy}}})}$)
-<br>
-...influenced by ($R_{5,19} = $$\frac{{\gamma^{yy}}}{{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}}$) * ($L_{19,14} = $${\frac{1}{4}} {({{{\frac1{\gamma^{xx}}}{({{\gamma^{xy}} \cdot {\gamma^{xz}}})}} - {\gamma^{yz}}})}$)
-<br>
-...influenced by ($R_{5,20} = $$\frac{{\gamma^{xy}}}{{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}}$) * ($L_{20,14} = $$\frac{{{-{\gamma^{xz}}} {\gamma^{yy}}} + {{\gamma^{xy}} \cdot {\gamma^{yz}}}}{4 {\gamma^{xx}}}$)
-<br>
-...influenced by ($R_{5,21} = $$\frac{{\gamma^{xy}}}{{\sqrt{\gamma^{xx}}} {({{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}$) * ($L_{21,14} = $$\frac{{{\gamma^{xz}} \cdot {\gamma^{yy}}} - {{\gamma^{xy}} \cdot {\gamma^{yz}}}}{2 {\sqrt{\gamma^{xx}}}}$)
-<br>
-...influenced by ($R_{5,23} = $$\frac{{{\gamma^{xz}} \cdot {({{{{\gamma^{xy}}}^{2}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}} - {2 {{{\gamma^{xx}} \cdot {\gamma^{xy}}} {\gamma^{yz}}}}}{{{\gamma^{xx}} \cdot {\sqrt{\gamma^{xx}}}} {({{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}$) * ($L_{23,14} = $$\frac{-{\gamma^{xy}}}{4 {\sqrt{\gamma^{xx}}}}$)
-<br>
-...influenced by ($R_{5,24} = $$\frac{{{\gamma^{xy}}}^{2}}{{\gamma^{xx}} \cdot {({{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}$) * ($L_{24,14} = $${\frac{1}{4}} {({{{\frac1{\gamma^{xx}}}{({-{{{\gamma^{xy}}}^{2}}})}} + {\gamma^{yy}}})}$)
-<br>
-...influenced by ($R_{5,25} = $$\frac{{\gamma^{yy}}}{{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}}$) * ($L_{25,14} = $${\frac{1}{4}} {({{{\frac1{\gamma^{xx}}}{({{\gamma^{xy}} \cdot {\gamma^{xz}}})}} - {\gamma^{yz}}})}$)
-<br>
-...influenced by ($R_{5,26} = $$\frac{{\gamma^{xy}}}{{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}}$) * ($L_{26,14} = $$\frac{{{-{\gamma^{xz}}} {\gamma^{yy}}} + {{\gamma^{xy}} \cdot {\gamma^{yz}}}}{4 {\gamma^{xx}}}$)
-<br>
-...influenced by ($R_{5,27} = $$\frac{{\gamma^{xy}}}{{\sqrt{\gamma^{xx}}} {({{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}$) * ($L_{27,14} = $$\frac{{{-{\gamma^{xz}}} {\gamma^{yy}}} + {{\gamma^{xy}} \cdot {\gamma^{yz}}}}{2 {\sqrt{\gamma^{xx}}}}$)
-<br>
-...influenced by ($R_{5,29} = $$\frac{{{-{\gamma^{xz}}} {({{{{\gamma^{xy}}}^{2}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}} + {{{2 {\gamma^{xx}}} {\gamma^{xy}}} {\gamma^{yz}}}}{{{\gamma^{xx}} \cdot {\sqrt{\gamma^{xx}}}} {({{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}$) * ($L_{29,14} = $$\frac{{\gamma^{xy}}}{4 {\sqrt{\gamma^{xx}}}}$)
-<br>
-
-<br>
-for 5,15 expected $0$ but found $\frac{{\gamma^{xy}} \cdot {({{{{{{\gamma^{xy}}}^{2}} {\gamma^{xx}} \cdot {\gamma^{yz}} \cdot {\gamma^{xz}}} - {{{{\gamma^{xx}}}^{2}} {\gamma^{yz}} \cdot {\gamma^{xz}} \cdot {\gamma^{yy}}}} + {{{{{\gamma^{xy}}}^{4}} {\gamma^{xz}}} - {{{{\gamma^{xy}}}^{3}} {{{\gamma^{xz}}}^{2}}}} + {{{{\gamma^{xy}} \cdot {{{\gamma^{xz}}}^{2}} {\gamma^{xx}} \cdot {\gamma^{yy}}} - {{{{\gamma^{xy}}}^{2}} {\gamma^{xz}} \cdot {\gamma^{xx}} \cdot {\gamma^{yy}}}} - {{{{\gamma^{xy}}}^{3}} {\gamma^{yz}} \cdot {\gamma^{xx}}}} + {{\gamma^{xy}} \cdot {\gamma^{yz}} \cdot {{{\gamma^{xx}}}^{2}} {\gamma^{yy}}}})}}{-{{{{\gamma^{xx}}}^{2}} {({{{4 {{{\gamma^{xy}}}^{4}}} - {8 {\gamma^{xx}} \cdot {{{\gamma^{xy}}}^{2}} {\gamma^{yy}}}} + {4 {{{\gamma^{xx}}}^{2}} {{{\gamma^{yy}}}^{2}}}})}}}$
-<br>
-...influenced by ($R_{5,16} = $1) * ($L_{16,15} = $$\frac{-{\gamma^{zz}}}{2 {\gamma^{xx}}}$)
-<br>
-...influenced by ($R_{5,18} = $$\frac{{\gamma^{xy}} \cdot {\gamma^{xz}}}{{\gamma^{xx}} \cdot {({{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}$) * ($L_{18,15} = $${\frac{1}{4}} {({{{\frac1{\gamma^{xx}}}{({{-{\gamma^{xy}}} {\gamma^{xz}}})}} + {\gamma^{yz}}})}$)
-<br>
-...influenced by ($R_{5,19} = $$\frac{{\gamma^{yy}}}{{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}}$) * ($L_{19,15} = $${\frac{1}{4}} {({{{\frac1{\gamma^{xx}}}{({{{\gamma^{xz}}}^{2}})}} - {\gamma^{zz}}})}$)
-<br>
-...influenced by ($R_{5,20} = $$\frac{{\gamma^{xy}}}{{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}}$) * ($L_{20,15} = $$\frac{{{-{\gamma^{xz}}} {\gamma^{yz}}} + {{\gamma^{xy}} \cdot {\gamma^{zz}}}}{4 {\gamma^{xx}}}$)
-<br>
-...influenced by ($R_{5,21} = $$\frac{{\gamma^{xy}}}{{\sqrt{\gamma^{xx}}} {({{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}$) * ($L_{21,15} = $$\frac{{{\gamma^{xz}} \cdot {\gamma^{yz}}} - {{\gamma^{xy}} \cdot {\gamma^{zz}}}}{2 {\sqrt{\gamma^{xx}}}}$)
-<br>
-...influenced by ($R_{5,22} = $$\frac{{\gamma^{xy}} \cdot {({{{{\gamma^{xz}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{zz}}}})}}{{{\gamma^{xx}} \cdot {\sqrt{\gamma^{xx}}}} {({{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}$) * ($L_{22,15} = $$\frac{-{\gamma^{xy}}}{2 {\sqrt{\gamma^{xx}}}}$)
-<br>
-...influenced by ($R_{5,23} = $$\frac{{{\gamma^{xz}} \cdot {({{{{\gamma^{xy}}}^{2}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}} - {2 {{{\gamma^{xx}} \cdot {\gamma^{xy}}} {\gamma^{yz}}}}}{{{\gamma^{xx}} \cdot {\sqrt{\gamma^{xx}}}} {({{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}$) * ($L_{23,15} = $$\frac{{\gamma^{xz}}}{4 {\sqrt{\gamma^{xx}}}}$)
-<br>
-...influenced by ($R_{5,24} = $$\frac{{{\gamma^{xy}}}^{2}}{{\gamma^{xx}} \cdot {({{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}$) * ($L_{24,15} = $${\frac{1}{4}} {({{{\frac1{\gamma^{xx}}}{({{-{\gamma^{xy}}} {\gamma^{xz}}})}} + {\gamma^{yz}}})}$)
-<br>
-...influenced by ($R_{5,25} = $$\frac{{\gamma^{yy}}}{{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}}$) * ($L_{25,15} = $${\frac{1}{4}} {({{{\frac1{\gamma^{xx}}}{({{{\gamma^{xz}}}^{2}})}} - {\gamma^{zz}}})}$)
-<br>
-...influenced by ($R_{5,26} = $$\frac{{\gamma^{xy}}}{{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}}$) * ($L_{26,15} = $$\frac{{{-{\gamma^{xz}}} {\gamma^{yz}}} + {{\gamma^{xy}} \cdot {\gamma^{zz}}}}{4 {\gamma^{xx}}}$)
-<br>
-...influenced by ($R_{5,27} = $$\frac{{\gamma^{xy}}}{{\sqrt{\gamma^{xx}}} {({{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}$) * ($L_{27,15} = $$\frac{{{-{\gamma^{xz}}} {\gamma^{yz}}} + {{\gamma^{xy}} \cdot {\gamma^{zz}}}}{2 {\sqrt{\gamma^{xx}}}}$)
-<br>
-...influenced by ($R_{5,28} = $$\frac{{\gamma^{xy}} \cdot {({{-{{{\gamma^{xz}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{zz}}}})}}{{{\gamma^{xx}} \cdot {\sqrt{\gamma^{xx}}}} {({{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}$) * ($L_{28,15} = $$\frac{{\gamma^{xy}}}{2 {\sqrt{\gamma^{xx}}}}$)
-<br>
-...influenced by ($R_{5,29} = $$\frac{{{-{\gamma^{xz}}} {({{{{\gamma^{xy}}}^{2}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}} + {{{2 {\gamma^{xx}}} {\gamma^{xy}}} {\gamma^{yz}}}}{{{\gamma^{xx}} \cdot {\sqrt{\gamma^{xx}}}} {({{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}$) * ($L_{29,15} = $$\frac{-{\gamma^{xz}}}{4 {\sqrt{\gamma^{xx}}}}$)
-<br>
-
-<br>
-for 5,19 expected $0$ but found $\frac{{\gamma^{xy}} \cdot {({{{{{\gamma^{xy}}}^{5}} - {2 {{{\gamma^{xy}}}^{3}} {\gamma^{xx}} \cdot {\gamma^{yy}}}} + {{{\gamma^{xy}} \cdot {{{\gamma^{xx}}}^{2}} {{{\gamma^{yy}}}^{2}}} - {{{{\gamma^{xy}}}^{4}} {\gamma^{xz}}}} + {{2 {{{\gamma^{xy}}}^{2}} {\gamma^{xz}} \cdot {\gamma^{yy}} \cdot {\gamma^{xx}}} - {{{{\gamma^{yy}}}^{2}} {\gamma^{xz}} \cdot {{{\gamma^{xx}}}^{2}}}}})}}{{{{\gamma^{xx}}}^{2}} {({{{4 {{{\gamma^{xy}}}^{4}}} - {8 {\gamma^{xx}} \cdot {{{\gamma^{xy}}}^{2}} {\gamma^{yy}}}} + {4 {{{\gamma^{xx}}}^{2}} {{{\gamma^{yy}}}^{2}}}})}}$
-<br>
-...influenced by ($R_{5,16} = $1) * ($L_{16,19} = $$\frac{{\gamma^{yz}}}{2 {\gamma^{xx}}}$)
-<br>
-...influenced by ($R_{5,18} = $$\frac{{\gamma^{xy}} \cdot {\gamma^{xz}}}{{\gamma^{xx}} \cdot {({{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}$) * ($L_{18,19} = $${\frac{1}{4}} {({{{\frac1{\gamma^{xx}}}{({{{\gamma^{xy}}}^{2}})}} - {\gamma^{yy}}})}$)
-<br>
-...influenced by ($R_{5,19} = $$\frac{{\gamma^{yy}}}{{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}}$) * ($L_{19,19} = $${\frac{1}{4}} {({{{\frac1{\gamma^{xx}}}{({{-{\gamma^{xy}}} {\gamma^{xz}}})}} + {\gamma^{yz}}})}$)
-<br>
-...influenced by ($R_{5,20} = $$\frac{{\gamma^{xy}}}{{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}}$) * ($L_{20,19} = $$\frac{{{\gamma^{xz}} \cdot {\gamma^{yy}}} - {{\gamma^{xy}} \cdot {\gamma^{yz}}}}{4 {\gamma^{xx}}}$)
-<br>
-...influenced by ($R_{5,21} = $$\frac{{\gamma^{xy}}}{{\sqrt{\gamma^{xx}}} {({{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}$) * ($L_{21,19} = $$\frac{{{-{\gamma^{xz}}} {\gamma^{yy}}} + {{\gamma^{xy}} \cdot {\gamma^{yz}}}}{2 {\sqrt{\gamma^{xx}}}}$)
-<br>
-...influenced by ($R_{5,23} = $$\frac{{{\gamma^{xz}} \cdot {({{{{\gamma^{xy}}}^{2}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}} - {2 {{{\gamma^{xx}} \cdot {\gamma^{xy}}} {\gamma^{yz}}}}}{{{\gamma^{xx}} \cdot {\sqrt{\gamma^{xx}}}} {({{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}$) * ($L_{23,19} = $$\frac{{\gamma^{xy}}}{4 {\sqrt{\gamma^{xx}}}}$)
-<br>
-...influenced by ($R_{5,24} = $$\frac{{{\gamma^{xy}}}^{2}}{{\gamma^{xx}} \cdot {({{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}$) * ($L_{24,19} = $${\frac{1}{4}} {({{{\frac1{\gamma^{xx}}}{({{{\gamma^{xy}}}^{2}})}} - {\gamma^{yy}}})}$)
-<br>
-...influenced by ($R_{5,25} = $$\frac{{\gamma^{yy}}}{{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}}$) * ($L_{25,19} = $${\frac{1}{4}} {({{{\frac1{\gamma^{xx}}}{({{-{\gamma^{xy}}} {\gamma^{xz}}})}} + {\gamma^{yz}}})}$)
-<br>
-...influenced by ($R_{5,26} = $$\frac{{\gamma^{xy}}}{{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}}$) * ($L_{26,19} = $$\frac{{{\gamma^{xz}} \cdot {\gamma^{yy}}} - {{\gamma^{xy}} \cdot {\gamma^{yz}}}}{4 {\gamma^{xx}}}$)
-<br>
-...influenced by ($R_{5,27} = $$\frac{{\gamma^{xy}}}{{\sqrt{\gamma^{xx}}} {({{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}$) * ($L_{27,19} = $$\frac{{{\gamma^{xz}} \cdot {\gamma^{yy}}} - {{\gamma^{xy}} \cdot {\gamma^{yz}}}}{2 {\sqrt{\gamma^{xx}}}}$)
-<br>
-...influenced by ($R_{5,29} = $$\frac{{{-{\gamma^{xz}}} {({{{{\gamma^{xy}}}^{2}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}} + {{{2 {\gamma^{xx}}} {\gamma^{xy}}} {\gamma^{yz}}}}{{{\gamma^{xx}} \cdot {\sqrt{\gamma^{xx}}}} {({{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}$) * ($L_{29,19} = $$\frac{-{\gamma^{xy}}}{4 {\sqrt{\gamma^{xx}}}}$)
-<br>
-
-<br>
-for 5,20 expected $0$ but found $\frac{{\gamma^{xy}} \cdot {({{{{{{\gamma^{xy}}}^{2}} {\gamma^{xx}} \cdot {\gamma^{yz}} \cdot {\gamma^{xz}}} - {{{{\gamma^{xx}}}^{2}} {\gamma^{yz}} \cdot {\gamma^{xz}} \cdot {\gamma^{yy}}}} + {{{{{\gamma^{xy}}}^{4}} {\gamma^{xz}}} - {{{{\gamma^{xy}}}^{3}} {{{\gamma^{xz}}}^{2}}}} + {{{{\gamma^{xy}} \cdot {{{\gamma^{xz}}}^{2}} {\gamma^{xx}} \cdot {\gamma^{yy}}} - {{{{\gamma^{xy}}}^{2}} {\gamma^{xz}} \cdot {\gamma^{xx}} \cdot {\gamma^{yy}}}} - {{{{\gamma^{xy}}}^{3}} {\gamma^{yz}} \cdot {\gamma^{xx}}}} + {{\gamma^{xy}} \cdot {\gamma^{yz}} \cdot {{{\gamma^{xx}}}^{2}} {\gamma^{yy}}}})}}{{{{\gamma^{xx}}}^{2}} {({{{4 {{{\gamma^{xy}}}^{4}}} - {8 {\gamma^{xx}} \cdot {{{\gamma^{xy}}}^{2}} {\gamma^{yy}}}} + {4 {{{\gamma^{xx}}}^{2}} {{{\gamma^{yy}}}^{2}}}})}}$
-<br>
-...influenced by ($R_{5,16} = $1) * ($L_{16,20} = $$\frac{{\gamma^{zz}}}{2 {\gamma^{xx}}}$)
-<br>
-...influenced by ($R_{5,18} = $$\frac{{\gamma^{xy}} \cdot {\gamma^{xz}}}{{\gamma^{xx}} \cdot {({{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}$) * ($L_{18,20} = $${\frac{1}{4}} {({{{\frac1{\gamma^{xx}}}{({{\gamma^{xy}} \cdot {\gamma^{xz}}})}} - {\gamma^{yz}}})}$)
-<br>
-...influenced by ($R_{5,19} = $$\frac{{\gamma^{yy}}}{{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}}$) * ($L_{19,20} = $${\frac{1}{4}} {({{{\frac1{\gamma^{xx}}}{({-{{{\gamma^{xz}}}^{2}}})}} + {\gamma^{zz}}})}$)
-<br>
-...influenced by ($R_{5,20} = $$\frac{{\gamma^{xy}}}{{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}}$) * ($L_{20,20} = $$\frac{{{\gamma^{xz}} \cdot {\gamma^{yz}}} - {{\gamma^{xy}} \cdot {\gamma^{zz}}}}{4 {\gamma^{xx}}}$)
-<br>
-...influenced by ($R_{5,21} = $$\frac{{\gamma^{xy}}}{{\sqrt{\gamma^{xx}}} {({{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}$) * ($L_{21,20} = $$\frac{{{-{\gamma^{xz}}} {\gamma^{yz}}} + {{\gamma^{xy}} \cdot {\gamma^{zz}}}}{2 {\sqrt{\gamma^{xx}}}}$)
-<br>
-...influenced by ($R_{5,22} = $$\frac{{\gamma^{xy}} \cdot {({{{{\gamma^{xz}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{zz}}}})}}{{{\gamma^{xx}} \cdot {\sqrt{\gamma^{xx}}}} {({{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}$) * ($L_{22,20} = $$\frac{{\gamma^{xy}}}{2 {\sqrt{\gamma^{xx}}}}$)
-<br>
-...influenced by ($R_{5,23} = $$\frac{{{\gamma^{xz}} \cdot {({{{{\gamma^{xy}}}^{2}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}} - {2 {{{\gamma^{xx}} \cdot {\gamma^{xy}}} {\gamma^{yz}}}}}{{{\gamma^{xx}} \cdot {\sqrt{\gamma^{xx}}}} {({{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}$) * ($L_{23,20} = $$\frac{-{\gamma^{xz}}}{4 {\sqrt{\gamma^{xx}}}}$)
-<br>
-...influenced by ($R_{5,24} = $$\frac{{{\gamma^{xy}}}^{2}}{{\gamma^{xx}} \cdot {({{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}$) * ($L_{24,20} = $${\frac{1}{4}} {({{{\frac1{\gamma^{xx}}}{({{\gamma^{xy}} \cdot {\gamma^{xz}}})}} - {\gamma^{yz}}})}$)
-<br>
-...influenced by ($R_{5,25} = $$\frac{{\gamma^{yy}}}{{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}}$) * ($L_{25,20} = $${\frac{1}{4}} {({{{\frac1{\gamma^{xx}}}{({-{{{\gamma^{xz}}}^{2}}})}} + {\gamma^{zz}}})}$)
-<br>
-...influenced by ($R_{5,26} = $$\frac{{\gamma^{xy}}}{{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}}$) * ($L_{26,20} = $$\frac{{{\gamma^{xz}} \cdot {\gamma^{yz}}} - {{\gamma^{xy}} \cdot {\gamma^{zz}}}}{4 {\gamma^{xx}}}$)
-<br>
-...influenced by ($R_{5,27} = $$\frac{{\gamma^{xy}}}{{\sqrt{\gamma^{xx}}} {({{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}$) * ($L_{27,20} = $$\frac{{{\gamma^{xz}} \cdot {\gamma^{yz}}} - {{\gamma^{xy}} \cdot {\gamma^{zz}}}}{2 {\sqrt{\gamma^{xx}}}}$)
-<br>
-...influenced by ($R_{5,28} = $$\frac{{\gamma^{xy}} \cdot {({{-{{{\gamma^{xz}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{zz}}}})}}{{{\gamma^{xx}} \cdot {\sqrt{\gamma^{xx}}}} {({{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}$) * ($L_{28,20} = $$\frac{-{\gamma^{xy}}}{2 {\sqrt{\gamma^{xx}}}}$)
-<br>
-...influenced by ($R_{5,29} = $$\frac{{{-{\gamma^{xz}}} {({{{{\gamma^{xy}}}^{2}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}} + {{{2 {\gamma^{xx}}} {\gamma^{xy}}} {\gamma^{yz}}}}{{{\gamma^{xx}} \cdot {\sqrt{\gamma^{xx}}}} {({{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}$) * ($L_{29,20} = $$\frac{{\gamma^{xz}}}{4 {\sqrt{\gamma^{xx}}}}$)
-<br>
-
-<br>
-for 5,24 expected $0$ but found $\frac{-{{\gamma^{xy}} \cdot {({{\gamma^{xy}} - {\gamma^{xz}}})}}}{2 {\sqrt{\gamma^{xx}}} {({{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}$
-<br>
-...influenced by ($R_{5,18} = $$\frac{{\gamma^{xy}} \cdot {\gamma^{xz}}}{{\gamma^{xx}} \cdot {({{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}$) * ($L_{18,24} = $${\frac12}{({\sqrt{\gamma^{xx}}})}$)
-<br>
-...influenced by ($R_{5,20} = $$\frac{{\gamma^{xy}}}{{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}}$) * ($L_{20,24} = $$\frac{-{\gamma^{xz}}}{2 {\sqrt{\gamma^{xx}}}}$)
-<br>
-...influenced by ($R_{5,24} = $$\frac{{{\gamma^{xy}}}^{2}}{{\gamma^{xx}} \cdot {({{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}$) * ($L_{24,24} = $${\frac12}{({-{\sqrt{\gamma^{xx}}}})}$)
-<br>
-...influenced by ($R_{5,26} = $$\frac{{\gamma^{xy}}}{{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}}$) * ($L_{26,24} = $$\frac{{\gamma^{xz}}}{2 {\sqrt{\gamma^{xx}}}}$)
-<br>
-
-<br>
-for 5,26 expected $0$ but found $\frac{{{{\gamma^{xy}}}^{2}} {({{{{{{\gamma^{xy}}}^{3}} - {{\gamma^{xy}} \cdot {\gamma^{xx}} \cdot {\gamma^{yy}}}} - {{{{\gamma^{xy}}}^{2}} {\gamma^{xz}}}} + {{\gamma^{yy}} \cdot {\gamma^{xz}} \cdot {\gamma^{xx}}}})}}{-{{{{\gamma^{xx}}}^{{({\frac{3}{2}})}}} {({{{2 {{{\gamma^{xy}}}^{4}}} - {4 {\gamma^{xx}} \cdot {{{\gamma^{xy}}}^{2}} {\gamma^{yy}}}} + {2 {{{\gamma^{xx}}}^{2}} {{{\gamma^{yy}}}^{2}}}})}}}$
-<br>
-...influenced by ($R_{5,18} = $$\frac{{\gamma^{xy}} \cdot {\gamma^{xz}}}{{\gamma^{xx}} \cdot {({{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}$) * ($L_{18,26} = $$\frac{{\gamma^{xy}}}{2 {\sqrt{\gamma^{xx}}}}$)
-<br>
-...influenced by ($R_{5,19} = $$\frac{{\gamma^{yy}}}{{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}}$) * ($L_{19,26} = $$\frac{{\gamma^{xz}}}{2 {\sqrt{\gamma^{xx}}}}$)
-<br>
-...influenced by ($R_{5,20} = $$\frac{{\gamma^{xy}}}{{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}}$) * ($L_{20,26} = $$\frac{-{\gamma^{yz}}}{\sqrt{\gamma^{xx}}}$)
-<br>
-...influenced by ($R_{5,23} = $$\frac{{{\gamma^{xz}} \cdot {({{{{\gamma^{xy}}}^{2}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}} - {2 {{{\gamma^{xx}} \cdot {\gamma^{xy}}} {\gamma^{yz}}}}}{{{\gamma^{xx}} \cdot {\sqrt{\gamma^{xx}}}} {({{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}$) * ($L_{23,26} = $$\frac{1}{2}$)
-<br>
-...influenced by ($R_{5,24} = $$\frac{{{\gamma^{xy}}}^{2}}{{\gamma^{xx}} \cdot {({{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}$) * ($L_{24,26} = $$\frac{-{\gamma^{xy}}}{2 {\sqrt{\gamma^{xx}}}}$)
-<br>
-...influenced by ($R_{5,25} = $$\frac{{\gamma^{yy}}}{{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}}$) * ($L_{25,26} = $$\frac{-{\gamma^{xz}}}{2 {\sqrt{\gamma^{xx}}}}$)
-<br>
-...influenced by ($R_{5,26} = $$\frac{{\gamma^{xy}}}{{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}}$) * ($L_{26,26} = $$\frac{{\gamma^{yz}}}{\sqrt{\gamma^{xx}}}$)
-<br>
-...influenced by ($R_{5,29} = $$\frac{{{-{\gamma^{xz}}} {({{{{\gamma^{xy}}}^{2}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}} + {{{2 {\gamma^{xx}}} {\gamma^{xy}}} {\gamma^{yz}}}}{{{\gamma^{xx}} \cdot {\sqrt{\gamma^{xx}}}} {({{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}$) * ($L_{29,26} = $$\frac{1}{2}$)
-<br>
-
-<br>
-for 5,27 expected $0$ but found $\frac{{\gamma^{xy}} \cdot {\gamma^{xz}} \cdot {({{{{{{{\gamma^{xy}}}^{2}} {\gamma^{xz}}} - {{{\gamma^{xy}}}^{3}}} - {{\gamma^{xz}} \cdot {\gamma^{xx}} \cdot {\gamma^{yy}}}} + {{\gamma^{xy}} \cdot {\gamma^{xx}} \cdot {\gamma^{yy}}}})}}{{{{\gamma^{xx}}}^{{({\frac{3}{2}})}}} {({{{2 {{{\gamma^{xy}}}^{4}}} - {4 {\gamma^{xx}} \cdot {{{\gamma^{xy}}}^{2}} {\gamma^{yy}}}} + {2 {{{\gamma^{xx}}}^{2}} {{{\gamma^{yy}}}^{2}}}})}}$
-<br>
-...influenced by ($R_{5,18} = $$\frac{{\gamma^{xy}} \cdot {\gamma^{xz}}}{{\gamma^{xx}} \cdot {({{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}$) * ($L_{18,27} = $$\frac{{\gamma^{xz}}}{2 {\sqrt{\gamma^{xx}}}}$)
-<br>
-...influenced by ($R_{5,20} = $$\frac{{\gamma^{xy}}}{{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}}$) * ($L_{20,27} = $$\frac{-{\gamma^{zz}}}{2 {\sqrt{\gamma^{xx}}}}$)
-<br>
-...influenced by ($R_{5,22} = $$\frac{{\gamma^{xy}} \cdot {({{{{\gamma^{xz}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{zz}}}})}}{{{\gamma^{xx}} \cdot {\sqrt{\gamma^{xx}}}} {({{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}$) * ($L_{22,27} = $$\frac{1}{2}$)
-<br>
-...influenced by ($R_{5,24} = $$\frac{{{\gamma^{xy}}}^{2}}{{\gamma^{xx}} \cdot {({{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}$) * ($L_{24,27} = $$\frac{-{\gamma^{xz}}}{2 {\sqrt{\gamma^{xx}}}}$)
-<br>
-...influenced by ($R_{5,26} = $$\frac{{\gamma^{xy}}}{{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}}$) * ($L_{26,27} = $$\frac{{\gamma^{zz}}}{2 {\sqrt{\gamma^{xx}}}}$)
-<br>
-...influenced by ($R_{5,28} = $$\frac{{\gamma^{xy}} \cdot {({{-{{{\gamma^{xz}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{zz}}}})}}{{{\gamma^{xx}} \cdot {\sqrt{\gamma^{xx}}}} {({{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}$) * ($L_{28,27} = $$\frac{1}{2}$)
-<br>
-
-<br>
-for 5,31 expected $0$ but found $\frac{{\gamma^{xy}} \cdot {({{{{{{\gamma^{xy}}}^{3}} - {{\gamma^{xy}} \cdot {\gamma^{xx}} \cdot {\gamma^{yy}}}} - {{{{\gamma^{xy}}}^{2}} {\gamma^{xz}}}} + {{\gamma^{xz}} \cdot {\gamma^{xx}} \cdot {\gamma^{yy}}}})}}{{\gamma^{xx}} \cdot {({{{2 {{{\gamma^{xy}}}^{4}}} - {4 {\gamma^{xx}} \cdot {{{\gamma^{xy}}}^{2}} {\gamma^{yy}}}} + {2 {{{\gamma^{xx}}}^{2}} {{{\gamma^{yy}}}^{2}}}})}}$
-<br>
-...influenced by ($R_{5,18} = $$\frac{{\gamma^{xy}} \cdot {\gamma^{xz}}}{{\gamma^{xx}} \cdot {({{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}$) * ($L_{18,31} = $$\frac{1}{2}$)
-<br>
-...influenced by ($R_{5,21} = $$\frac{{\gamma^{xy}}}{{\sqrt{\gamma^{xx}}} {({{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}$) * ($L_{21,31} = $$\frac{{\gamma^{xz}}}{2 {\sqrt{\gamma^{xx}}}}$)
-<br>
-...influenced by ($R_{5,24} = $$\frac{{{\gamma^{xy}}}^{2}}{{\gamma^{xx}} \cdot {({{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}$) * ($L_{24,31} = $$\frac{1}{2}$)
-<br>
-...influenced by ($R_{5,27} = $$\frac{{\gamma^{xy}}}{{\sqrt{\gamma^{xx}}} {({{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}$) * ($L_{27,31} = $$\frac{-{\gamma^{xz}}}{2 {\sqrt{\gamma^{xx}}}}$)
-<br>
-
+${R L} = {\left[\matrix{1&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&1&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&1&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&1&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&1&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&1&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&1&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&1&0&0&0&0&0&0&0&0&{-{\frac{1}{2}}}&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&1&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&1&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&1&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&1&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&1&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&1&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&1&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&1&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&1&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&1&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&1&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&1&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&1&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&1&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&1&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&1&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&1&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&1&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&1&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&1&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&1&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&1&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&1}\right]}$
 <br>
 for 8,17 expected $0$ but found $-{\frac{1}{2}}$
 <br>
-...influenced by ($R_{8,23} = $$\frac{-1}{\sqrt{\gamma^{xx}}}$) * ($L_{23,17} = $${\frac14}{({\sqrt{\gamma^{xx}}})}$)
+...influenced by ($R_{1+7,1+0} = $$0$) * ($L_{1+0,1+16} = $$0$)
 <br>
-...influenced by ($R_{8,29} = $$\frac{1}{\sqrt{\gamma^{xx}}}$) * ($L_{29,17} = $${\frac14}{({-{\sqrt{\gamma^{xx}}}})}$)
+...influenced by ($R_{1+7,1+1} = $$0$) * ($L_{1+1,1+16} = $$0$)
+<br>
+...influenced by ($R_{1+7,1+2} = $$0$) * ($L_{1+2,1+16} = $$0$)
+<br>
+...influenced by ($R_{1+7,1+3} = $$\frac{-{\gamma^{xz}}}{2 {\gamma^{xx}}}$) * ($L_{1+3,1+16} = $$0$)
+<br>
+...influenced by ($R_{1+7,1+4} = $$\frac{{\gamma^{xy}}}{2 {\gamma^{xx}}}$) * ($L_{1+4,1+16} = $$0$)
+<br>
+...influenced by ($R_{1+7,1+5} = $$0$) * ($L_{1+5,1+16} = $$0$)
+<br>
+...influenced by ($R_{1+7,1+6} = $$0$) * ($L_{1+6,1+16} = $1)
+<br>
+...influenced by ($R_{1+7,1+7} = $$0$) * ($L_{1+7,1+16} = $$0$)
+<br>
+...influenced by ($R_{1+7,1+8} = $$\frac{{\gamma^{xz}}}{2 {\gamma^{xx}}}$) * ($L_{1+8,1+16} = $$0$)
+<br>
+...influenced by ($R_{1+7,1+9} = $$\frac{-{\gamma^{xy}}}{2 {\gamma^{xx}}}$) * ($L_{1+9,1+16} = $$0$)
+<br>
+...influenced by ($R_{1+7,1+10} = $$0$) * ($L_{1+10,1+16} = $$0$)
+<br>
+...influenced by ($R_{1+7,1+11} = $$\frac{1}{2}$) * ($L_{1+11,1+16} = $$0$)
+<br>
+...influenced by ($R_{1+7,1+12} = $$0$) * ($L_{1+12,1+16} = $$0$)
+<br>
+...influenced by ($R_{1+7,1+13} = $$0$) * ($L_{1+13,1+16} = $$0$)
+<br>
+...influenced by ($R_{1+7,1+14} = $$0$) * ($L_{1+14,1+16} = $$\frac{-{\gamma^{xy}}}{2 {\gamma^{xx}}}$)
+<br>
+...influenced by ($R_{1+7,1+15} = $$0$) * ($L_{1+15,1+16} = $$\frac{-{\gamma^{xz}}}{2 {\gamma^{xx}}}$)
+<br>
+...influenced by ($R_{1+7,1+16} = $$0$) * ($L_{1+16,1+16} = $$\frac{{{{\gamma^{xy}} \cdot {\gamma^{xz}}} {({2 - m})}} + {{{\gamma^{xx}} \cdot {\gamma^{yz}}} {({{-1} + m})}}}{{{\gamma^{xx}}}^{2}}$)
+<br>
+...influenced by ($R_{1+7,1+17} = $$0$) * ($L_{1+17,1+16} = $$0$)
+<br>
+...influenced by ($R_{1+7,1+18} = $$0$) * ($L_{1+18,1+16} = $$0$)
+<br>
+...influenced by ($R_{1+7,1+19} = $$0$) * ($L_{1+19,1+16} = $$0$)
+<br>
+...influenced by ($R_{1+7,1+20} = $$0$) * ($L_{1+20,1+16} = $$\frac{{{-{\gamma^{xy}}} {\gamma^{xz}}} + {{\gamma^{xx}} \cdot {\gamma^{yz}}}}{2 {\sqrt{\gamma^{xx}}}}$)
+<br>
+...influenced by ($R_{1+7,1+21} = $$0$) * ($L_{1+21,1+16} = $$0$)
+<br>
+...influenced by ($R_{1+7,1+22} = $$\frac{-1}{\sqrt{\gamma^{xx}}}$) * ($L_{1+22,1+16} = $${\frac14}{({\sqrt{\gamma^{xx}}})}$)
+<br>
+...influenced by ($R_{1+7,1+23} = $$0$) * ($L_{1+23,1+16} = $$0$)
+<br>
+...influenced by ($R_{1+7,1+24} = $$0$) * ($L_{1+24,1+16} = $$0$)
+<br>
+...influenced by ($R_{1+7,1+25} = $$0$) * ($L_{1+25,1+16} = $$0$)
+<br>
+...influenced by ($R_{1+7,1+26} = $$0$) * ($L_{1+26,1+16} = $$\frac{{{\gamma^{xy}} \cdot {\gamma^{xz}}} - {{\gamma^{xx}} \cdot {\gamma^{yz}}}}{2 {\sqrt{\gamma^{xx}}}}$)
+<br>
+...influenced by ($R_{1+7,1+27} = $$0$) * ($L_{1+27,1+16} = $$0$)
+<br>
+...influenced by ($R_{1+7,1+28} = $$\frac{1}{\sqrt{\gamma^{xx}}}$) * ($L_{1+28,1+16} = $${\frac14}{({-{\sqrt{\gamma^{xx}}}})}$)
+<br>
+...influenced by ($R_{1+7,1+29} = $$0$) * ($L_{1+29,1+16} = $$\frac{{\sqrt f} {{({{{\gamma^{xy}} \cdot {\gamma^{xz}}} - {{\gamma^{xx}} \cdot {\gamma^{yz}}}})} {({{-2} + m})}}}{{{2 {({{-1} + f})}} {\gamma^{xx}}} {\sqrt{\gamma^{xx}}}}$)
+<br>
+...influenced by ($R_{1+7,1+30} = $$0$) * ($L_{1+30,1+16} = $$\frac{{{\sqrt f} {({{{-{\gamma^{xy}}} {\gamma^{xz}}} + {{\gamma^{xx}} \cdot {\gamma^{yz}}}})}} {({{-2} + m})}}{{{2 {({{-1} + f})}} {\gamma^{xx}}} {\sqrt{\gamma^{xx}}}}$)
 <br>
 
 <br>
-${L R} = {\left[\matrix{1&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&1&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&1&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&1&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&1&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&1&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&1&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&1&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&1&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&1&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&1&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&1&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&1&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&1&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&{\frac{-{\gamma^{xy}}}{2 {\gamma^{xx}}}}&0&0&0&0&0&0&0&1&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&{\frac{-{\gamma^{xz}}}{2 {\gamma^{xx}}}}&0&0&0&0&0&0&0&0&1&0&0&0&0&0&0&0&{\frac{{\gamma^{xy}} \cdot {({{{{{{\gamma^{xy}}}^{3}} - {{\gamma^{xy}} \cdot {\gamma^{xx}} \cdot {\gamma^{yy}}}} - {{{{\gamma^{xy}}}^{2}} {\gamma^{xz}}}} + {{\gamma^{xz}} \cdot {\gamma^{xx}} \cdot {\gamma^{yy}}}})}}{{\gamma^{xx}} \cdot {({{{{{\gamma^{xy}}}^{4}} - {2 {\gamma^{xx}} \cdot {{{\gamma^{xy}}}^{2}} {\gamma^{yy}}}} + {{{{\gamma^{xx}}}^{2}} {{{\gamma^{yy}}}^{2}}}})}}}&0&0&0&0&0&0&0\\0&0&0&0&0&0&{\frac{-{({{{{{\gamma^{xx}} \cdot {\gamma^{yz}}} - {{\gamma^{xx}} \cdot {\gamma^{yz}} \cdot m}} - {2 {\gamma^{xy}} \cdot {\gamma^{xz}}}} + {{\gamma^{xy}} \cdot {\gamma^{xz}} \cdot m}})}}{{{\gamma^{xx}}}^{2}}}&0&0&0&0&0&0&0&0&0&1&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&1&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&1&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&1&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&{\frac{{{\gamma^{xx}} \cdot {\gamma^{yz}}} - {{\gamma^{xy}} \cdot {\gamma^{xz}}}}{2 {\sqrt{\gamma^{xx}}}}}&0&0&0&0&0&0&0&0&0&0&0&0&0&1&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&1&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&{{\frac14}{({\sqrt{\gamma^{xx}}})}}&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&1&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&1&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&1&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&1&0&0&0&0&0\\0&0&0&0&0&0&{\frac{-{({{{\gamma^{xx}} \cdot {\gamma^{yz}}} - {{\gamma^{xy}} \cdot {\gamma^{xz}}}})}}{2 {\sqrt{\gamma^{xx}}}}}&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&1&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&1&0&0&0\\0&0&0&0&0&0&{{\frac14}{({-{\sqrt{\gamma^{xx}}}})}}&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&1&0&0\\0&0&0&0&0&0&{\frac{{\sqrt f} {({{{{2 {\gamma^{xx}} \cdot {\gamma^{yz}}} - {{\gamma^{xx}} \cdot {\gamma^{yz}} \cdot m}} - {2 {\gamma^{xy}} \cdot {\gamma^{xz}}}} + {{\gamma^{xy}} \cdot {\gamma^{xz}} \cdot m}})}}{-{2 {{{\gamma^{xx}}}^{{({\frac{3}{2}})}}} {({1 - f})}}}}&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&1&0\\0&0&0&0&0&0&{\frac{{\sqrt f} {({{{{2 {\gamma^{xx}} \cdot {\gamma^{yz}}} - {{\gamma^{xx}} \cdot {\gamma^{yz}} \cdot m}} - {2 {\gamma^{xy}} \cdot {\gamma^{xz}}}} + {{\gamma^{xy}} \cdot {\gamma^{xz}} \cdot m}})}}{2 {{{\gamma^{xx}}}^{{({\frac{3}{2}})}}} {({1 - f})}}}&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&1}\right]}$
+${L R} = {\left[\matrix{1&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&1&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&1&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&1&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&1&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&1&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&1&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&1&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&1&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&1&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&1&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&1&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&1&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&1&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&{\frac{-{\gamma^{xy}}}{2 {\gamma^{xx}}}}&0&0&0&0&0&0&0&1&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&{\frac{-{\gamma^{xz}}}{2 {\gamma^{xx}}}}&0&0&0&0&0&0&0&0&1&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&{\frac{-{({{{{{\gamma^{xx}} \cdot {\gamma^{yz}}} - {{\gamma^{xx}} \cdot {\gamma^{yz}} \cdot m}} - {2 {\gamma^{xy}} \cdot {\gamma^{xz}}}} + {{\gamma^{xy}} \cdot {\gamma^{xz}} \cdot m}})}}{{{\gamma^{xx}}}^{2}}}&0&0&0&0&0&0&0&0&0&1&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&1&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&1&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&1&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&{\frac{{{\gamma^{xx}} \cdot {\gamma^{yz}}} - {{\gamma^{xy}} \cdot {\gamma^{xz}}}}{2 {\sqrt{\gamma^{xx}}}}}&0&0&0&0&0&0&0&0&0&0&0&0&0&1&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&1&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&{{\frac14}{({\sqrt{\gamma^{xx}}})}}&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&1&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&1&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&1&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&1&0&0&0&0&0\\0&0&0&0&0&0&{\frac{-{({{{\gamma^{xx}} \cdot {\gamma^{yz}}} - {{\gamma^{xy}} \cdot {\gamma^{xz}}}})}}{2 {\sqrt{\gamma^{xx}}}}}&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&1&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&1&0&0&0\\0&0&0&0&0&0&{{\frac14}{({-{\sqrt{\gamma^{xx}}}})}}&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&1&0&0\\0&0&0&0&0&0&{\frac{{\sqrt f} {({{{{2 {\gamma^{xx}} \cdot {\gamma^{yz}}} - {{\gamma^{xx}} \cdot {\gamma^{yz}} \cdot m}} - {2 {\gamma^{xy}} \cdot {\gamma^{xz}}}} + {{\gamma^{xy}} \cdot {\gamma^{xz}} \cdot m}})}}{-{2 {{{\gamma^{xx}}}^{{({\frac{3}{2}})}}} {({1 - f})}}}}&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&1&0\\0&0&0&0&0&0&{\frac{{\sqrt f} {({{{{2 {\gamma^{xx}} \cdot {\gamma^{yz}}} - {{\gamma^{xx}} \cdot {\gamma^{yz}} \cdot m}} - {2 {\gamma^{xy}} \cdot {\gamma^{xz}}}} + {{\gamma^{xy}} \cdot {\gamma^{xz}} \cdot m}})}}{2 {{{\gamma^{xx}}}^{{({\frac{3}{2}})}}} {({1 - f})}}}&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&1}\right]}$
 <br>
 for 15,7 expected $0$ but found $\frac{-{\gamma^{xy}}}{2 {\gamma^{xx}}}$
 <br>
-...influenced by ($L_{15,17} = $$\frac{-{\gamma^{xy}}}{2 {\gamma^{xx}}}$) * ($R_{17,7} = $1)
+...influenced by ($L_{1+14,1+0} = $$0$) * ($R_{1+0,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+14,1+1} = $$0$) * ($R_{1+1,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+14,1+2} = $$\frac{-1}{2 {\gamma^{xx}}}$) * ($R_{1+2,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+14,1+3} = $$0$) * ($R_{1+3,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+14,1+4} = $$0$) * ($R_{1+4,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+14,1+5} = $1) * ($R_{1+5,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+14,1+6} = $$0$) * ($R_{1+6,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+14,1+7} = $${\frac1{\gamma^{xx}}}{({{\gamma^{xy}}})}$) * ($R_{1+7,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+14,1+8} = $${\frac1{\gamma^{xx}}}{({{\gamma^{xz}}})}$) * ($R_{1+8,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+14,1+9} = $$0$) * ($R_{1+9,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+14,1+10} = $$0$) * ($R_{1+10,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+14,1+11} = $$\frac{-{\gamma^{xy}}}{2 {\gamma^{xx}}}$) * ($R_{1+11,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+14,1+12} = $$0$) * ($R_{1+12,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+14,1+13} = $$\frac{{\gamma^{yy}}}{2 {\gamma^{xx}}}$) * ($R_{1+13,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+14,1+14} = $$\frac{{\gamma^{yz}}}{2 {\gamma^{xx}}}$) * ($R_{1+14,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+14,1+15} = $$0$) * ($R_{1+15,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+14,1+16} = $$\frac{-{\gamma^{xy}}}{2 {\gamma^{xx}}}$) * ($R_{1+16,1+6} = $1)
+<br>
+...influenced by ($L_{1+14,1+17} = $${\frac1{\gamma^{xx}}}{({-{\gamma^{xz}}})}$) * ($R_{1+17,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+14,1+18} = $$\frac{-{\gamma^{yy}}}{2 {\gamma^{xx}}}$) * ($R_{1+18,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+14,1+19} = $$\frac{-{\gamma^{yz}}}{2 {\gamma^{xx}}}$) * ($R_{1+19,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+14,1+20} = $$0$) * ($R_{1+20,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+14,1+21} = $$0$) * ($R_{1+21,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+14,1+22} = $$0$) * ($R_{1+22,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+14,1+23} = $$0$) * ($R_{1+23,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+14,1+24} = $$0$) * ($R_{1+24,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+14,1+25} = $$0$) * ($R_{1+25,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+14,1+26} = $$0$) * ($R_{1+26,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+14,1+27} = $$0$) * ($R_{1+27,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+14,1+28} = $$0$) * ($R_{1+28,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+14,1+29} = $$0$) * ($R_{1+29,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+14,1+30} = $$\frac{1}{{\gamma^{xx}}}$) * ($R_{1+30,1+6} = $$0$)
 <br>
 
 <br>
 for 16,7 expected $0$ but found $\frac{-{\gamma^{xz}}}{2 {\gamma^{xx}}}$
 <br>
-...influenced by ($L_{16,17} = $$\frac{-{\gamma^{xz}}}{2 {\gamma^{xx}}}$) * ($R_{17,7} = $1)
+...influenced by ($L_{1+15,1+0} = $$0$) * ($R_{1+0,1+6} = $$0$)
 <br>
-
+...influenced by ($L_{1+15,1+1} = $$\frac{-1}{2 {\gamma^{xx}}}$) * ($R_{1+1,1+6} = $$0$)
 <br>
-for 16,24 expected $0$ but found $\frac{{\gamma^{xy}} \cdot {({{{{{{\gamma^{xy}}}^{3}} - {{\gamma^{xy}} \cdot {\gamma^{xx}} \cdot {\gamma^{yy}}}} - {{{{\gamma^{xy}}}^{2}} {\gamma^{xz}}}} + {{\gamma^{xz}} \cdot {\gamma^{xx}} \cdot {\gamma^{yy}}}})}}{{\gamma^{xx}} \cdot {({{{{{\gamma^{xy}}}^{4}} - {2 {\gamma^{xx}} \cdot {{{\gamma^{xy}}}^{2}} {\gamma^{yy}}}} + {{{{\gamma^{xx}}}^{2}} {{{\gamma^{yy}}}^{2}}}})}}$
+...influenced by ($L_{1+15,1+2} = $$0$) * ($R_{1+2,1+6} = $$0$)
 <br>
-...influenced by ($L_{16,5} = $1) * ($R_{5,24} = $$\frac{{{\gamma^{xy}}}^{2}}{{\gamma^{xx}} \cdot {({{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}$)
+...influenced by ($L_{1+15,1+3} = $$0$) * ($R_{1+3,1+6} = $$0$)
 <br>
-...influenced by ($L_{16,7} = $${\frac1{\gamma^{xx}}}{({{\gamma^{xy}}})}$) * ($R_{7,24} = $$\frac{{\gamma^{xz}}}{{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}}$)
+...influenced by ($L_{1+15,1+4} = $1) * ($R_{1+4,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+15,1+5} = $$0$) * ($R_{1+5,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+15,1+6} = $${\frac1{\gamma^{xx}}}{({{\gamma^{xy}}})}$) * ($R_{1+6,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+15,1+7} = $${\frac1{\gamma^{xx}}}{({{\gamma^{xz}}})}$) * ($R_{1+7,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+15,1+8} = $$0$) * ($R_{1+8,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+15,1+9} = $$0$) * ($R_{1+9,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+15,1+10} = $${\frac1{\gamma^{xx}}}{({-{\gamma^{xy}}})}$) * ($R_{1+10,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+15,1+11} = $$\frac{-{\gamma^{xz}}}{2 {\gamma^{xx}}}$) * ($R_{1+11,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+15,1+12} = $$0$) * ($R_{1+12,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+15,1+13} = $$\frac{-{\gamma^{yz}}}{2 {\gamma^{xx}}}$) * ($R_{1+13,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+15,1+14} = $$\frac{-{\gamma^{zz}}}{2 {\gamma^{xx}}}$) * ($R_{1+14,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+15,1+15} = $$0$) * ($R_{1+15,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+15,1+16} = $$\frac{-{\gamma^{xz}}}{2 {\gamma^{xx}}}$) * ($R_{1+16,1+6} = $1)
+<br>
+...influenced by ($L_{1+15,1+17} = $$0$) * ($R_{1+17,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+15,1+18} = $$\frac{{\gamma^{yz}}}{2 {\gamma^{xx}}}$) * ($R_{1+18,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+15,1+19} = $$\frac{{\gamma^{zz}}}{2 {\gamma^{xx}}}$) * ($R_{1+19,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+15,1+20} = $$0$) * ($R_{1+20,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+15,1+21} = $$0$) * ($R_{1+21,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+15,1+22} = $$0$) * ($R_{1+22,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+15,1+23} = $$0$) * ($R_{1+23,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+15,1+24} = $$0$) * ($R_{1+24,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+15,1+25} = $$0$) * ($R_{1+25,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+15,1+26} = $$0$) * ($R_{1+26,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+15,1+27} = $$0$) * ($R_{1+27,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+15,1+28} = $$0$) * ($R_{1+28,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+15,1+29} = $$\frac{1}{{\gamma^{xx}}}$) * ($R_{1+29,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+15,1+30} = $$0$) * ($R_{1+30,1+6} = $$0$)
 <br>
 
 <br>
 for 17,7 expected $0$ but found $\frac{-{({{{{{\gamma^{xx}} \cdot {\gamma^{yz}}} - {{\gamma^{xx}} \cdot {\gamma^{yz}} \cdot m}} - {2 {\gamma^{xy}} \cdot {\gamma^{xz}}}} + {{\gamma^{xy}} \cdot {\gamma^{xz}} \cdot m}})}}{{{\gamma^{xx}}}^{2}}$
 <br>
-...influenced by ($L_{17,17} = $$\frac{{{{\gamma^{xy}} \cdot {\gamma^{xz}}} {({2 - m})}} + {{{\gamma^{xx}} \cdot {\gamma^{yz}}} {({{-1} + m})}}}{{{\gamma^{xx}}}^{2}}$) * ($R_{17,7} = $1)
+...influenced by ($L_{1+16,1+0} = $$\frac{-1}{f {\gamma^{xx}}}$) * ($R_{1+0,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+16,1+1} = $$\frac{{({{-1} + f})} {\gamma^{xy}}}{f {{{\gamma^{xx}}}^{2}}}$) * ($R_{1+1,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+16,1+2} = $$\frac{{({{-1} + f})} {\gamma^{xz}}}{f {{{\gamma^{xx}}}^{2}}}$) * ($R_{1+2,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+16,1+3} = $1) * ($R_{1+3,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+16,1+4} = $$0$) * ($R_{1+4,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+16,1+5} = $$0$) * ($R_{1+5,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+16,1+6} = $$\frac{{{{{\gamma^{xy}}}^{2}} {({{-2} + m})}} - {{{\gamma^{xx}} \cdot {\gamma^{yy}}} {({{-1} + m})}}}{{{\gamma^{xx}}}^{2}}$) * ($R_{1+6,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+16,1+7} = $$\frac{2 {({{{{\gamma^{xy}} \cdot {\gamma^{xz}}} {({{-2} + m})}} - {{{\gamma^{xx}} \cdot {\gamma^{yz}}} {({{-1} + m})}}})}}{{{\gamma^{xx}}}^{2}}$) * ($R_{1+7,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+16,1+8} = $$\frac{{{{{\gamma^{xz}}}^{2}} {({{-2} + m})}} - {{{\gamma^{xx}} \cdot {\gamma^{zz}}} {({{-1} + m})}}}{{{\gamma^{xx}}}^{2}}$) * ($R_{1+8,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+16,1+9} = $$0$) * ($R_{1+9,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+16,1+10} = $$\frac{{{{{\gamma^{xy}}}^{2}} {({2 - m})}} + {{{\gamma^{xx}} \cdot {\gamma^{yy}}} {({{-1} + m})}}}{{{\gamma^{xx}}}^{2}}$) * ($R_{1+10,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+16,1+11} = $$\frac{{{{\gamma^{xy}} \cdot {\gamma^{xz}}} {({2 - m})}} + {{{\gamma^{xx}} \cdot {\gamma^{yz}}} {({{-1} + m})}}}{{{\gamma^{xx}}}^{2}}$) * ($R_{1+11,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+16,1+12} = $$0$) * ($R_{1+12,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+16,1+13} = $$\frac{{({{{\gamma^{xz}} \cdot {\gamma^{yy}}} - {{\gamma^{xy}} \cdot {\gamma^{yz}}}})} {({{-2} + m})}}{{{\gamma^{xx}}}^{2}}$) * ($R_{1+13,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+16,1+14} = $$\frac{{({{{\gamma^{xz}} \cdot {\gamma^{yz}}} - {{\gamma^{xy}} \cdot {\gamma^{zz}}}})} {({{-2} + m})}}{{{\gamma^{xx}}}^{2}}$) * ($R_{1+14,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+16,1+15} = $$0$) * ($R_{1+15,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+16,1+16} = $$\frac{{{{\gamma^{xy}} \cdot {\gamma^{xz}}} {({2 - m})}} + {{{\gamma^{xx}} \cdot {\gamma^{yz}}} {({{-1} + m})}}}{{{\gamma^{xx}}}^{2}}$) * ($R_{1+16,1+6} = $1)
+<br>
+...influenced by ($L_{1+16,1+17} = $$\frac{{{{{\gamma^{xz}}}^{2}} {({2 - m})}} + {{{\gamma^{xx}} \cdot {\gamma^{zz}}} {({{-1} + m})}}}{{{\gamma^{xx}}}^{2}}$) * ($R_{1+17,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+16,1+18} = $$\frac{{-{({{{\gamma^{xz}} \cdot {\gamma^{yy}}} - {{\gamma^{xy}} \cdot {\gamma^{yz}}}})}} {({{-2} + m})}}{{{\gamma^{xx}}}^{2}}$) * ($R_{1+18,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+16,1+19} = $$\frac{{-{({{{\gamma^{xz}} \cdot {\gamma^{yz}}} - {{\gamma^{xy}} \cdot {\gamma^{zz}}}})}} {({{-2} + m})}}{{{\gamma^{xx}}}^{2}}$) * ($R_{1+19,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+16,1+20} = $$0$) * ($R_{1+20,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+16,1+21} = $$0$) * ($R_{1+21,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+16,1+22} = $$0$) * ($R_{1+22,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+16,1+23} = $$0$) * ($R_{1+23,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+16,1+24} = $$0$) * ($R_{1+24,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+16,1+25} = $$0$) * ($R_{1+25,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+16,1+26} = $$0$) * ($R_{1+26,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+16,1+27} = $$0$) * ($R_{1+27,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+16,1+28} = $${\frac1{\gamma^{xx}}}{({m})}$) * ($R_{1+28,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+16,1+29} = $$\frac{{\gamma^{xy}} \cdot {({{-2} + m})}}{{{\gamma^{xx}}}^{2}}$) * ($R_{1+29,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+16,1+30} = $$\frac{{\gamma^{xz}} \cdot {({{-2} + m})}}{{{\gamma^{xx}}}^{2}}$) * ($R_{1+30,1+6} = $$0$)
 <br>
 
 <br>
 for 21,7 expected $0$ but found $\frac{{{\gamma^{xx}} \cdot {\gamma^{yz}}} - {{\gamma^{xy}} \cdot {\gamma^{xz}}}}{2 {\sqrt{\gamma^{xx}}}}$
 <br>
-...influenced by ($L_{21,17} = $$\frac{{{-{\gamma^{xy}}} {\gamma^{xz}}} + {{\gamma^{xx}} \cdot {\gamma^{yz}}}}{2 {\sqrt{\gamma^{xx}}}}$) * ($R_{17,7} = $1)
+...influenced by ($L_{1+20,1+0} = $$0$) * ($R_{1+0,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+20,1+1} = $$0$) * ($R_{1+1,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+20,1+2} = $$0$) * ($R_{1+2,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+20,1+3} = $$0$) * ($R_{1+3,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+20,1+4} = $$0$) * ($R_{1+4,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+20,1+5} = $$0$) * ($R_{1+5,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+20,1+6} = $$\frac{{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}}{2 {\sqrt{\gamma^{xx}}}}$) * ($R_{1+6,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+20,1+7} = $$\frac{{{\gamma^{xy}} \cdot {\gamma^{xz}}} - {{\gamma^{xx}} \cdot {\gamma^{yz}}}}{\sqrt{\gamma^{xx}}}$) * ($R_{1+7,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+20,1+8} = $$\frac{{{{\gamma^{xz}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{zz}}}}{2 {\sqrt{\gamma^{xx}}}}$) * ($R_{1+8,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+20,1+9} = $$0$) * ($R_{1+9,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+20,1+10} = $$\frac{{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}}{2 {\sqrt{\gamma^{xx}}}}$) * ($R_{1+10,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+20,1+11} = $$\frac{{{-{\gamma^{xy}}} {\gamma^{xz}}} + {{\gamma^{xx}} \cdot {\gamma^{yz}}}}{2 {\sqrt{\gamma^{xx}}}}$) * ($R_{1+11,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+20,1+12} = $$0$) * ($R_{1+12,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+20,1+13} = $$\frac{{{\gamma^{xz}} \cdot {\gamma^{yy}}} - {{\gamma^{xy}} \cdot {\gamma^{yz}}}}{2 {\sqrt{\gamma^{xx}}}}$) * ($R_{1+13,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+20,1+14} = $$\frac{{{\gamma^{xz}} \cdot {\gamma^{yz}}} - {{\gamma^{xy}} \cdot {\gamma^{zz}}}}{2 {\sqrt{\gamma^{xx}}}}$) * ($R_{1+14,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+20,1+15} = $$0$) * ($R_{1+15,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+20,1+16} = $$\frac{{{-{\gamma^{xy}}} {\gamma^{xz}}} + {{\gamma^{xx}} \cdot {\gamma^{yz}}}}{2 {\sqrt{\gamma^{xx}}}}$) * ($R_{1+16,1+6} = $1)
+<br>
+...influenced by ($L_{1+20,1+17} = $$\frac{{-{{{\gamma^{xz}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{zz}}}}{2 {\sqrt{\gamma^{xx}}}}$) * ($R_{1+17,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+20,1+18} = $$\frac{{{-{\gamma^{xz}}} {\gamma^{yy}}} + {{\gamma^{xy}} \cdot {\gamma^{yz}}}}{2 {\sqrt{\gamma^{xx}}}}$) * ($R_{1+18,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+20,1+19} = $$\frac{{{-{\gamma^{xz}}} {\gamma^{yz}}} + {{\gamma^{xy}} \cdot {\gamma^{zz}}}}{2 {\sqrt{\gamma^{xx}}}}$) * ($R_{1+19,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+20,1+20} = $$0$) * ($R_{1+20,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+20,1+21} = $$0$) * ($R_{1+21,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+20,1+22} = $$0$) * ($R_{1+22,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+20,1+23} = $$0$) * ($R_{1+23,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+20,1+24} = $$0$) * ($R_{1+24,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+20,1+25} = $$0$) * ($R_{1+25,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+20,1+26} = $$0$) * ($R_{1+26,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+20,1+27} = $$\frac{1}{2}$) * ($R_{1+27,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+20,1+28} = $${\frac12}{({\sqrt{\gamma^{xx}}})}$) * ($R_{1+28,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+20,1+29} = $$\frac{{\gamma^{xy}}}{2 {\sqrt{\gamma^{xx}}}}$) * ($R_{1+29,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+20,1+30} = $$\frac{{\gamma^{xz}}}{2 {\sqrt{\gamma^{xx}}}}$) * ($R_{1+30,1+6} = $$0$)
 <br>
 
 <br>
 for 23,7 expected $0$ but found ${\frac14}{({\sqrt{\gamma^{xx}}})}$
 <br>
-...influenced by ($L_{23,17} = $${\frac14}{({\sqrt{\gamma^{xx}}})}$) * ($R_{17,7} = $1)
+...influenced by ($L_{1+22,1+0} = $$0$) * ($R_{1+0,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+22,1+1} = $$0$) * ($R_{1+1,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+22,1+2} = $$0$) * ($R_{1+2,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+22,1+3} = $$0$) * ($R_{1+3,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+22,1+4} = $$0$) * ($R_{1+4,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+22,1+5} = $$0$) * ($R_{1+5,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+22,1+6} = $$0$) * ($R_{1+6,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+22,1+7} = $${\frac12}{({-{\sqrt{\gamma^{xx}}}})}$) * ($R_{1+7,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+22,1+8} = $$0$) * ($R_{1+8,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+22,1+9} = $$0$) * ($R_{1+9,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+22,1+10} = $$0$) * ($R_{1+10,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+22,1+11} = $${\frac14}{({\sqrt{\gamma^{xx}}})}$) * ($R_{1+11,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+22,1+12} = $$0$) * ($R_{1+12,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+22,1+13} = $$\frac{-{\gamma^{xy}}}{4 {\sqrt{\gamma^{xx}}}}$) * ($R_{1+13,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+22,1+14} = $$\frac{{\gamma^{xz}}}{4 {\sqrt{\gamma^{xx}}}}$) * ($R_{1+14,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+22,1+15} = $$0$) * ($R_{1+15,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+22,1+16} = $${\frac14}{({\sqrt{\gamma^{xx}}})}$) * ($R_{1+16,1+6} = $1)
+<br>
+...influenced by ($L_{1+22,1+17} = $$0$) * ($R_{1+17,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+22,1+18} = $$\frac{{\gamma^{xy}}}{4 {\sqrt{\gamma^{xx}}}}$) * ($R_{1+18,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+22,1+19} = $$\frac{-{\gamma^{xz}}}{4 {\sqrt{\gamma^{xx}}}}$) * ($R_{1+19,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+22,1+20} = $$0$) * ($R_{1+20,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+22,1+21} = $$0$) * ($R_{1+21,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+22,1+22} = $$0$) * ($R_{1+22,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+22,1+23} = $$0$) * ($R_{1+23,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+22,1+24} = $$0$) * ($R_{1+24,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+22,1+25} = $$\frac{1}{2}$) * ($R_{1+25,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+22,1+26} = $$0$) * ($R_{1+26,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+22,1+27} = $$0$) * ($R_{1+27,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+22,1+28} = $$0$) * ($R_{1+28,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+22,1+29} = $$0$) * ($R_{1+29,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+22,1+30} = $$0$) * ($R_{1+30,1+6} = $$0$)
 <br>
 
 <br>
 for 27,7 expected $0$ but found $\frac{-{({{{\gamma^{xx}} \cdot {\gamma^{yz}}} - {{\gamma^{xy}} \cdot {\gamma^{xz}}}})}}{2 {\sqrt{\gamma^{xx}}}}$
 <br>
-...influenced by ($L_{27,17} = $$\frac{{{\gamma^{xy}} \cdot {\gamma^{xz}}} - {{\gamma^{xx}} \cdot {\gamma^{yz}}}}{2 {\sqrt{\gamma^{xx}}}}$) * ($R_{17,7} = $1)
+...influenced by ($L_{1+26,1+0} = $$0$) * ($R_{1+0,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+26,1+1} = $$0$) * ($R_{1+1,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+26,1+2} = $$0$) * ($R_{1+2,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+26,1+3} = $$0$) * ($R_{1+3,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+26,1+4} = $$0$) * ($R_{1+4,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+26,1+5} = $$0$) * ($R_{1+5,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+26,1+6} = $$\frac{{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}}{2 {\sqrt{\gamma^{xx}}}}$) * ($R_{1+6,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+26,1+7} = $$\frac{{{-{\gamma^{xy}}} {\gamma^{xz}}} + {{\gamma^{xx}} \cdot {\gamma^{yz}}}}{\sqrt{\gamma^{xx}}}$) * ($R_{1+7,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+26,1+8} = $$\frac{{-{{{\gamma^{xz}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{zz}}}}{2 {\sqrt{\gamma^{xx}}}}$) * ($R_{1+8,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+26,1+9} = $$0$) * ($R_{1+9,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+26,1+10} = $$\frac{{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}}{2 {\sqrt{\gamma^{xx}}}}$) * ($R_{1+10,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+26,1+11} = $$\frac{{{\gamma^{xy}} \cdot {\gamma^{xz}}} - {{\gamma^{xx}} \cdot {\gamma^{yz}}}}{2 {\sqrt{\gamma^{xx}}}}$) * ($R_{1+11,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+26,1+12} = $$0$) * ($R_{1+12,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+26,1+13} = $$\frac{{{-{\gamma^{xz}}} {\gamma^{yy}}} + {{\gamma^{xy}} \cdot {\gamma^{yz}}}}{2 {\sqrt{\gamma^{xx}}}}$) * ($R_{1+13,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+26,1+14} = $$\frac{{{-{\gamma^{xz}}} {\gamma^{yz}}} + {{\gamma^{xy}} \cdot {\gamma^{zz}}}}{2 {\sqrt{\gamma^{xx}}}}$) * ($R_{1+14,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+26,1+15} = $$0$) * ($R_{1+15,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+26,1+16} = $$\frac{{{\gamma^{xy}} \cdot {\gamma^{xz}}} - {{\gamma^{xx}} \cdot {\gamma^{yz}}}}{2 {\sqrt{\gamma^{xx}}}}$) * ($R_{1+16,1+6} = $1)
+<br>
+...influenced by ($L_{1+26,1+17} = $$\frac{{{{\gamma^{xz}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{zz}}}}{2 {\sqrt{\gamma^{xx}}}}$) * ($R_{1+17,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+26,1+18} = $$\frac{{{\gamma^{xz}} \cdot {\gamma^{yy}}} - {{\gamma^{xy}} \cdot {\gamma^{yz}}}}{2 {\sqrt{\gamma^{xx}}}}$) * ($R_{1+18,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+26,1+19} = $$\frac{{{\gamma^{xz}} \cdot {\gamma^{yz}}} - {{\gamma^{xy}} \cdot {\gamma^{zz}}}}{2 {\sqrt{\gamma^{xx}}}}$) * ($R_{1+19,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+26,1+20} = $$0$) * ($R_{1+20,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+26,1+21} = $$0$) * ($R_{1+21,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+26,1+22} = $$0$) * ($R_{1+22,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+26,1+23} = $$0$) * ($R_{1+23,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+26,1+24} = $$0$) * ($R_{1+24,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+26,1+25} = $$0$) * ($R_{1+25,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+26,1+26} = $$0$) * ($R_{1+26,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+26,1+27} = $$\frac{1}{2}$) * ($R_{1+27,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+26,1+28} = $${\frac12}{({-{\sqrt{\gamma^{xx}}}})}$) * ($R_{1+28,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+26,1+29} = $$\frac{-{\gamma^{xy}}}{2 {\sqrt{\gamma^{xx}}}}$) * ($R_{1+29,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+26,1+30} = $$\frac{-{\gamma^{xz}}}{2 {\sqrt{\gamma^{xx}}}}$) * ($R_{1+30,1+6} = $$0$)
 <br>
 
 <br>
 for 29,7 expected $0$ but found ${\frac14}{({-{\sqrt{\gamma^{xx}}}})}$
 <br>
-...influenced by ($L_{29,17} = $${\frac14}{({-{\sqrt{\gamma^{xx}}}})}$) * ($R_{17,7} = $1)
+...influenced by ($L_{1+28,1+0} = $$0$) * ($R_{1+0,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+28,1+1} = $$0$) * ($R_{1+1,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+28,1+2} = $$0$) * ($R_{1+2,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+28,1+3} = $$0$) * ($R_{1+3,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+28,1+4} = $$0$) * ($R_{1+4,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+28,1+5} = $$0$) * ($R_{1+5,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+28,1+6} = $$0$) * ($R_{1+6,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+28,1+7} = $${\frac12}{({\sqrt{\gamma^{xx}}})}$) * ($R_{1+7,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+28,1+8} = $$0$) * ($R_{1+8,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+28,1+9} = $$0$) * ($R_{1+9,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+28,1+10} = $$0$) * ($R_{1+10,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+28,1+11} = $${\frac14}{({-{\sqrt{\gamma^{xx}}}})}$) * ($R_{1+11,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+28,1+12} = $$0$) * ($R_{1+12,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+28,1+13} = $$\frac{{\gamma^{xy}}}{4 {\sqrt{\gamma^{xx}}}}$) * ($R_{1+13,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+28,1+14} = $$\frac{-{\gamma^{xz}}}{4 {\sqrt{\gamma^{xx}}}}$) * ($R_{1+14,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+28,1+15} = $$0$) * ($R_{1+15,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+28,1+16} = $${\frac14}{({-{\sqrt{\gamma^{xx}}}})}$) * ($R_{1+16,1+6} = $1)
+<br>
+...influenced by ($L_{1+28,1+17} = $$0$) * ($R_{1+17,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+28,1+18} = $$\frac{-{\gamma^{xy}}}{4 {\sqrt{\gamma^{xx}}}}$) * ($R_{1+18,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+28,1+19} = $$\frac{{\gamma^{xz}}}{4 {\sqrt{\gamma^{xx}}}}$) * ($R_{1+19,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+28,1+20} = $$0$) * ($R_{1+20,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+28,1+21} = $$0$) * ($R_{1+21,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+28,1+22} = $$0$) * ($R_{1+22,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+28,1+23} = $$0$) * ($R_{1+23,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+28,1+24} = $$0$) * ($R_{1+24,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+28,1+25} = $$\frac{1}{2}$) * ($R_{1+25,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+28,1+26} = $$0$) * ($R_{1+26,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+28,1+27} = $$0$) * ($R_{1+27,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+28,1+28} = $$0$) * ($R_{1+28,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+28,1+29} = $$0$) * ($R_{1+29,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+28,1+30} = $$0$) * ($R_{1+30,1+6} = $$0$)
 <br>
 
 <br>
 for 30,7 expected $0$ but found $\frac{{\sqrt f} {({{{{2 {\gamma^{xx}} \cdot {\gamma^{yz}}} - {{\gamma^{xx}} \cdot {\gamma^{yz}} \cdot m}} - {2 {\gamma^{xy}} \cdot {\gamma^{xz}}}} + {{\gamma^{xy}} \cdot {\gamma^{xz}} \cdot m}})}}{-{2 {{{\gamma^{xx}}}^{{({\frac{3}{2}})}}} {({1 - f})}}}$
 <br>
-...influenced by ($L_{30,17} = $$\frac{{\sqrt f} {{({{{\gamma^{xy}} \cdot {\gamma^{xz}}} - {{\gamma^{xx}} \cdot {\gamma^{yz}}}})} {({{-2} + m})}}}{{{2 {({{-1} + f})}} {\gamma^{xx}}} {\sqrt{\gamma^{xx}}}}$) * ($R_{17,7} = $1)
+...influenced by ($L_{1+29,1+0} = $$\frac{-1}{2 {\sqrt{f {\gamma^{xx}}}}}$) * ($R_{1+0,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+29,1+1} = $$\frac{-{\gamma^{xy}}}{{2 {\gamma^{xx}}} {\sqrt{f {\gamma^{xx}}}}}$) * ($R_{1+1,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+29,1+2} = $$\frac{-{\gamma^{xz}}}{{2 {\gamma^{xx}}} {\sqrt{f {\gamma^{xx}}}}}$) * ($R_{1+2,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+29,1+3} = $$0$) * ($R_{1+3,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+29,1+4} = $$0$) * ($R_{1+4,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+29,1+5} = $$0$) * ($R_{1+5,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+29,1+6} = $$\frac{{\sqrt f} {{({{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}})} {({{-2} + m})}}}{{{2 {({{-1} + f})}} {\gamma^{xx}}} {\sqrt{\gamma^{xx}}}}$) * ($R_{1+6,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+29,1+7} = $$\frac{{\sqrt f} {{({{{-{\gamma^{xy}}} {\gamma^{xz}}} + {{\gamma^{xx}} \cdot {\gamma^{yz}}}})} {({{-2} + m})}}}{{{({{-1} + f})} {\gamma^{xx}}} {\sqrt{\gamma^{xx}}}}$) * ($R_{1+7,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+29,1+8} = $$\frac{{\sqrt f} {{({{-{{{\gamma^{xz}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{zz}}}})} {({{-2} + m})}}}{{{2 {({{-1} + f})}} {\gamma^{xx}}} {\sqrt{\gamma^{xx}}}}$) * ($R_{1+8,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+29,1+9} = $$0$) * ($R_{1+9,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+29,1+10} = $$\frac{{\sqrt f} {{({{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}})} {({{-2} + m})}}}{{{2 {({{-1} + f})}} {\gamma^{xx}}} {\sqrt{\gamma^{xx}}}}$) * ($R_{1+10,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+29,1+11} = $$\frac{{\sqrt f} {{({{{\gamma^{xy}} \cdot {\gamma^{xz}}} - {{\gamma^{xx}} \cdot {\gamma^{yz}}}})} {({{-2} + m})}}}{{{2 {({{-1} + f})}} {\gamma^{xx}}} {\sqrt{\gamma^{xx}}}}$) * ($R_{1+11,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+29,1+12} = $$0$) * ($R_{1+12,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+29,1+13} = $$\frac{{\sqrt f} {{({{{-{\gamma^{xz}}} {\gamma^{yy}}} + {{\gamma^{xy}} \cdot {\gamma^{yz}}}})} {({{-2} + m})}}}{{{2 {({{-1} + f})}} {\gamma^{xx}}} {\sqrt{\gamma^{xx}}}}$) * ($R_{1+13,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+29,1+14} = $$\frac{{\sqrt f} {{({{{-{\gamma^{xz}}} {\gamma^{yz}}} + {{\gamma^{xy}} \cdot {\gamma^{zz}}}})} {({{-2} + m})}}}{{{2 {({{-1} + f})}} {\gamma^{xx}}} {\sqrt{\gamma^{xx}}}}$) * ($R_{1+14,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+29,1+15} = $$0$) * ($R_{1+15,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+29,1+16} = $$\frac{{\sqrt f} {{({{{\gamma^{xy}} \cdot {\gamma^{xz}}} - {{\gamma^{xx}} \cdot {\gamma^{yz}}}})} {({{-2} + m})}}}{{{2 {({{-1} + f})}} {\gamma^{xx}}} {\sqrt{\gamma^{xx}}}}$) * ($R_{1+16,1+6} = $1)
+<br>
+...influenced by ($L_{1+29,1+17} = $$\frac{{\sqrt f} {{({{{{\gamma^{xz}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{zz}}}})} {({{-2} + m})}}}{{{2 {({{-1} + f})}} {\gamma^{xx}}} {\sqrt{\gamma^{xx}}}}$) * ($R_{1+17,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+29,1+18} = $$\frac{{\sqrt f} {{({{{\gamma^{xz}} \cdot {\gamma^{yy}}} - {{\gamma^{xy}} \cdot {\gamma^{yz}}}})} {({{-2} + m})}}}{{{2 {({{-1} + f})}} {\gamma^{xx}}} {\sqrt{\gamma^{xx}}}}$) * ($R_{1+18,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+29,1+19} = $$\frac{{\sqrt f} {{({{{\gamma^{xz}} \cdot {\gamma^{yz}}} - {{\gamma^{xy}} \cdot {\gamma^{zz}}}})} {({{-2} + m})}}}{{{2 {({{-1} + f})}} {\gamma^{xx}}} {\sqrt{\gamma^{xx}}}}$) * ($R_{1+19,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+29,1+20} = $$0$) * ($R_{1+20,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+29,1+21} = $$\frac{1}{2}$) * ($R_{1+21,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+29,1+22} = $${\frac1{\gamma^{xx}}}{({{\gamma^{xy}}})}$) * ($R_{1+22,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+29,1+23} = $${\frac1{\gamma^{xx}}}{({{\gamma^{xz}}})}$) * ($R_{1+23,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+29,1+24} = $$\frac{{\gamma^{yy}}}{2 {\gamma^{xx}}}$) * ($R_{1+24,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+29,1+25} = $${\frac1{\gamma^{xx}}}{({{\gamma^{yz}}})}$) * ($R_{1+25,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+29,1+26} = $$\frac{{\gamma^{zz}}}{2 {\gamma^{xx}}}$) * ($R_{1+26,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+29,1+27} = $$\frac{2 - {f m}}{{{-2} {\gamma^{xx}}} + {{2 f} {\gamma^{xx}}}}$) * ($R_{1+27,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+29,1+28} = $$\frac{{-{\sqrt f}} {({{-2} + m})}}{{2 {({{-1} + f})}} {\sqrt{\gamma^{xx}}}}$) * ($R_{1+28,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+29,1+29} = $$\frac{{{-{\sqrt f}} {\gamma^{xy}}} {({{-2} + m})}}{{{2 {({{-1} + f})}} {\gamma^{xx}}} {\sqrt{\gamma^{xx}}}}$) * ($R_{1+29,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+29,1+30} = $$\frac{{{-{\sqrt f}} {\gamma^{xz}}} {({{-2} + m})}}{{{2 {({{-1} + f})}} {\gamma^{xx}}} {\sqrt{\gamma^{xx}}}}$) * ($R_{1+30,1+6} = $$0$)
 <br>
 
 <br>
 for 31,7 expected $0$ but found $\frac{{\sqrt f} {({{{{2 {\gamma^{xx}} \cdot {\gamma^{yz}}} - {{\gamma^{xx}} \cdot {\gamma^{yz}} \cdot m}} - {2 {\gamma^{xy}} \cdot {\gamma^{xz}}}} + {{\gamma^{xy}} \cdot {\gamma^{xz}} \cdot m}})}}{2 {{{\gamma^{xx}}}^{{({\frac{3}{2}})}}} {({1 - f})}}$
 <br>
-...influenced by ($L_{31,17} = $$\frac{{{\sqrt f} {({{{-{\gamma^{xy}}} {\gamma^{xz}}} + {{\gamma^{xx}} \cdot {\gamma^{yz}}}})}} {({{-2} + m})}}{{{2 {({{-1} + f})}} {\gamma^{xx}}} {\sqrt{\gamma^{xx}}}}$) * ($R_{17,7} = $1)
+...influenced by ($L_{1+30,1+0} = $$\frac{1}{2 {\sqrt{f {\gamma^{xx}}}}}$) * ($R_{1+0,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+30,1+1} = $$\frac{{\gamma^{xy}}}{{2 {\gamma^{xx}}} {\sqrt{f {\gamma^{xx}}}}}$) * ($R_{1+1,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+30,1+2} = $$\frac{{\gamma^{xz}}}{{2 {\gamma^{xx}}} {\sqrt{f {\gamma^{xx}}}}}$) * ($R_{1+2,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+30,1+3} = $$0$) * ($R_{1+3,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+30,1+4} = $$0$) * ($R_{1+4,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+30,1+5} = $$0$) * ($R_{1+5,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+30,1+6} = $$\frac{{{\sqrt f} {({{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}} {({{-2} + m})}}{{{2 {({{-1} + f})}} {\gamma^{xx}}} {\sqrt{\gamma^{xx}}}}$) * ($R_{1+6,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+30,1+7} = $$\frac{{{\sqrt f} {({{{\gamma^{xy}} \cdot {\gamma^{xz}}} - {{\gamma^{xx}} \cdot {\gamma^{yz}}}})}} {({{-2} + m})}}{{{({{-1} + f})} {\gamma^{xx}}} {\sqrt{\gamma^{xx}}}}$) * ($R_{1+7,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+30,1+8} = $$\frac{{{\sqrt f} {({{{{\gamma^{xz}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{zz}}}})}} {({{-2} + m})}}{{{2 {({{-1} + f})}} {\gamma^{xx}}} {\sqrt{\gamma^{xx}}}}$) * ($R_{1+8,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+30,1+9} = $$0$) * ($R_{1+9,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+30,1+10} = $$\frac{{{\sqrt f} {({{-{{{\gamma^{xy}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}} {({{-2} + m})}}{{{2 {({{-1} + f})}} {\gamma^{xx}}} {\sqrt{\gamma^{xx}}}}$) * ($R_{1+10,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+30,1+11} = $$\frac{{{\sqrt f} {({{{-{\gamma^{xy}}} {\gamma^{xz}}} + {{\gamma^{xx}} \cdot {\gamma^{yz}}}})}} {({{-2} + m})}}{{{2 {({{-1} + f})}} {\gamma^{xx}}} {\sqrt{\gamma^{xx}}}}$) * ($R_{1+11,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+30,1+12} = $$0$) * ($R_{1+12,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+30,1+13} = $$\frac{{{\sqrt f} {({{{\gamma^{xz}} \cdot {\gamma^{yy}}} - {{\gamma^{xy}} \cdot {\gamma^{yz}}}})}} {({{-2} + m})}}{{{2 {({{-1} + f})}} {\gamma^{xx}}} {\sqrt{\gamma^{xx}}}}$) * ($R_{1+13,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+30,1+14} = $$\frac{{{\sqrt f} {({{{\gamma^{xz}} \cdot {\gamma^{yz}}} - {{\gamma^{xy}} \cdot {\gamma^{zz}}}})}} {({{-2} + m})}}{{{2 {({{-1} + f})}} {\gamma^{xx}}} {\sqrt{\gamma^{xx}}}}$) * ($R_{1+14,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+30,1+15} = $$0$) * ($R_{1+15,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+30,1+16} = $$\frac{{{\sqrt f} {({{{-{\gamma^{xy}}} {\gamma^{xz}}} + {{\gamma^{xx}} \cdot {\gamma^{yz}}}})}} {({{-2} + m})}}{{{2 {({{-1} + f})}} {\gamma^{xx}}} {\sqrt{\gamma^{xx}}}}$) * ($R_{1+16,1+6} = $1)
+<br>
+...influenced by ($L_{1+30,1+17} = $$\frac{{{\sqrt f} {({{-{{{\gamma^{xz}}}^{2}}} + {{\gamma^{xx}} \cdot {\gamma^{zz}}}})}} {({{-2} + m})}}{{{2 {({{-1} + f})}} {\gamma^{xx}}} {\sqrt{\gamma^{xx}}}}$) * ($R_{1+17,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+30,1+18} = $$\frac{{{\sqrt f} {({{{-{\gamma^{xz}}} {\gamma^{yy}}} + {{\gamma^{xy}} \cdot {\gamma^{yz}}}})}} {({{-2} + m})}}{{{2 {({{-1} + f})}} {\gamma^{xx}}} {\sqrt{\gamma^{xx}}}}$) * ($R_{1+18,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+30,1+19} = $$\frac{{{\sqrt f} {({{{-{\gamma^{xz}}} {\gamma^{yz}}} + {{\gamma^{xy}} \cdot {\gamma^{zz}}}})}} {({{-2} + m})}}{{{2 {({{-1} + f})}} {\gamma^{xx}}} {\sqrt{\gamma^{xx}}}}$) * ($R_{1+19,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+30,1+20} = $$0$) * ($R_{1+20,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+30,1+21} = $$\frac{1}{2}$) * ($R_{1+21,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+30,1+22} = $${\frac1{\gamma^{xx}}}{({{\gamma^{xy}}})}$) * ($R_{1+22,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+30,1+23} = $${\frac1{\gamma^{xx}}}{({{\gamma^{xz}}})}$) * ($R_{1+23,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+30,1+24} = $$\frac{{\gamma^{yy}}}{2 {\gamma^{xx}}}$) * ($R_{1+24,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+30,1+25} = $${\frac1{\gamma^{xx}}}{({{\gamma^{yz}}})}$) * ($R_{1+25,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+30,1+26} = $$\frac{{\gamma^{zz}}}{2 {\gamma^{xx}}}$) * ($R_{1+26,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+30,1+27} = $$\frac{2 - {f m}}{{{-2} {\gamma^{xx}}} + {{2 f} {\gamma^{xx}}}}$) * ($R_{1+27,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+30,1+28} = $$\frac{{\sqrt f} {({{-2} + m})}}{{2 {({{-1} + f})}} {\sqrt{\gamma^{xx}}}}$) * ($R_{1+28,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+30,1+29} = $$\frac{{{\sqrt f} {\gamma^{xy}}} {({{-2} + m})}}{{{2 {({{-1} + f})}} {\gamma^{xx}}} {\sqrt{\gamma^{xx}}}}$) * ($R_{1+29,1+6} = $$0$)
+<br>
+...influenced by ($L_{1+30,1+30} = $$\frac{{{\sqrt f} {\gamma^{xz}}} {({{-2} + m})}}{{{2 {({{-1} + f})}} {\gamma^{xx}}} {\sqrt{\gamma^{xx}}}}$) * ($R_{1+30,1+6} = $$0$)
 <br>
 
 <br>
-found 20 errors
+found 10 errors
+<br>
+$\Lambda = {\left[\matrix{0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&{{-\alpha} {\sqrt{\gamma^{xx}}}}&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&{{-\alpha} {\sqrt{\gamma^{xx}}}}&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&{{-\alpha} {\sqrt{\gamma^{xx}}}}&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&{{-\alpha} {\sqrt{\gamma^{xx}}}}&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&{{-\alpha} {\sqrt{\gamma^{xx}}}}&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&{{-\alpha} {\sqrt{\gamma^{xx}}}}&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&{\alpha \cdot {\sqrt{\gamma^{xx}}}}&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&{\alpha \cdot {\sqrt{\gamma^{xx}}}}&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&{\alpha \cdot {\sqrt{\gamma^{xx}}}}&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&{\alpha \cdot {\sqrt{\gamma^{xx}}}}&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&{\alpha \cdot {\sqrt{\gamma^{xx}}}}&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&{\alpha \cdot {\sqrt{\gamma^{xx}}}}&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&{{-\alpha} {\sqrt{f {\gamma^{xx}}}}}&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&{\alpha \cdot {\sqrt{f {\gamma^{xx}}}}}}\right]}$
+<br>
+$A = {\left[\matrix{0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&{f {\gamma^{xx}} \cdot \alpha}&{2 f \alpha \cdot {\gamma^{xy}}}&{2 f \alpha \cdot {\gamma^{xz}}}&{f \alpha \cdot {\gamma^{yy}}}&{2 f \alpha \cdot {\gamma^{yz}}}&{f \alpha \cdot {\gamma^{zz}}}&{-{f \alpha \cdot m}}&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&\alpha&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&{\frac{\alpha \cdot {({{{{\gamma^{xy}}}^{2}} - {{\gamma^{yy}} \cdot {\gamma^{xx}}}})}}{-{({{{\gamma^{xx}} \cdot {\gamma^{yy}}} - {{{\gamma^{xy}}}^{2}}})}}}&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&\alpha&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&\alpha&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&\alpha&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&\alpha&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0\\\alpha&0&0&0&0&0&{\alpha \cdot {\gamma^{yy}}}&{2 \alpha \cdot {\gamma^{yz}}}&{\frac{-{\alpha \cdot {\gamma^{zz}} \cdot {({{2 {{{\gamma^{xx}}}^{2}} {{{\gamma^{yy}}}^{2}}} + {{2 {{{\gamma^{xy}}}^{4}}} - {4 {{{\gamma^{xy}}}^{2}} {\gamma^{xx}} \cdot {\gamma^{yy}}}} + {{{4 f {\gamma^{xx}} \cdot {{{\gamma^{xy}}}^{2}} {\gamma^{yy}}} - {2 f {{{\gamma^{xx}}}^{2}} {{{\gamma^{yy}}}^{2}}}} - {2 f {{{\gamma^{xy}}}^{4}}}}})}}}{{{{4 {\gamma^{xx}} \cdot {{{\gamma^{xy}}}^{2}} {\gamma^{yy}}} - {4 {\gamma^{xx}} \cdot {{{\gamma^{xy}}}^{2}} f {\gamma^{yy}}}} - {2 {{{\gamma^{xx}}}^{2}} {{{\gamma^{yy}}}^{2}}}} + {{2 {{{\gamma^{xx}}}^{2}} {{{\gamma^{yy}}}^{2}} f} - {2 {{{\gamma^{xy}}}^{4}}}} + {2 {{{\gamma^{xy}}}^{4}} f}}}&0&{-{\alpha \cdot {\gamma^{yy}}}}&{-{\alpha \cdot {\gamma^{yz}}}}&0&0&0&0&{-{\alpha \cdot {\gamma^{yz}}}}&{\frac{\alpha \cdot {\gamma^{zz}} \cdot {({{2 {{{\gamma^{xx}}}^{2}} {{{\gamma^{yy}}}^{2}}} + {{2 {{{\gamma^{xy}}}^{4}}} - {4 {{{\gamma^{xy}}}^{2}} {\gamma^{xx}} \cdot {\gamma^{yy}}}} + {{{4 f {\gamma^{xx}} \cdot {{{\gamma^{xy}}}^{2}} {\gamma^{yy}}} - {2 f {{{\gamma^{xx}}}^{2}} {{{\gamma^{yy}}}^{2}}}} - {2 f {{{\gamma^{xy}}}^{4}}}}})}}{{{{4 {\gamma^{xx}} \cdot {{{\gamma^{xy}}}^{2}} {\gamma^{yy}}} - {4 {\gamma^{xx}} \cdot {{{\gamma^{xy}}}^{2}} f {\gamma^{yy}}}} - {2 {{{\gamma^{xx}}}^{2}} {{{\gamma^{yy}}}^{2}}}} + {{2 {{{\gamma^{xx}}}^{2}} {{{\gamma^{yy}}}^{2}} f} - {2 {{{\gamma^{xy}}}^{4}}}} + {2 {{{\gamma^{xy}}}^{4}} f}}}&0&0&0&0&0&0&0&0&0&0&{\frac{-{\alpha \cdot {({{4 {{{\gamma^{xx}}}^{2}} {{{\gamma^{yy}}}^{2}}} + {{{{4 {{{\gamma^{xy}}}^{4}}} - {8 {{{\gamma^{xy}}}^{2}} {\gamma^{xx}} \cdot {\gamma^{yy}}}} - {4 {{{\gamma^{xy}}}^{4}} f}} - {4 f {{{\gamma^{xx}}}^{2}} {{{\gamma^{yy}}}^{2}}}} + {8 f {{{\gamma^{xy}}}^{2}} {\gamma^{xx}} \cdot {\gamma^{yy}}}})}}}{{2 {{{\gamma^{xx}}}^{2}} {{{\gamma^{yy}}}^{2}}} + {{{{2 {{{\gamma^{xy}}}^{4}}} - {4 {{{\gamma^{xy}}}^{2}} {\gamma^{xx}} \cdot {\gamma^{yy}}}} - {2 f {{{\gamma^{xx}}}^{2}} {{{\gamma^{yy}}}^{2}}}} - {2 f {{{\gamma^{xy}}}^{4}}}} + {4 f {{{\gamma^{xy}}}^{2}} {\gamma^{xx}} \cdot {\gamma^{yy}}}}}&0&0\\0&{\frac{\alpha \cdot {({{2 {{{\gamma^{xx}}}^{2}} {{{\gamma^{yy}}}^{2}}} + {{2 {{{\gamma^{xy}}}^{4}}} - {4 {{{\gamma^{xy}}}^{2}} {\gamma^{xx}} \cdot {\gamma^{yy}}}}})}}{{4 {{{\gamma^{xx}}}^{2}} {{{\gamma^{yy}}}^{2}}} + {{4 {{{\gamma^{xy}}}^{4}}} - {8 {{{\gamma^{xy}}}^{2}} {\gamma^{xx}} \cdot {\gamma^{yy}}}}}}&0&0&0&0&{\frac{{\gamma^{xy}} \cdot \alpha \cdot {({{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}{{{\gamma^{xx}} \cdot {\gamma^{yy}}} - {{{\gamma^{xy}}}^{2}}}}&{-{\alpha \cdot {\gamma^{xz}}}}&0&0&{\frac{{\gamma^{xy}} \cdot \alpha \cdot {({{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}{-{({{{\gamma^{xx}} \cdot {\gamma^{yy}}} - {{{\gamma^{xy}}}^{2}}})}}}&{{\frac12}{({\alpha \cdot {\gamma^{xz}}})}}&0&{\frac{\alpha \cdot {\gamma^{yz}} \cdot {({{{2 {{{\gamma^{xy}}}^{4}}} - {4 {{{\gamma^{xy}}}^{2}} {\gamma^{xx}} \cdot {\gamma^{yy}}}} + {2 {{{\gamma^{yy}}}^{2}} {{{\gamma^{xx}}}^{2}}}})}}{{4 {{{\gamma^{xx}}}^{2}} {{{\gamma^{yy}}}^{2}}} + {{4 {{{\gamma^{xy}}}^{4}}} - {8 {{{\gamma^{xy}}}^{2}} {\gamma^{xx}} \cdot {\gamma^{yy}}}}}}&{\frac{\alpha \cdot {\gamma^{zz}} \cdot {({{{2 {{{\gamma^{xy}}}^{4}}} - {4 {{{\gamma^{xy}}}^{2}} {\gamma^{xx}} \cdot {\gamma^{yy}}}} + {2 {{{\gamma^{yy}}}^{2}} {{{\gamma^{xx}}}^{2}}}})}}{{4 {{{\gamma^{xx}}}^{2}} {{{\gamma^{yy}}}^{2}}} + {{4 {{{\gamma^{xy}}}^{4}}} - {8 {{{\gamma^{xy}}}^{2}} {\gamma^{xx}} \cdot {\gamma^{yy}}}}}}&0&{{\frac12}{({\alpha \cdot {\gamma^{xz}}})}}&0&{\frac{\alpha \cdot {\gamma^{yz}} \cdot {({{{2 {{{\gamma^{xy}}}^{4}}} - {4 {{{\gamma^{xy}}}^{2}} {\gamma^{xx}} \cdot {\gamma^{yy}}}} + {2 {{{\gamma^{yy}}}^{2}} {{{\gamma^{xx}}}^{2}}}})}}{-{({{4 {{{\gamma^{xx}}}^{2}} {{{\gamma^{yy}}}^{2}}} + {{4 {{{\gamma^{xy}}}^{4}}} - {8 {{{\gamma^{xy}}}^{2}} {\gamma^{xx}} \cdot {\gamma^{yy}}}}})}}}&{\frac{\alpha \cdot {\gamma^{zz}} \cdot {({{{2 {{{\gamma^{xy}}}^{4}}} - {4 {{{\gamma^{xy}}}^{2}} {\gamma^{xx}} \cdot {\gamma^{yy}}}} + {2 {{{\gamma^{yy}}}^{2}} {{{\gamma^{xx}}}^{2}}}})}}{-{({{4 {{{\gamma^{xx}}}^{2}} {{{\gamma^{yy}}}^{2}}} + {{4 {{{\gamma^{xy}}}^{4}}} - {8 {{{\gamma^{xy}}}^{2}} {\gamma^{xx}} \cdot {\gamma^{yy}}}}})}}}&0&0&0&0&0&0&0&0&0&{-\alpha}&0\\0&0&{{\frac12}{({\alpha})}}&0&0&0&0&{-{{\gamma^{xy}} \cdot \alpha}}&{-{{\gamma^{xz}} \cdot \alpha}}&0&0&{{\frac12}{({{\gamma^{xy}} \cdot \alpha})}}&0&{{\frac12}{({-{\alpha \cdot {\gamma^{yy}}}})}}&{{\frac12}{({-{\alpha \cdot {\gamma^{yz}}}})}}&0&{{\frac12}{({{\gamma^{xy}} \cdot \alpha})}}&{{\gamma^{xz}} \cdot \alpha}&{{\frac12}{({\alpha \cdot {\gamma^{yy}}})}}&{{\frac12}{({\alpha \cdot {\gamma^{yz}}})}}&0&0&0&0&0&0&0&0&0&0&{-\alpha}\\0&0&0&0&0&0&{\frac{-{{\gamma^{xx}} \cdot \alpha \cdot {({{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}}{{{\gamma^{xx}} \cdot {\gamma^{yy}}} - {{{\gamma^{xy}}}^{2}}}}&0&0&0&{\frac{{\gamma^{xx}} \cdot \alpha \cdot {({{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}{{{\gamma^{xx}} \cdot {\gamma^{yy}}} - {{{\gamma^{xy}}}^{2}}}}&0&0&{-{\alpha \cdot {\gamma^{xz}}}}&0&0&0&0&{\alpha \cdot {\gamma^{xz}}}&0&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&{\alpha \cdot {\gamma^{xx}}}&0&0&0&{{\frac12}{({-{\alpha \cdot {\gamma^{xx}}}})}}&0&{{\frac12}{({\alpha \cdot {\gamma^{xy}}})}}&{{\frac12}{({-{\alpha \cdot {\gamma^{xz}}}})}}&0&{{\frac12}{({-{\alpha \cdot {\gamma^{xx}}}})}}&0&{{\frac12}{({-{\alpha \cdot {\gamma^{xy}}}})}}&{{\frac12}{({\alpha \cdot {\gamma^{xz}}})}}&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&0&0&{\alpha \cdot {\gamma^{xx}}}&0&0&0&0&0&{\alpha \cdot {\gamma^{xy}}}&0&0&{-{\alpha \cdot {\gamma^{xx}}}}&0&{-{\alpha \cdot {\gamma^{xy}}}}&0&0&0&0&0&0&0&0&0&0&0\\0&0&0&0&0&0&{\alpha \cdot {({{{\gamma^{xx}} \cdot {\gamma^{yy}}} - {{{\gamma^{xy}}}^{2}}})}}&{2 \alpha \cdot {({{{\gamma^{xx}} \cdot {\gamma^{yz}}} - {{\gamma^{xy}} \cdot {\gamma^{xz}}}})}}&{\alpha \cdot {({{{\gamma^{xx}} \cdot {\gamma^{zz}}} - {{{\gamma^{xz}}}^{2}}})}}&0&{-{\alpha \cdot {({{{\gamma^{xx}} \cdot {\gamma^{yy}}} - {{{\gamma^{xy}}}^{2}}})}}}&{-{\alpha \cdot {({{{\gamma^{xx}} \cdot {\gamma^{yz}}} - {{\gamma^{xy}} \cdot {\gamma^{xz}}}})}}}&0&{\alpha \cdot {({{{\gamma^{xy}} \cdot {\gamma^{yz}}} - {{\gamma^{xz}} \cdot {\gamma^{yy}}}})}}&{\alpha \cdot {({{{\gamma^{xy}} \cdot {\gamma^{zz}}} - {{\gamma^{xz}} \cdot {\gamma^{yz}}}})}}&0&{-{\alpha \cdot {({{{\gamma^{xx}} \cdot {\gamma^{yz}}} - {{\gamma^{xy}} \cdot {\gamma^{xz}}}})}}}&{-{\alpha \cdot {({{{\gamma^{xx}} \cdot {\gamma^{zz}}} - {{{\gamma^{xz}}}^{2}}})}}}&{-{\alpha \cdot {({{{\gamma^{xy}} \cdot {\gamma^{yz}}} - {{\gamma^{xz}} \cdot {\gamma^{yy}}}})}}}&{-{\alpha \cdot {({{{\gamma^{xy}} \cdot {\gamma^{zz}}} - {{\gamma^{xz}} \cdot {\gamma^{yz}}}})}}}&0&0&0&0&0&0&0&0&{-{\alpha \cdot {\gamma^{xx}}}}&{-{\alpha \cdot {\gamma^{xy}}}}&{-{\alpha \cdot {\gamma^{xz}}}}\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&{\alpha \cdot {\gamma^{xy}}}&{\alpha \cdot {\gamma^{xz}}}&{\alpha \cdot {\gamma^{yy}}}&{2 \alpha \cdot {\gamma^{yz}}}&{\alpha \cdot {\gamma^{zz}}}&{-\alpha}&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&{-{\alpha \cdot {\gamma^{xx}}}}&0&{-{\alpha \cdot {\gamma^{xy}}}}&{-{\alpha \cdot {\gamma^{xz}}}}&0&0&0&0&0\\0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&0&{-{\alpha \cdot {\gamma^{xx}}}}&0&{-{\alpha \cdot {\gamma^{xy}}}}&{-{\alpha \cdot {\gamma^{xz}}}}&0&0&0&0}\right]}$
+<br>
+$A_{1+0,1+21} / \alpha = $$f {\gamma^{xx}}$
+<br>
+$A_{1+0,1+22} / \alpha = $$2 f {\gamma^{xy}}$
+<br>
+$A_{1+0,1+23} / \alpha = $$2 f {\gamma^{xz}}$
+<br>
+$A_{1+0,1+24} / \alpha = $$f {\gamma^{yy}}$
+<br>
+$A_{1+0,1+25} / \alpha = $$2 f {\gamma^{yz}}$
+<br>
+$A_{1+0,1+26} / \alpha = $$f {\gamma^{zz}}$
+<br>
+$A_{1+0,1+27} / \alpha = $$-{f m}$
+<br>
+$A_{1+3,1+21} / \alpha = $$1$
+<br>
+$A_{1+4,1+22} / \alpha = $$1$
+<br>
+$A_{1+5,1+23} / \alpha = $$1$
+<br>
+$A_{1+6,1+24} / \alpha = $$1$
+<br>
+$A_{1+7,1+25} / \alpha = $$1$
+<br>
+$A_{1+8,1+26} / \alpha = $$1$
+<br>
+$A_{1+21,1+0} / \alpha = $$1$
+<br>
+$A_{1+21,1+6} / \alpha = $${\gamma^{yy}}$
+<br>
+$A_{1+21,1+7} / \alpha = $$2 {\gamma^{yz}}$
+<br>
+$A_{1+21,1+8} / \alpha = $$\frac{-{{\gamma^{zz}} \cdot {({{2 {{{\gamma^{xx}}}^{2}} {{{\gamma^{yy}}}^{2}}} + {{2 {{{\gamma^{xy}}}^{4}}} - {4 {{{\gamma^{xy}}}^{2}} {\gamma^{xx}} \cdot {\gamma^{yy}}}} + {{{4 f {\gamma^{xx}} \cdot {{{\gamma^{xy}}}^{2}} {\gamma^{yy}}} - {2 f {{{\gamma^{xx}}}^{2}} {{{\gamma^{yy}}}^{2}}}} - {2 f {{{\gamma^{xy}}}^{4}}}}})}}}{{{{4 {\gamma^{xx}} \cdot {{{\gamma^{xy}}}^{2}} {\gamma^{yy}}} - {4 {\gamma^{xx}} \cdot {{{\gamma^{xy}}}^{2}} f {\gamma^{yy}}}} - {2 {{{\gamma^{xx}}}^{2}} {{{\gamma^{yy}}}^{2}}}} + {{2 {{{\gamma^{xx}}}^{2}} {{{\gamma^{yy}}}^{2}} f} - {2 {{{\gamma^{xy}}}^{4}}}} + {2 {{{\gamma^{xy}}}^{4}} f}}$
+<br>
+$A_{1+21,1+10} / \alpha = $$-{\gamma^{yy}}$
+<br>
+$A_{1+21,1+11} / \alpha = $$-{\gamma^{yz}}$
+<br>
+$A_{1+21,1+16} / \alpha = $$-{\gamma^{yz}}$
+<br>
+$A_{1+21,1+17} / \alpha = $$\frac{{\gamma^{zz}} \cdot {({{2 {{{\gamma^{xx}}}^{2}} {{{\gamma^{yy}}}^{2}}} + {{2 {{{\gamma^{xy}}}^{4}}} - {4 {{{\gamma^{xy}}}^{2}} {\gamma^{xx}} \cdot {\gamma^{yy}}}} + {{{4 f {\gamma^{xx}} \cdot {{{\gamma^{xy}}}^{2}} {\gamma^{yy}}} - {2 f {{{\gamma^{xx}}}^{2}} {{{\gamma^{yy}}}^{2}}}} - {2 f {{{\gamma^{xy}}}^{4}}}}})}}{{{{4 {\gamma^{xx}} \cdot {{{\gamma^{xy}}}^{2}} {\gamma^{yy}}} - {4 {\gamma^{xx}} \cdot {{{\gamma^{xy}}}^{2}} f {\gamma^{yy}}}} - {2 {{{\gamma^{xx}}}^{2}} {{{\gamma^{yy}}}^{2}}}} + {{2 {{{\gamma^{xx}}}^{2}} {{{\gamma^{yy}}}^{2}} f} - {2 {{{\gamma^{xy}}}^{4}}}} + {2 {{{\gamma^{xy}}}^{4}} f}}$
+<br>
+$A_{1+21,1+28} / \alpha = $$\frac{-{({{4 {{{\gamma^{xx}}}^{2}} {{{\gamma^{yy}}}^{2}}} + {{{{4 {{{\gamma^{xy}}}^{4}}} - {8 {{{\gamma^{xy}}}^{2}} {\gamma^{xx}} \cdot {\gamma^{yy}}}} - {4 {{{\gamma^{xy}}}^{4}} f}} - {4 f {{{\gamma^{xx}}}^{2}} {{{\gamma^{yy}}}^{2}}}} + {8 f {{{\gamma^{xy}}}^{2}} {\gamma^{xx}} \cdot {\gamma^{yy}}}})}}{{2 {{{\gamma^{xx}}}^{2}} {{{\gamma^{yy}}}^{2}}} + {{{{2 {{{\gamma^{xy}}}^{4}}} - {4 {{{\gamma^{xy}}}^{2}} {\gamma^{xx}} \cdot {\gamma^{yy}}}} - {2 f {{{\gamma^{xx}}}^{2}} {{{\gamma^{yy}}}^{2}}}} - {2 f {{{\gamma^{xy}}}^{4}}}} + {4 f {{{\gamma^{xy}}}^{2}} {\gamma^{xx}} \cdot {\gamma^{yy}}}}$
+<br>
+$A_{1+22,1+1} / \alpha = $$\frac{{2 {{{\gamma^{xx}}}^{2}} {{{\gamma^{yy}}}^{2}}} + {{2 {{{\gamma^{xy}}}^{4}}} - {4 {{{\gamma^{xy}}}^{2}} {\gamma^{xx}} \cdot {\gamma^{yy}}}}}{{4 {{{\gamma^{xx}}}^{2}} {{{\gamma^{yy}}}^{2}}} + {{4 {{{\gamma^{xy}}}^{4}}} - {8 {{{\gamma^{xy}}}^{2}} {\gamma^{xx}} \cdot {\gamma^{yy}}}}}$
+<br>
+$A_{1+22,1+6} / \alpha = $$\frac{{\gamma^{xy}} \cdot {({{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}{{{\gamma^{xx}} \cdot {\gamma^{yy}}} - {{{\gamma^{xy}}}^{2}}}$
+<br>
+$A_{1+22,1+7} / \alpha = $$-{\gamma^{xz}}$
+<br>
+$A_{1+22,1+10} / \alpha = $$\frac{{\gamma^{xy}} \cdot {({{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}{-{({{{\gamma^{xx}} \cdot {\gamma^{yy}}} - {{{\gamma^{xy}}}^{2}}})}}$
+<br>
+$A_{1+22,1+11} / \alpha = $${\frac12}{({{\gamma^{xz}}})}$
+<br>
+$A_{1+22,1+13} / \alpha = $$\frac{{\gamma^{yz}} \cdot {({{{2 {{{\gamma^{xy}}}^{4}}} - {4 {{{\gamma^{xy}}}^{2}} {\gamma^{xx}} \cdot {\gamma^{yy}}}} + {2 {{{\gamma^{yy}}}^{2}} {{{\gamma^{xx}}}^{2}}}})}}{{4 {{{\gamma^{xx}}}^{2}} {{{\gamma^{yy}}}^{2}}} + {{4 {{{\gamma^{xy}}}^{4}}} - {8 {{{\gamma^{xy}}}^{2}} {\gamma^{xx}} \cdot {\gamma^{yy}}}}}$
+<br>
+$A_{1+22,1+14} / \alpha = $$\frac{{\gamma^{zz}} \cdot {({{{2 {{{\gamma^{xy}}}^{4}}} - {4 {{{\gamma^{xy}}}^{2}} {\gamma^{xx}} \cdot {\gamma^{yy}}}} + {2 {{{\gamma^{yy}}}^{2}} {{{\gamma^{xx}}}^{2}}}})}}{{4 {{{\gamma^{xx}}}^{2}} {{{\gamma^{yy}}}^{2}}} + {{4 {{{\gamma^{xy}}}^{4}}} - {8 {{{\gamma^{xy}}}^{2}} {\gamma^{xx}} \cdot {\gamma^{yy}}}}}$
+<br>
+$A_{1+22,1+16} / \alpha = $${\frac12}{({{\gamma^{xz}}})}$
+<br>
+$A_{1+22,1+18} / \alpha = $$\frac{{\gamma^{yz}} \cdot {({{{2 {{{\gamma^{xy}}}^{4}}} - {4 {{{\gamma^{xy}}}^{2}} {\gamma^{xx}} \cdot {\gamma^{yy}}}} + {2 {{{\gamma^{yy}}}^{2}} {{{\gamma^{xx}}}^{2}}}})}}{-{({{4 {{{\gamma^{xx}}}^{2}} {{{\gamma^{yy}}}^{2}}} + {{4 {{{\gamma^{xy}}}^{4}}} - {8 {{{\gamma^{xy}}}^{2}} {\gamma^{xx}} \cdot {\gamma^{yy}}}}})}}$
+<br>
+$A_{1+22,1+19} / \alpha = $$\frac{{\gamma^{zz}} \cdot {({{{2 {{{\gamma^{xy}}}^{4}}} - {4 {{{\gamma^{xy}}}^{2}} {\gamma^{xx}} \cdot {\gamma^{yy}}}} + {2 {{{\gamma^{yy}}}^{2}} {{{\gamma^{xx}}}^{2}}}})}}{-{({{4 {{{\gamma^{xx}}}^{2}} {{{\gamma^{yy}}}^{2}}} + {{4 {{{\gamma^{xy}}}^{4}}} - {8 {{{\gamma^{xy}}}^{2}} {\gamma^{xx}} \cdot {\gamma^{yy}}}}})}}$
+<br>
+$A_{1+22,1+29} / \alpha = $$-1$
+<br>
+$A_{1+23,1+2} / \alpha = $$\frac{1}{2}$
+<br>
+$A_{1+23,1+7} / \alpha = $$-{\gamma^{xy}}$
+<br>
+$A_{1+23,1+8} / \alpha = $$-{\gamma^{xz}}$
+<br>
+$A_{1+23,1+11} / \alpha = $${\frac12}{({{\gamma^{xy}}})}$
+<br>
+$A_{1+23,1+13} / \alpha = $${\frac12}{({-{\gamma^{yy}}})}$
+<br>
+$A_{1+23,1+14} / \alpha = $${\frac12}{({-{\gamma^{yz}}})}$
+<br>
+$A_{1+23,1+16} / \alpha = $${\frac12}{({{\gamma^{xy}}})}$
+<br>
+$A_{1+23,1+17} / \alpha = $${\gamma^{xz}}$
+<br>
+$A_{1+23,1+18} / \alpha = $${\frac12}{({{\gamma^{yy}}})}$
+<br>
+$A_{1+23,1+19} / \alpha = $${\frac12}{({{\gamma^{yz}}})}$
+<br>
+$A_{1+23,1+30} / \alpha = $$-1$
+<br>
+$A_{1+24,1+6} / \alpha = $$\frac{-{{\gamma^{xx}} \cdot {({{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}}{{{\gamma^{xx}} \cdot {\gamma^{yy}}} - {{{\gamma^{xy}}}^{2}}}$
+<br>
+$A_{1+24,1+10} / \alpha = $$\frac{{\gamma^{xx}} \cdot {({{{{\gamma^{xy}}}^{2}} - {{\gamma^{xx}} \cdot {\gamma^{yy}}}})}}{{{\gamma^{xx}} \cdot {\gamma^{yy}}} - {{{\gamma^{xy}}}^{2}}}$
+<br>
+$A_{1+24,1+13} / \alpha = $$-{\gamma^{xz}}$
+<br>
+$A_{1+24,1+18} / \alpha = $${\gamma^{xz}}$
+<br>
+$A_{1+25,1+7} / \alpha = $${\gamma^{xx}}$
+<br>
+$A_{1+25,1+11} / \alpha = $${\frac12}{({-{\gamma^{xx}}})}$
+<br>
+$A_{1+25,1+13} / \alpha = $${\frac12}{({{\gamma^{xy}}})}$
+<br>
+$A_{1+25,1+14} / \alpha = $${\frac12}{({-{\gamma^{xz}}})}$
+<br>
+$A_{1+25,1+16} / \alpha = $${\frac12}{({-{\gamma^{xx}}})}$
+<br>
+$A_{1+25,1+18} / \alpha = $${\frac12}{({-{\gamma^{xy}}})}$
+<br>
+$A_{1+25,1+19} / \alpha = $${\frac12}{({{\gamma^{xz}}})}$
+<br>
+$A_{1+26,1+8} / \alpha = $${\gamma^{xx}}$
+<br>
+$A_{1+26,1+14} / \alpha = $${\gamma^{xy}}$
+<br>
+$A_{1+26,1+17} / \alpha = $$-{\gamma^{xx}}$
+<br>
+$A_{1+26,1+19} / \alpha = $$-{\gamma^{xy}}$
+<br>
+$A_{1+27,1+6} / \alpha = $${{\gamma^{xx}} \cdot {\gamma^{yy}}} - {{{\gamma^{xy}}}^{2}}$
+<br>
+$A_{1+27,1+7} / \alpha = $$2 {({{{\gamma^{xx}} \cdot {\gamma^{yz}}} - {{\gamma^{xy}} \cdot {\gamma^{xz}}}})}$
+<br>
+$A_{1+27,1+8} / \alpha = $${{\gamma^{xx}} \cdot {\gamma^{zz}}} - {{{\gamma^{xz}}}^{2}}$
+<br>
+$A_{1+27,1+10} / \alpha = $$-{({{{\gamma^{xx}} \cdot {\gamma^{yy}}} - {{{\gamma^{xy}}}^{2}}})}$
+<br>
+$A_{1+27,1+11} / \alpha = $$-{({{{\gamma^{xx}} \cdot {\gamma^{yz}}} - {{\gamma^{xy}} \cdot {\gamma^{xz}}}})}$
+<br>
+$A_{1+27,1+13} / \alpha = $${{\gamma^{xy}} \cdot {\gamma^{yz}}} - {{\gamma^{xz}} \cdot {\gamma^{yy}}}$
+<br>
+$A_{1+27,1+14} / \alpha = $${{\gamma^{xy}} \cdot {\gamma^{zz}}} - {{\gamma^{xz}} \cdot {\gamma^{yz}}}$
+<br>
+$A_{1+27,1+16} / \alpha = $$-{({{{\gamma^{xx}} \cdot {\gamma^{yz}}} - {{\gamma^{xy}} \cdot {\gamma^{xz}}}})}$
+<br>
+$A_{1+27,1+17} / \alpha = $$-{({{{\gamma^{xx}} \cdot {\gamma^{zz}}} - {{{\gamma^{xz}}}^{2}}})}$
+<br>
+$A_{1+27,1+18} / \alpha = $$-{({{{\gamma^{xy}} \cdot {\gamma^{yz}}} - {{\gamma^{xz}} \cdot {\gamma^{yy}}}})}$
+<br>
+$A_{1+27,1+19} / \alpha = $$-{({{{\gamma^{xy}} \cdot {\gamma^{zz}}} - {{\gamma^{xz}} \cdot {\gamma^{yz}}}})}$
+<br>
+$A_{1+27,1+28} / \alpha = $$-{\gamma^{xx}}$
+<br>
+$A_{1+27,1+29} / \alpha = $$-{\gamma^{xy}}$
+<br>
+$A_{1+27,1+30} / \alpha = $$-{\gamma^{xz}}$
+<br>
+$A_{1+28,1+22} / \alpha = $${\gamma^{xy}}$
+<br>
+$A_{1+28,1+23} / \alpha = $${\gamma^{xz}}$
+<br>
+$A_{1+28,1+24} / \alpha = $${\gamma^{yy}}$
+<br>
+$A_{1+28,1+25} / \alpha = $$2 {\gamma^{yz}}$
+<br>
+$A_{1+28,1+26} / \alpha = $${\gamma^{zz}}$
+<br>
+$A_{1+28,1+27} / \alpha = $$-1$
+<br>
+$A_{1+29,1+22} / \alpha = $$-{\gamma^{xx}}$
+<br>
+$A_{1+29,1+24} / \alpha = $$-{\gamma^{xy}}$
+<br>
+$A_{1+29,1+25} / \alpha = $$-{\gamma^{xz}}$
+<br>
+$A_{1+30,1+23} / \alpha = $$-{\gamma^{xx}}$
+<br>
+$A_{1+30,1+25} / \alpha = $$-{\gamma^{xy}}$
+<br>
+$A_{1+30,1+26} / \alpha = $$-{\gamma^{xz}}$
+<br>
+$U = {\left[\matrix{{a_x}\\{a_y}\\{a_z}\\{d_{xxx}}\\{d_{xxy}}\\{d_{xxz}}\\{d_{xyy}}\\{d_{xyz}}\\{d_{xzz}}\\{d_{yxx}}\\{d_{yxy}}\\{d_{yxz}}\\{d_{yyy}}\\{d_{yyz}}\\{d_{yzz}}\\{d_{zxx}}\\{d_{zxy}}\\{d_{zxz}}\\{d_{zyy}}\\{d_{zyz}}\\{d_{zzz}}\\{K_{xx}}\\{K_{xy}}\\{K_{xz}}\\{K_{yy}}\\{K_{yz}}\\{K_{zz}}\\\Theta\\{Z_x}\\{Z_y}\\{Z_z}}\right]}$
 <br>

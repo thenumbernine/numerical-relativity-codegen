@@ -297,7 +297,10 @@ evr[1+4][1+19] = gUxy / (gUxy^2 - gUxx * gUyy)
 evr[1+4][1+20] = gUxy / (sqrt(gUxx) * (-gUxy^2 + gUxx * gUyy))
 evr[1+4][1+21] = gUxy * (gUxz^2 - gUxx * gUzz) / (gUxx * sqrt(gUxx) * (-gUxy^2 + gUxx * gUyy))
 evr[1+4][1+22] = (gUxz * (gUxy^2 + gUxx * gUyy) - 2 * (gUxx * gUxy * gUyz)) / ( gUxx * sqrt(gUxx) * (-gUxy^2 + gUxx * gUyy) )
-evr[1+4][1+23] = gUxy^2 / (gUxx * ( gUxy^2 - gUxx * gUyy) )
+
+--evr[1+4][1+23] = gUxy^2 / (gUxx * ( gUxy^2 - gUxx * gUyy) )		-- in paper
+evr[1+4][1+23] = gUxy * gUxz / (gUxx * ( gUxy^2 - gUxx * gUyy) )
+
 evr[1+4][1+24] = gUyy / (gUxy^2 - gUxx * gUyy)
 evr[1+4][1+25] = gUxy / (gUxy^2 - gUxx * gUyy)
 evr[1+4][1+26] = gUxy / (sqrt(gUxx) * (gUxy^2 - gUxx * gUyy))
@@ -358,7 +361,10 @@ evr[1+21][1+21] = (gUxz^2 * gUyy - gUxy^2 * gUzz) / (-gUxx * gUxy^2 + gUxx^2 * g
 evr[1+21][1+22] = (2 * gUxy * (gUxz * gUyy - gUxy * gUyz)) / (gUxx * (-gUxy^2 + gUxx * gUyy))
 evr[1+21][1+23] = gUxz * gUyy / (sqrt(gUxx) * (-gUxy^2 + gUxx * gUyy))
 evr[1+21][1+24] = gUxy * gUyy / (sqrt(gUxx) * (-gUxy^2 + gUxx * gUyy))
+
+--evr[1+21][1+25] = (2 * (gUxy * gUxy)^2 - gUxx * gUyy) / (sqrt(gUxx) * (-gUxy^2 + gUxx * gUyy))		-- in paper 
 evr[1+21][1+25] = (2 * gUxy^2 - gUxx * gUyy) / (sqrt(gUxx) * (-gUxy^2 + gUxx * gUyy))
+
 evr[1+21][1+26] = (gUxy^2 / (-gUxy^2 + gUxx * gUyy) + (-1 + f * (-1 + m)) / (-1 + f)) / gUxx
 evr[1+21][1+27] = (gUxz^2 * gUyy - gUxy^2 * gUzz) / (-gUxx * gUxy^2 + gUxx^2 * gUyy)
 evr[1+21][1+28] = (2 * gUxy * (gUxz * gUyy - gUxy * gUyz)) / (gUxx * (-gUxy^2 + gUxx * gUyy))
@@ -423,9 +429,9 @@ for i=1,n do
 		if evr_evl[i][j] ~= expected then
 			printbr('for '..i..','..j..' expected '..expected..' but found '..evr_evl[i][j])
 			for k=1,n do
-				if evr[i][k] ~= Constant(0) and evl[k][j] ~= Constant(0) then
-					printbr('...influenced by ($R_{'..i..','..k..'} = $'..evr[i][k]..') * ($L_{'..k..','..j..'} = $'..evl[k][j]..')')
-				end
+				--if evr[i][k] ~= Constant(0) and evl[k][j] ~= Constant(0) then
+					printbr('...influenced by ($R_{1+'..(i-1)..',1+'..(k-1)..'} = $'..evr[i][k]..') * ($L_{1+'..(k-1)..',1+'..(j-1)..'} = $'..evl[k][j]..')')
+				--end
 			end
 			printbr()
 			numErrors = numErrors + 1
@@ -441,9 +447,9 @@ for i=1,n do
 		if evl_evr[i][j] ~= expected then
 			printbr('for '..i..','..j..' expected '..expected..' but found '..evl_evr[i][j])
 			for k=1,n do
-				if evl[i][k] ~= Constant(0) and evr[k][j] ~= Constant(0) then
-					printbr('...influenced by ($L_{'..i..','..k..'} = $'..evl[i][k]..') * ($R_{'..k..','..j..'} = $'..evr[k][j]..')')
-				end
+				--if evl[i][k] ~= Constant(0) and evr[k][j] ~= Constant(0) then
+					printbr('...influenced by ($L_{1+'..(i-1)..',1+'..(k-1)..'} = $'..evl[i][k]..') * ($R_{1+'..(k-1)..',1+'..(j-1)..'} = $'..evr[k][j]..')')
+				--end
 			end
 			printbr()
 			numErrors = numErrors + 1
@@ -452,8 +458,8 @@ for i=1,n do
 end
 
 printbr('found '..numErrors..' errors')
-os.exit()
 
+--[[
 local start = os.time()
 io.stderr:write'inverting...\n' io.stderr:flush()
 
@@ -466,7 +472,7 @@ printbr(var'R':eq(evrCheck))
 
 printbr'difference:'
 printbr((evr - evrCheck)())
-os.exit()
+--]]
 
 local lambdaDiags = range(0,30):map(function(i)
 	if i >= 0 and i <= 16 then return 0 end
@@ -481,6 +487,13 @@ printbr(var'\\Lambda':eq(Lambda))
 
 local A = (evr * Lambda * evl)()
 printbr(var'A':eq(A))
+for i=1,n do
+	for j=1,n do
+		if A[i][j] ~= Constant(0) then
+			printbr('$A_{1+'..(i-1)..',1+'..(j-1)..'} / \\alpha = $'..(A[i][j] / alpha)())
+		end
+	end
+end
 
 local Us = table()
 for i,xi in ipairs(xs) do
@@ -500,6 +513,17 @@ for i,xi in ipairs(xs) do
 end
 local U = Matrix(Us):transpose()
 printbr(var'U':eq(U))
+os.exit()
 
 local F = (A * U)()
 printbr(var'F':eq(F))
+
+--[[
+RL[8,17] = R_8,k L_k,17
+so the 8th row of R and/or the 17th col of L have something wrong
+
+LR[i,7] = L_ik R_k,7
+so the 7th col of R
+
+so R_8,7 is likely to have an error ...
+--]]
