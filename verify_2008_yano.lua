@@ -251,7 +251,7 @@ evl[1+30][1+27] = (2 - f * m) / (-2 * gUxx + 2 * f * gUxx)
 evl[1+30][1+28] = sqrt(f) * (-2 + m) / (2 * (-1 + f) * sqrt(gUxx))
 evl[1+30][1+29] = sqrt(f) * gUxy * (-2 + m) / (2 * (-1 + f) * gUxx * sqrt(gUxx))
 evl[1+30][1+30] = sqrt(f) * gUxz * (-2 + m) / (2 * (-1 + f) * gUxx * sqrt(gUxx))
-printbr(var'L':eq(evl))
+--printbr(var'L':eq(evl))
 
 local evr = Matrix:zeros{31,31}
 evr[1+0][1+0] = -2 * gUxz / gUxx
@@ -331,16 +331,19 @@ evr[1+6][1+27] = (gUxz^2 - gUxx * gUzz) / (sqrt(gUxx) * (-gUxy^2 + gUxx * gUyy))
 evr[1+6][1+28] = (-2 * (gUxy * gUxz - gUxx * gUyz)) / (sqrt(gUxx) * (gUxy^2 - gUxx * gUyy))
 evr[1+7][1+3] = -gUxz / (2 * gUxx)
 evr[1+7][1+4] = gUxy / (2 * gUxx)
+evr[1+7][1+6] = frac(1,2)	-- 0 in the paper
 evr[1+7][1+8] = gUxz / (2 * gUxx)
 evr[1+7][1+9] = -gUxy / (2 * gUxx)
 evr[1+7][1+11] = frac(1,2)
 evr[1+7][1+22] = -1 / sqrt(gUxx)
 evr[1+7][1+28] = 1 / sqrt(gUxx)
+
 evr[1+8][1+3] = gUxy / gUxx
 evr[1+8][1+5] = 1
 evr[1+8][1+8] = -gUxy / gUxx
 evr[1+8][1+21] = -1/sqrt(gUxx)
 evr[1+8][1+27] = 1/sqrt(gUxx)
+
 evr[1+9][1+13] = 1
 evr[1+10][1+12] = 1
 evr[1+11][1+11] = 1
@@ -416,15 +419,15 @@ evr[1+29][1+24] = 1
 evr[1+30][1+0] = 1
 evr[1+30][1+17] = 1
 evr[1+30][1+23] = 1
-printbr(var'R':eq(evr))
+--printbr(var'R':eq(evr))
 
 
 local numErrors = 0
 local n = #evr	-- hope everything is square ...
 
--- [[
 local evr_evl = ( evr * evl )()
 printbr( (var'R' * var'L'):eq(evr_evl) )
+-- [[
 for i=1,n do
 	for j=1,n do
 		local expected = Constant(i == j and 1 or 0)
@@ -440,9 +443,11 @@ for i=1,n do
 		end
 	end
 end
+--]]
 
 local evl_evr = ( evl * evr )()
 printbr( (var'L' * var'R'):eq(evl_evr) )
+-- [[
 for i=1,n do
 	for j=1,n do
 		local expected = Constant(i == j and 1 or 0)
@@ -587,10 +592,9 @@ A_alpha[1+30][1+23] = -gUxx
 A_alpha[1+30][1+25] = -gUxy
 A_alpha[1+30][1+26] = -gUxz
 
-printbr((var'A' / var'\\alpha'):eq(A_alpha))
-
-
 local A_check = (evr * Lambda * evl)()
+-- [[
+printbr((var'A' / var'\\alpha'):eq(A_alpha))
 printbr((var'A_{check}' / var'\\alpha'):eq(A_check))
 for i=1,n do
 	for j=1,n do
@@ -601,6 +605,8 @@ for i=1,n do
 		end
 	end
 end
+--]]
+
 printbr('found '..numErrors..' errors')
 
 local Us = table()
@@ -625,12 +631,3 @@ printbr(var'U':eq(U))
 local F = (A_check * U)()
 printbr(var'F':eq(F))
 
---[[
-RL[8,17] = R_8,k L_k,17
-so the 8th row of R and/or the 17th col of L have something wrong
-
-LR[i,7] = L_ik R_k,7
-so the 7th col of R
-
-so R_8,7 is likely to have an error ...
---]]
