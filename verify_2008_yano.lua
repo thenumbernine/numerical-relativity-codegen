@@ -418,9 +418,11 @@ evr[1+30][1+17] = 1
 evr[1+30][1+23] = 1
 printbr(var'R':eq(evr))
 
+
 local numErrors = 0
 local n = #evr	-- hope everything is square ...
 
+-- [[
 local evr_evl = ( evr * evl )()
 printbr( (var'R' * var'L'):eq(evr_evl) )
 for i=1,n do
@@ -456,8 +458,7 @@ for i=1,n do
 		end
 	end
 end
-
-printbr('found '..numErrors..' errors')
+--]]
 
 --[[
 local start = os.time()
@@ -485,15 +486,122 @@ end)
 local Lambda = Matrix.diagonal(lambdaDiags:unpack())
 printbr(var'\\Lambda':eq(Lambda))
 
-local A = (evr * Lambda * evl)()
-printbr(var'A':eq(A))
+
+-- A_ij / alpha
+local A_alpha = Matrix:zeros{31,31}
+
+A_alpha[1+0][1+21] = f * gUxx
+A_alpha[1+0][1+22] = 2 * f * gUxy
+A_alpha[1+0][1+23] = 2 * f * gUxz
+A_alpha[1+0][1+24] = f * gUyy
+A_alpha[1+0][1+25] = 2 * f * gUyz
+A_alpha[1+0][1+26] = f * gUzz
+A_alpha[1+0][1+27] = -f * m
+
+A_alpha[1+3][1+21] = 1
+A_alpha[1+4][1+22] = 1
+A_alpha[1+5][1+23] = 1
+A_alpha[1+6][1+24] = 1
+A_alpha[1+7][1+25] = 1
+A_alpha[1+8][1+26] = 1
+
+A_alpha[1+21][1+0] = 1
+A_alpha[1+21][1+6] = gUyy
+A_alpha[1+21][1+7] = 2 * gUyz
+A_alpha[1+21][1+8] = gUzz
+A_alpha[1+21][1+10] = -gUyy
+A_alpha[1+21][1+11] = -gUyz
+A_alpha[1+21][1+16] = -gUyz
+A_alpha[1+21][1+17] = -gUzz
+A_alpha[1+21][1+28] = -2
+
+A_alpha[1+22][1+1] = frac(1,2)
+A_alpha[1+22][1+6] = -gUxy
+A_alpha[1+22][1+7] = -gUxz
+A_alpha[1+22][1+10] = gUxy
+A_alpha[1+22][1+11] = gUxz / 2
+A_alpha[1+22][1+13] = gUyz / 2
+A_alpha[1+22][1+14] = gUzz / 2
+A_alpha[1+22][1+16] = gUxz / 2
+A_alpha[1+22][1+18] = -gUyz / 2
+A_alpha[1+22][1+19] = -gUzz / 2
+A_alpha[1+22][1+29] = -1
+ 
+A_alpha[1+23][1+2] = frac(1,2)
+A_alpha[1+23][1+7] = -gUxy
+A_alpha[1+23][1+8] = -gUxz
+A_alpha[1+23][1+11] = gUxy / 2
+A_alpha[1+23][1+13] = -gUyy / 2
+A_alpha[1+23][1+14] = -gUyz / 2
+A_alpha[1+23][1+16] = gUxy / 2
+A_alpha[1+23][1+17] = gUxz
+A_alpha[1+23][1+18] = gUyy / 2
+A_alpha[1+23][1+19] = gUyz / 2
+A_alpha[1+23][1+30] = -1
+
+A_alpha[1+24][1+6] = gUxx
+A_alpha[1+24][1+10] = -gUxx
+A_alpha[1+24][1+13] = -gUxz
+A_alpha[1+24][1+18] = gUxz
+
+A_alpha[1+25][1+7] = gUxx
+A_alpha[1+25][1+11] = -gUxx / 2
+A_alpha[1+25][1+13] = gUxy / 2
+A_alpha[1+25][1+14] = -gUxz / 2
+A_alpha[1+25][1+16] = -gUxx / 2
+A_alpha[1+25][1+18] = -gUxy / 2
+A_alpha[1+25][1+19] = gUxz / 2
+
+A_alpha[1+26][1+8] = gUxx
+A_alpha[1+26][1+14] = gUxy
+A_alpha[1+26][1+17] = -gUxx
+A_alpha[1+26][1+19] = -gUxy
+
+A_alpha[1+27][1+6] = -gUxy^2 + gUxx * gUyy
+A_alpha[1+27][1+7] = -2 * gUxy * gUxz + 2 * gUxx * gUyz
+A_alpha[1+27][1+8] = -gUxz^2 + gUxx * gUzz
+A_alpha[1+27][1+10] = gUxy^2 - gUxx * gUyy
+A_alpha[1+27][1+11] = gUxy * gUxz - gUxx * gUyz
+A_alpha[1+27][1+13] = -gUxz * gUyy + gUxy * gUyz
+A_alpha[1+27][1+14] = -gUxz * gUyz + gUxy * gUzz
+A_alpha[1+27][1+16] = gUxy * gUxz - gUxx * gUyz
+A_alpha[1+27][1+17] = gUxz^2 - gUxx * gUzz
+A_alpha[1+27][1+18] = gUxz * gUyy - gUxy * gUyz
+A_alpha[1+27][1+19] = gUxz * gUyz - gUxy * gUzz
+A_alpha[1+27][1+28] = -gUxx
+A_alpha[1+27][1+29] = -gUxy
+A_alpha[1+27][1+30] = -gUxz
+
+A_alpha[1+28][1+22] = gUxy
+A_alpha[1+28][1+23] = gUxz
+A_alpha[1+28][1+24] = gUyy
+A_alpha[1+28][1+25] = 2 * gUyz
+A_alpha[1+28][1+26] = gUzz
+A_alpha[1+28][1+27] = -1
+
+A_alpha[1+29][1+22] = -gUxx
+A_alpha[1+29][1+24] = -gUxy
+A_alpha[1+29][1+25] = -gUxz
+
+A_alpha[1+30][1+23] = -gUxx
+A_alpha[1+30][1+25] = -gUxy
+A_alpha[1+30][1+26] = -gUxz
+
+printbr((var'A' / var'\\alpha'):eq(A_alpha))
+
+
+local A_check = (evr * Lambda * evl)()
+printbr((var'A_{check}' / var'\\alpha'):eq(A_check))
 for i=1,n do
 	for j=1,n do
-		if A[i][j] ~= Constant(0) then
-			printbr('$A_{1+'..(i-1)..',1+'..(j-1)..'} / \\alpha = $'..(A[i][j] / alpha)())
+		local A_check_ij_alpha = (A_check[i][j] / alpha)()
+		if (A_check_ij_alpha - A_alpha[i][j])() ~= Constant(0) then
+			printbr('$A_{1+'..(i-1)..',1+'..(j-1)..'} / \\alpha = $'..A_check_ij_alpha..' should be '..A_alpha[i][j])
+			numErrors = numErrors + 1
 		end
 	end
 end
+printbr('found '..numErrors..' errors')
 
 local Us = table()
 for i,xi in ipairs(xs) do
@@ -513,9 +621,8 @@ for i,xi in ipairs(xs) do
 end
 local U = Matrix(Us):transpose()
 printbr(var'U':eq(U))
-os.exit()
 
-local F = (A * U)()
+local F = (A_check * U)()
 printbr(var'F':eq(F))
 
 --[[
