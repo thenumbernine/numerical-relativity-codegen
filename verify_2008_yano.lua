@@ -715,22 +715,34 @@ local vVars = range(n):map(function(i)
 	return var('input['..(i-1)..']')
 end)
 local vs = Matrix(vVars):T()
-printbr('left eigenvector linear function:')
-local Lv = (evl * vs)()
+local Lv = (evl * vs)():T()[1]
+local Rv = (evr * vs)():T()[1]
 local o = assert(io.open('2008_yano.c', 'w'))
 local ToC = require 'symmath.tostring.C'
 local compileVars = table()
-	:append{alpha, f, m, Theta}
+	:append{alpha, f, g, m, Theta}
 	:append(gLvars)
 	:append(gUvars)
 	:append(vVars)
-for i=1,n do
-	o:write(
-		'result['..(i-1)..'] = '
-		..(ToC:compile( Lv[i][1], compileVars ))
-			:match('{ return (.*); }')
-			:gsub('\\gamma%^{(..)}', function(ij)
-				return 'gammaU.'..ij
-			end)
-		..'\n')
+for _,info in ipairs{
+	{'L', Lv},
+	{'R', Rv},
+} do
+	local name, exprs = table.unpack(info)
+	o:write('void compute'..name..'() {\n')
+	for i=1,n do
+		o:write(
+			'result['..(i-1)..'] = '
+			..(ToC:compile( exprs[i], compileVars ))
+				:match('{ return (.*); }')
+				:gsub('\\gamma%^{(..)}', function(ij)
+					return 'gammaU.'..ij
+				end)
+				:gsub('\\gamma%_{(..)}', function(ij)
+					return 'gamma.'..ij
+				end)
+			..'\n')
+	end
+	o:write'}\n'
+	o:write'\n'
 end
