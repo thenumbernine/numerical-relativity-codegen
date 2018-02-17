@@ -514,7 +514,6 @@ end)
 local Lambda = Matrix.diagonal(lambdaDiags:unpack())
 --printbr(var'\\Lambda':eq(Lambda))
 
-
 -- A_ij / alpha
 local A_alpha = Matrix:zeros{31,31}
 
@@ -630,6 +629,68 @@ if verify then
 	end
 end
 
+-- A = evr Lambda evl
+-- evl = (evr)^-1
+-- permute: P
+-- A = evr Lambda (evr)^-1
+-- A = evr P P^-1 Lambda P P^-1 (evr)^-1
+-- A = (evr P) (P^-1 Lambda P) (evr P)^-1
+
+local permIndexes = table()
+	:append{30}
+	:append(range(18, 23))
+	:append(range(1, 17))
+	:append(range(24, 29))
+	:append{31}
+
+--[[ using a matrix
+local function permute(p)
+	return Matrix:lambda({n,n}, function(i,j)
+		return i == p[j] and 1 or 0
+	end)
+end
+local P = permute(permIndexes)
+
+printbr( P )
+evr = (evr * P)()
+evl = (P:T() * evl)()
+Lambda = (P:T() * Lambda * P)()
+--]]
+-- [[ permuting manually
+local function permuteRows(p,m)
+	return Matrix:lambda({n,n}, function(i,j)
+		return m[p[i]][j]
+	end)
+end
+local function permuteCols(p,m)
+	return Matrix:lambda({n,n}, function(i,j)
+		return m[i][p[j]]
+	end)
+end
+evr = permuteCols(permIndexes, evr)
+evl = permuteRows(permIndexes, evl)
+Lambda = permuteRows(permIndexes, permuteCols(permIndexes, Lambda))
+printbr(var'L':eq(evl))
+printbr(var'R':eq(evr))
+printbr(var'\\Lambda':eq(Lambda))
+--]]
+
+if verify then
+	local A_check = (evr * Lambda * evl)()
+	printbr((var'A' / alpha):eq(A_alpha))
+	printbr((var'A_{check}' / alpha):eq(A_check))
+	for i=1,n do
+		for j=1,n do
+			local A_check_ij_alpha = (A_check[i][j] / alpha)()
+			if (A_check_ij_alpha - A_alpha[i][j])() ~= Constant(0) then
+				printbr('$A_{1+'..(i-1)..',1+'..(j-1)..'} / \\alpha = $'..A_check_ij_alpha..' should be '..A_alpha[i][j])
+				numErrors = numErrors + 1
+			end
+		end
+	end
+end
+
+
 local A = (A_alpha * alpha)()
 
 local Us = table()
@@ -687,6 +748,7 @@ local detg_gL_def= Matrix(
 
 evl = clone(evl)
 evr = clone(evr)
+A_alpha = clone(A_alpha)
 for i=1,3 do
 	for j=1,3 do
 		assert(op.sub.is(detg_gL_def[i][j]))
@@ -695,21 +757,27 @@ for i=1,3 do
 		--printbr(detg_gL_def[i][j], ' => ', g * gL[i][j])
 		evl = evl:replace(a - b, g * gL[i][j])
 		evr = evr:replace(a - b, g * gL[i][j])
+		A_alpha = A_alpha:replace(a - b, g * gL[i][j])
 		
 		evl = evl:replace(-b + a, g * gL[i][j])
 		evr = evr:replace(-b + a, g * gL[i][j])
+		A_alpha = A_alpha:replace(-b + a, g * gL[i][j])
 		
 		evl = evl:replace(b - a, -g * gL[i][j])
 		evr = evr:replace(b - a, -g * gL[i][j])
+		A_alpha = A_alpha:replace(b - a, -g * gL[i][j])
 		
 		evl = evl:replace(-a + b, -g * gL[i][j])
 		evr = evr:replace(-a + b, -g * gL[i][j])
+		A_alpha = A_alpha:replace(-a + b, -g * gL[i][j])
 	end
 end
+
 -- print after g_ij substitution
 printbr(var'L':eq(evl))	
 printbr(var'R':eq(evr))
-
+printbr(var'\\Lambda':eq(Lambda))
+printbr((var'A' / alpha):eq(A_alpha))
 -- output the code to a separate file ...
 local vVars = range(n):map(function(i)
 	return var('input['..(i-1)..']')
@@ -717,6 +785,8 @@ end)
 local vs = Matrix(vVars):T()
 local Lv = (evl * vs)():T()[1]
 local Rv = (evr * vs)():T()[1]
+local Lambda_v = (Lambda * vs)():T()[1]
+local A_alpha_v = (A_alpha * vs)():T()[1]
 local o = assert(io.open('2008_yano.c', 'w'))
 local ToC = require 'symmath.tostring.C'
 local compileVars = table()
@@ -727,6 +797,8 @@ local compileVars = table()
 for _,info in ipairs{
 	{'L', Lv},
 	{'R', Rv},
+	{'Lambda', Lambda_v},
+	{'A_alpha', A_alpha_v},
 } do
 	local name, exprs = table.unpack(info)
 	o:write('void compute'..name..'() {\n')
