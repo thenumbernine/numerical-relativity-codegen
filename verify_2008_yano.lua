@@ -806,7 +806,7 @@ for _,info in ipairs{
 	o:write('void compute'..name..'() {\n')
 	for i=1,n do
 		local s = 
-			'result['..(i-1)..'] = '
+			'\tresult['..(i-1)..'] = '
 			..(ToC:compile( exprs[i], compileVars ))
 				:match('{ return (.*); }')
 				:gsub('\\gamma%^{(..)}', function(ij)
@@ -815,12 +815,13 @@ for _,info in ipairs{
 				:gsub('\\gamma%_{(..)}', function(ij)
 					return 'gamma.'..ij
 				end)
-			..'\n'
+			..';\n'
 		local function fixname(name)
 			return name
 				:gsub('a_(.)', 'a.%1')
 				:gsub('d_{(.)(..)}', 'd%1.%2')
 				:gsub('K_{(..)}', 'K.%1')
+				:gsub('\\Theta', 'Theta')
 				:gsub('Z_(.)', 'Z.%1')
 		end
 		if name == 'L' then 	-- replace input[] with the state variables
@@ -832,6 +833,7 @@ for _,info in ipairs{
 				return fixname(Us[1+i].name)
 			end)
 		end
+		s = s:gsub('[%+%-]', '\n\t\t%0')
 		o:write(s)
 	end
 	o:write'}\n'
