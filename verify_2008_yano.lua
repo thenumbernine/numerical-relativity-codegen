@@ -639,7 +639,7 @@ end
 local permIndexes = table()
 	:append{30}
 	:append(range(18, 23))
-	:append(range(1, 17))
+	:append(range(1, 17):reverse())	-- TODO reverse
 	:append(range(24, 29))
 	:append{31}
 
@@ -749,6 +749,7 @@ local detg_gL_def= Matrix(
 evl = clone(evl)
 evr = clone(evr)
 A_alpha = clone(A_alpha)
+--[[
 for i=1,3 do
 	for j=1,3 do
 		assert(op.sub.is(detg_gL_def[i][j]))
@@ -772,6 +773,7 @@ for i=1,3 do
 		A_alpha = A_alpha:replace(-a + b, -g * gL[i][j])
 	end
 end
+--]]
 
 -- print after g_ij substitution
 printbr(var'L':eq(evl))	
@@ -803,7 +805,7 @@ for _,info in ipairs{
 	local name, exprs = table.unpack(info)
 	o:write('void compute'..name..'() {\n')
 	for i=1,n do
-		o:write(
+		local s = 
 			'result['..(i-1)..'] = '
 			..(ToC:compile( exprs[i], compileVars ))
 				:match('{ return (.*); }')
@@ -813,7 +815,24 @@ for _,info in ipairs{
 				:gsub('\\gamma%_{(..)}', function(ij)
 					return 'gamma.'..ij
 				end)
-			..'\n')
+			..'\n'
+		local function fixname(name)
+			return name
+				:gsub('a_(.)', 'a.%1')
+				:gsub('d_{(.)(..)}', 'd%1.%2')
+				:gsub('K_{(..)}', 'K.%1')
+				:gsub('Z_(.)', 'Z.%1')
+		end
+		if name == 'L' then 	-- replace input[] with the state variables
+			s = s:gsub('input%[(%d+)%]', function(i)
+				return fixname(Us[1+i].name)
+			end)
+		elseif name == 'R' then	-- replace result[] with the state variables
+			s = s:gsub('result%[(%d+)%]', function(i)
+				return fixname(Us[1+i].name)
+			end)
+		end
+		o:write(s)
 	end
 	o:write'}\n'
 	o:write'\n'
