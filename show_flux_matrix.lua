@@ -1,5 +1,7 @@
 #!/usr/bin/env luajit
 
+io.stdout:setvbuf'no'
+
 -- idk where to put this, or what it should do
 -- I just wanted a script to create a flux jacobian matrix from tensor index equations
 require 'ext'
@@ -15,14 +17,14 @@ local textOutput = false		-- this will output a txt file instead of a html file
 local outputMathematica = false	-- this will output the flux as mathematica and exit
 local keepSourceTerms = false	-- this goes slow with 3D
 local use1D = false				-- consider spatially x instead of xyz
-local removeZeroRows = false	-- whether to keep variables whose dt rows are entirely zero.  only really useful when shift is disabled.
-local useShift = false			-- whether to include beta^i_,t
+local removeZeroRows = true		-- whether to keep variables whose dt rows are entirely zero.  only really useful when shift is disabled.
+local useShift = true			-- whether to include beta^i_,t
 -- these are all exclusive
 local useV = true				-- ADM Bona-Masso with V constraint.  Not needed with use1D
 local useGamma = false			-- ADM Bona-Masso with Gamma^i_,t . Exclusive to useV ... 
 local useZ4 = false				-- Z4
 local showEigenfields = true	-- my attempt at using eigenfields to deduce the left eigenvectors
-local forceRemakeHeader = true	
+local forceRemakeHeader = false
 
 
 local t,x,y,z = vars('t','x','y','z')
@@ -130,6 +132,7 @@ do
 	local filename = outputNameBase..outputExt
 	print('writing to '..filename)
 	outputFile = assert(io.open(filename, 'w'))
+	outputFile:setvbuf'no'
 	if MathJax then outputFile:write(tostring(MathJax.header)) end
 	printbr = function(...)
 		assert(outputFile)
@@ -1120,7 +1123,7 @@ else
 		defs:insert(dt_Z_def)
 
 	else
-		-- [[ primitives first, in greek order
+		--[[ primitives first, in greek order
 		defs:insert(dt_alpha_def)
 		defs:insert(dt_beta_def)
 		defs:insert(dt_gamma_def)
@@ -1129,7 +1132,7 @@ else
 		defs:insert(dt_B_def)
 		defs:insert(dt_d_def)
 		--]]
-		--[[ shifts first
+		-- [[ shifts first
 		defs:insert(dt_beta_def)
 		defs:insert(dt_b_def)
 		defs:insert(dt_B_def)
@@ -1582,6 +1585,7 @@ local n = #fluxJacobian
 
 -- [[ I don't have poly factoring so this doesn't matter
 -- it's also freezing for useV useShift noZeroRows
+io.stderr:write'computing characteristic polynomial...\n'
 local lambda = var'\\lambda'
 local charpoly  = (A - Matrix.identity(n) * lambda):determinant()
 printbr'characteristic polynomial:'
