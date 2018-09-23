@@ -14,17 +14,17 @@ symmath.debugSimplifyLoops = true
 symmath.simplifyMaxIter = 20
 
 --local outputType = 'txt'		-- this will output a txt 
---local outputType = 'html'		-- this will output a html file
-local outputType = 'tex'		-- this will output a pdf file
+local outputType = 'html'		-- this will output a html file
+--local outputType = 'tex'		-- this will output a pdf file
 local outputMathematica = false	-- this will output the flux as mathematica and exit
 
 local keepSourceTerms = false	-- this goes slow with 3D
 local use1D = false				-- consider spatially x instead of xyz
 local removeZeroRows = true		-- whether to keep variables whose dt rows are entirely zero.  only really useful when shift is disabled.
-local useShift = false			-- whether to include beta^i_,t
+local useShift = true			-- whether to include beta^i_,t
 -- these are all exclusive
-local useV = false				-- ADM Bona-Masso with V constraint.  Not needed with use1D
-local useGamma = true			-- ADM Bona-Masso with Gamma^i_,t . Exclusive to useV ... 
+local useV = true				-- ADM Bona-Masso with V constraint.  Not needed with use1D
+local useGamma = false			-- ADM Bona-Masso with Gamma^i_,t . Exclusive to useV ... 
 local useZ4 = false				-- Z4
 local showEigenfields = true	-- my attempt at using eigenfields to deduce the left eigenvectors
 local forceRemakeHeader = true
