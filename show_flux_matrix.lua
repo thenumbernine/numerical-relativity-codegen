@@ -13,18 +13,21 @@ TensorRef:pushRule'Prune/replacePartial'
 symmath.debugSimplifyLoops = true
 symmath.simplifyMaxIter = 20
 
-local textOutput = false		-- this will output a txt file instead of a html file
+--local outputType = 'txt'		-- this will output a txt 
+--local outputType = 'html'		-- this will output a html file
+local outputType = 'tex'		-- this will output a pdf file
 local outputMathematica = false	-- this will output the flux as mathematica and exit
+
 local keepSourceTerms = false	-- this goes slow with 3D
 local use1D = false				-- consider spatially x instead of xyz
 local removeZeroRows = true		-- whether to keep variables whose dt rows are entirely zero.  only really useful when shift is disabled.
-local useShift = true			-- whether to include beta^i_,t
+local useShift = false			-- whether to include beta^i_,t
 -- these are all exclusive
-local useV = true				-- ADM Bona-Masso with V constraint.  Not needed with use1D
-local useGamma = false			-- ADM Bona-Masso with Gamma^i_,t . Exclusive to useV ... 
+local useV = false				-- ADM Bona-Masso with V constraint.  Not needed with use1D
+local useGamma = true			-- ADM Bona-Masso with Gamma^i_,t . Exclusive to useV ... 
 local useZ4 = false				-- Z4
 local showEigenfields = true	-- my attempt at using eigenfields to deduce the left eigenvectors
-local forceRemakeHeader = false
+local forceRemakeHeader = true
 
 
 local t,x,y,z = vars('t','x','y','z')
@@ -39,12 +42,10 @@ local depvars = table{t,fluxdirvar}
 
 
 
-local MathJax
-if not textOutput then -- [[ mathjax output
-	MathJax = require 'symmath.tostring.MathJax'
-	MathJax.usePartialLHSForDerivative = true
-	symmath.tostring = MathJax
-else --]] 
+local ToString
+if outputType == 'html' then -- [[ mathjax output
+	ToString = require 'symmath.tostring.MathJax'
+elseif outputType == 'txt' then --]] 
 	--[[ text output - breaking
 	function var(s)
 		if symmath.tostring.fixImplicitName then
@@ -54,6 +55,12 @@ else --]]
 		return Variable(s)
 	end
 	--]]
+elseif outputType == 'tex' then
+	ToString = require 'symmath.tostring.LaTeX'
+end
+if ToString then
+	symmath.tostring = ToString
+	ToString.usePartialLHSForDerivative = true
 end
 
 -- kronecher delta
@@ -124,16 +131,21 @@ local outputSuffix = (useZ4 and 'z4' or 'adm')
 	..(use1D and '_1D' or '')
 
 local outputNameBase = 'flux_matrix_output/flux_matrix.'..outputSuffix
-local outputExt = textOutput and '.txt' or '.html'
+
+local lineEnding = ({
+	txt = '\n',
+	html = '<br>\n',
+	tex = ' \\\\\n',
+})[outputType] or '\n'
 
 local printbr, outputFile
 local closeFile
 do
-	local filename = outputNameBase..outputExt
+	local filename = outputNameBase..'.'..outputType
 	print('writing to '..filename)
 	outputFile = assert(io.open(filename, 'w'))
 	outputFile:setvbuf'no'
-	if MathJax then outputFile:write(tostring(MathJax.header)) end
+	if ToString then outputFile:write(tostring(ToString.header)) end
 	printbr = function(...)
 		assert(outputFile)
 		local n = select('#', ...)
@@ -141,7 +153,8 @@ do
 			outputFile:write(tostring(select(i, ...)))
 			if i<n then outputFile:write'\t' end
 		end
-		outputFile:write'<br>\n'
+		outputFile:write(lineEnding)
+		-- TODO why not just setvbuf?
 		outputFile:flush()
 	end
 	closeFile = function()
@@ -328,15 +341,16 @@ local function fixJacobianCell(fluxJacobian,i,j)
 	end
 end
 local function fixFluxJacobian(fluxJacobian, i, j, k, reason)
+do return end
 -- NOTICE you have to do everything for useV useShift noZeroRows		
-	if not reason then -- just do everything
+--	if not reason then -- just do everything
 		print('fixing everything in fluxJacobian...')
 		for i=1,#fluxJacobian do
 			for j=1,#fluxJacobian[1] do
 				fixJacobianCell(fluxJacobian,i,j)
 			end
 		end
--- [[
+--[[
 	else
 		if reason == 'scale' then 	-- scale row i
 			for x=1,#fluxJacobian do
@@ -357,13 +371,13 @@ end
 -- otherwise use the cached prefix
 -- (TODO store the prefix in a separate file)
 local symmathJacobianFilename = 'flux_matrix_output/symmath.'..outputSuffix..'.lua'
-local headerExpressionFilename = 'flux_matrix_output/header.'..outputSuffix..'.html'
+local headerExpressionFilename = 'flux_matrix_output/header.'..outputSuffix..'.'..outputType
 
 local fluxJacobian
 
 if not forceRemakeHeader
 and (io.fileexists(headerExpressionFilename) 
-or io.fileexists(symmathJacobianFilename))
+	or io.fileexists(symmathJacobianFilename))
 then
 	if not (io.fileexists(headerExpressionFilename) 
 		and io.fileexists(symmathJacobianFilename))
@@ -380,10 +394,30 @@ return ]] .. file[symmathJacobianFilename]))(
 		)
 	))
 else
-	
 	local pushOutputFile = outputFile
 	outputFile = io.open(headerExpressionFilename, 'w')
+
+--[[
+	-- TODO start with EFE, apply Gauss-Codazzi-Ricci, then automatically recast all higher order derivatives as new variables of 1st derivatives
+	printbr'Einstein Field Equations in spacetime:'
 	
+	local Gamma_def = Gamma'_abc':eq(g'_ab,c' + g'_ac,b' - g'_bc,a')
+	printbr(Gamma_def)
+	
+	-- Riemann def, with coordinate basis, no commutation, no torsion
+	local Riemann_def = R'^a_bcd':eq(Gamma'^a_bd,c' - Gamma'^a_bc,d' + Gamma'^a_uc' * Gamma'^u_bd' - Gamma'^a_ud' * Gamma'^u_bc')
+	printbr(Riemann_def)
+	
+	local Ricci_def = R'_ab':eq(R'^u_aub')
+	printbr(Ricci_def)
+	
+	local Einstein_def = G'_ab':eq(R'_ab' - frac(1,2) * R * g'_ab')
+	printbr(Einstein_def)
+	
+	local EFEdef = G'_ab':eq(8 * pi * T'_ab')
+	printbr(EFEdef)
+--]]
+
 	printbr[[gauge vars]]
 
 	local Q_def = Q:eq(alpha * f * K'^i_i')
@@ -395,7 +429,6 @@ else
 		printbr(Qu_def) 
 	end
 
-	-- TODO start with EFE, apply Gauss-Codazzi-Ricci, then automatically recast all higher order derivatives as new variables of 1st derivatives
 	printbr[[primitive $\partial_t$ defs]]
 
 	local dt_alpha_def = alpha'_,t':eq(alpha'_,i' * beta'^i' - alpha * Q)
@@ -1143,7 +1176,7 @@ else
 		--]]
 		
 		if useV then
-			-- TODO just replace the V's in this
+			-- TODO just replace the V's in this, and don't redeclare everything
 			dt_K_def = K'_ij,t':eq(
 				- frac(1,2) * alpha * a'_i,j'
 				- frac(1,2) * alpha * a'_j,i'
@@ -1390,7 +1423,7 @@ else
 				--]]
 			else
 				local dim = lhs:dim()
-				assert(dim[#dim].value == 1)	-- the ,t ...
+				assert(dim[#dim] == 1)	-- the ,t ...
 
 				-- remove the ,t dimension
 				lhs = Tensor(table.sub(lhs.variance, 1, #dim-1), function(...)
@@ -1433,11 +1466,17 @@ else
 					--]]
 						allLhs:insert(lhs)
 						allRhs:insert(rhs)
-						printbr(lhs:eq(rhs))
 					end
 				end
 			end
 		end
+	end
+
+	assert(#allLhs == #allRhs)
+	for i=1,#allLhs do
+		local lhs = allLhs[i]
+		local rhs = allRhs[i]
+		printbr(lhs:eq(rhs))
 	end
 
 	local allDxs = allLhs:map(function(lhs)
@@ -1584,16 +1623,22 @@ local n = #fluxJacobian
 
 
 -- [[ I don't have poly factoring so this doesn't matter
--- it's also freezing for useV useShift noZeroRows
+-- it's also freezing for almost anything with useShift
+-- maybe I should change my shift condition?
 io.stderr:write'computing characteristic polynomial...\n'
 local lambda = var'\\lambda'
-local charpoly  = (A - Matrix.identity(n) * lambda):determinant()
+local charpolymat = (A - Matrix.identity(n) * lambda)()
+local charpoly  = charpolymat:determinant()
 printbr'characteristic polynomial:'
+printbr(charpoly)
+--os.exit()
+printbr('simplified...')
+charpoly = charpoly()
 printbr(charpoly)
 --]]
 
 
---[[ this works fast enough without simplification
+-- [[ this works fast enough without simplification
 A = A()
 printbr'simplified:'
 printbr(A)
@@ -1603,11 +1648,9 @@ printbr(sofar)
 printbr(reduce)
 --]]
 
-do 	--if not useV and not useGamma and not useZ4 and not use1D then
-	io.stderr:write"I'm not going to eigendecompose without useV or useGamma set\n"
-	
-	closeFile() os.exit()
-end
+--if not useV and not useGamma and not useZ4 and not use1D then
+--	closeFile() os.exit()
+--end
 
 --[[
 here's where I need polynomial factoring
@@ -1645,39 +1688,65 @@ local gammaUjj = gammaUVars[fluxdir][fluxdir]
 -- but the multiplicities are different: 
 -- with useV off we get 19, 3, 3, 1, 1
 -- with useV on we get 18, 5, 5, 1, 1
-local lambdas = use1D and table{
-	-alpha * sqrt(f * gammaUjj),
-	0,
-	alpha * sqrt(f * gammaUjj),
-} or (
-	useZ4
-	or (useV and useShift)
-) and table{
-	0,
-	-alpha * sqrt(gammaUjj),
-	alpha * sqrt(gammaUjj),
-	-alpha * sqrt(f * gammaUjj),
-	alpha * sqrt(f * gammaUjj),
-} or table{
-	-- the more multiplicity, the easier it is to factor
-	-- also, without useVConstraints, the 1-multiplicity eigenvectors take forever and the expressions get huge and take forever
-	-- [[
-	-alpha * sqrt(f * gammaUjj),
-	-alpha * sqrt(gammaUjj),
-	0,
-	alpha * sqrt(gammaUjj),
-	alpha * sqrt(f * gammaUjj),
-	--]]
-	
-	
+local lambdas
+if use1D then
+	lambdas = table{
+		-alpha * sqrt(f * gammaUjj),
+		0,
+		alpha * sqrt(f * gammaUjj),
+	} 
+elseif useZ4 or (useV and useShift) then
+	lambdas = table{
+		0,
+		-alpha * sqrt(gammaUjj),
+		alpha * sqrt(gammaUjj),
+		-alpha * sqrt(f * gammaUjj),
+		alpha * sqrt(f * gammaUjj),
+	} 
+elseif useGamma and not useShift then	-- same for both removeZeroRows and not removeZeroRows
 	--[[
-	0,
-	-alpha * sqrt(gammaUjj),
-	alpha * sqrt(gammaUjj),
-	-alpha * sqrt(f * gammaUjj),
-	alpha * sqrt(f * gammaUjj),
+	x = lambda^2
+	g = alpha^2 gamma^xx
+	asking wolfram alpha:	
+	x^6 + (3-f) x^5 g - (3+f) x^4 g^2 + (5f - 11) x^3 g^3 + (f + 6) x^2 g^4 + 4 (3 - 2 f) x g^5 + 4 (f - 2) g^6
+	roots:
+	lambda^2 = -2 alpha^2 gamma^xx
+	lambda^2 = alpha^2 gamma^xx
+	lambda^2 = (f-2) alpha^2 gamma^xx
+	...and we have a complex root...
+	lambda = +-i alpha sqrt(2 gamma^xx)
+	lambda = +- alpha sqrt(gamma^xx)
+	lambda = +- alpha sqrt((f-2) gamma^xx)
 	--]]
-}
+	lambdas = table{
+		-alpha * sqrt((f-2) * gammaUjj),
+		-alpha * sqrt(gammaUjj),
+		0,
+		alpha * sqrt(gammaUjj),
+		alpha * sqrt((f-2) * gammaUjj),
+	}
+else
+	lambdas = table{
+		-- the more multiplicity, the easier it is to factor
+		-- also, without useV, the 1-multiplicity eigenvectors take forever and the expressions get huge and take forever
+		-- [[
+		-alpha * sqrt(f * gammaUjj),
+		-alpha * sqrt(gammaUjj),
+		0,
+		alpha * sqrt(gammaUjj),
+		alpha * sqrt(f * gammaUjj),
+		--]]
+		
+		
+		--[[
+		0,
+		-alpha * sqrt(gammaUjj),
+		alpha * sqrt(gammaUjj),
+		-alpha * sqrt(f * gammaUjj),
+		alpha * sqrt(f * gammaUjj),
+		--]]
+	}
+end
 
 local evs = table()
 local multiplicity = table()
@@ -1701,14 +1770,14 @@ io.stderr:write('finding eigenvector of eigenvalue '..tostring(lambda)..'\n') io
 		printbr(AInv)
 		--]]
 		-- [[
-		local f = assert(io.open(outputNameBase..'.progress'..outputExt,'w'))
-		f:write(tostring(MathJax.header))
+		local f = assert(io.open(outputNameBase..'.progress.'..outputType,'w'))
+		f:write(tostring(ToString.header))
 		local function printbr(...)
 			for i=1,select('#', ...) do
 				if i>1 then f:write'\t' end
 				f:write(tostring(select(i, ...)))
 			end
-			f:write'<br>\n'
+			f:write(lineEnding)
 			f:flush()
 		end
 		printbr('eigenvalue', lambda)	
@@ -1716,10 +1785,16 @@ io.stderr:write('finding eigenvector of eigenvalue '..tostring(lambda)..'\n') io
 		printbr(A)
 		printbr(AInv)
 		f:close()
--- [=[ enable this to monitor the Gaussian elimination progress one step at a time
+-- [=[ print
+print('generated '..i..', '..j..', '..k..' '..reason)
+--]=]
+--[=[ enable this to monitor the Gaussian elimination progress one step at a time
 io.write('generated '..i..', '..j..', '..k..' '..reason..' -- press enter ')
 io.flush()
 io.read'*l'
+--]=]
+--[=[ interactive prompt?
+require 'interpreter'(getfenv and getfenv() or _ENV)
 --]=]
 		--]]
 	end)
@@ -1744,42 +1819,46 @@ io.read'*l'
 		j = j + 1
 	end
 	nonLeadingCols:append(range(j,n))
+	if #nonLeadingCols == 0 then
+		print("found no eigenvectors associated with eigenvalue",lambda)
+	else
 
-	multiplicity:insert(#nonLeadingCols)
+		multiplicity:insert(#nonLeadingCols)
 
-	-- now build the eigenvector basis for this eigenvalue
-	local ev = Matrix:zeros{n, #nonLeadingCols}
-	
-	-- cycle through the rows
-	for i=1,n do
-		local k = nonLeadingCols:find(i) 
-		if k then
-			ev[i][k] = Constant(1)
-		else
-			-- j is the free param # (eigenvector col)
-			-- k is the non leading column
-			-- everything else in reduce[i][*] should be zero, except the leading 1
-			for k,j in ipairs(nonLeadingCols) do
-				ev[i][k] = ev[i][k] - reduce[i][j]
+		-- now build the eigenvector basis for this eigenvalue
+		local ev = Matrix:zeros{n, #nonLeadingCols}
+		
+		-- cycle through the rows
+		for i=1,n do
+			local k = nonLeadingCols:find(i) 
+			if k then
+				ev[i][k] = Constant(1)
+			else
+				-- j is the free param # (eigenvector col)
+				-- k is the non leading column
+				-- everything else in reduce[i][*] should be zero, except the leading 1
+				for k,j in ipairs(nonLeadingCols) do
+					ev[i][k] = ev[i][k] - reduce[i][j]
+				end
 			end
 		end
-	end
-	ev = ev()
-	
-	--[[ try to remove any inverses ...
-	for i=1,3 do
-		for j=1,3 do
-			ev = ev:replace(det_gamma_times_gammaUInv[i][j](), gamma * gammaLVars[i][j])
-			-- this doesn't simplify like I want it to ...
-			ev = ev:replace((-det_gamma_times_gammaUInv[i][j])(), -gamma * gammaLVars[i][j])
+		
+		ev = ev()
+		
+		--[[ try to remove any inverses ...
+		for i=1,3 do
+			for j=1,3 do
+				ev = ev:replace(det_gamma_times_gammaUInv[i][j](), gamma * gammaLVars[i][j])
+				-- this doesn't simplify like I want it to ...
+				ev = ev:replace((-det_gamma_times_gammaUInv[i][j])(), -gamma * gammaLVars[i][j])
+			end
 		end
+		--]]
+
+		printbr('eigenvector:')
+		printbr(ev)
+		evs:insert(ev)
 	end
-	--]]
-
-	printbr('eigenvector:')
-	printbr(ev)
-	evs:insert(ev)
-
 end
 io.stderr:write('done finding eigenvector!\n') io.stderr:flush()
 

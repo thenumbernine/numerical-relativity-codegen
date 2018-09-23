@@ -6,7 +6,7 @@ This is making use of symmath tensor index expressions.
 1) It starts with the tensor index PDE system.  
 2) From there it derives the tensor index PDE system for the specific numerical method formalism.
 3) Next it represents the PDE as a linear system, showing the source terms and the flux matrix.
-4) Next it factors the right eigenvectors of the flux matrix. Still working on eigenvalues. It is lacking a polynomial solver. But, with correctly provided eigenvalues, it does linearize the flux, represent it as a matrix, and calculate the right and left eigenvector matrices.
+4) Next it factors the right eigenvectors of the flux matrix. Still working on eigenvalues. It is lacking a polynomial solver. But, with correctly provided eigenvalues, it does linearize the flux, represent it as a matrix, and calculate the right eigenvector matrices.
 5) Last it inverts the right eigenvector matrix to find the left eigenvectors.
 
 TODO with it
