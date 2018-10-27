@@ -810,19 +810,19 @@ for _,info in ipairs{
 			..(ToC:compile( exprs[i], compileVars ))
 				:match('{ return (.*); }')
 				:gsub('\\gamma%^{(..)}', function(ij)
-					return 'gammaU.'..ij
+					return 'gamma_uu.'..ij
 				end)
 				:gsub('\\gamma%_{(..)}', function(ij)
-					return 'gamma.'..ij
+					return 'gamma_ll.'..ij
 				end)
 			..';\n'
 		local function fixname(name)
 			return name
-				:gsub('a_(.)', 'a.%1')
-				:gsub('d_{(.)(..)}', 'd%1.%2')
-				:gsub('K_{(..)}', 'K.%1')
+				:gsub('a_(.)', 'a_l.%1')
+				:gsub('d_{(.)(..)}', 'd_lll.%1.%2')
+				:gsub('K_{(..)}', 'K_ll.%1')
 				:gsub('\\Theta', 'Theta')
-				:gsub('Z_(.)', 'Z.%1')
+				:gsub('Z_(.)', 'Z_l.%1')
 		end
 		if name == 'L' then 	-- replace input[] with the state variables
 			s = s:gsub('input%[(%d+)%]', function(i)
