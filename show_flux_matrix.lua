@@ -21,9 +21,10 @@ local outputMathematica = false	-- this will output the flux as mathematica and 
 local keepSourceTerms = false	-- this goes slow with 3D
 local use1D = false				-- consider spatially x instead of xyz
 local removeZeroRows = true		-- whether to keep variables whose dt rows are entirely zero.  only really useful when shift is disabled.
-local useShift = true			-- whether to include beta^i_,t
+local useShift = false			-- whether to include beta^i_,t
+local useConnInsteadOfD = true	-- use conn^k_ij instead of d_kij = 1/2 g_ij,k = conn_(ij)k
 -- these are all exclusive
-local useV = true				-- ADM Bona-Masso with V constraint.  Not needed with use1D
+local useV = false				-- ADM Bona-Masso with V constraint.  Not needed with use1D
 local useGamma = false			-- ADM Bona-Masso with Gamma^i_,t . Exclusive to useV ... 
 local useZ4 = false				-- Z4
 local showEigenfields = true	-- my attempt at using eigenfields to deduce the left eigenvectors
@@ -91,7 +92,7 @@ local b = var'b'	-- b^i_j = beta^i_,j
 local B = var'B'	-- B^i = beta^i_,t
 -- adm variants
 local V = var'V'
-local Gamma = var'\\Gamma'
+local Gamma = var'\\Gamma'	-- Gamma^k_ij or Gamma^k
 -- z4
 local Z = var'Z'
 local Theta = var('\\Theta', depvars)
@@ -124,6 +125,7 @@ end
 
 local outputSuffix = (useZ4 and 'z4' or 'adm')
 	..(keepSourceTerms and '_withSource' or '')
+	..(useConnInsteadOfD and '_useConn' or '')
 	..(useV and '_useV' or '')
 	..(useGamma and '_useGamma' or '')
 	..(useShift and '_useShift' or '')
@@ -198,6 +200,14 @@ local dVars = Tensor('_kij', function(k,i,j)
 	return var('d_{'..xs[k].name..xs[i].name..xs[j].name..'}', depvars)
 end)
 -- TODO reorder from [k][i][j] to [i][j][k]
+
+local connVars = Tensor('^k_ij', function(k,i,j)
+	return var('{\\Gamma^'
+		..xs[k].name..'}'
+		..'_{'..xs[i].name
+		..' '..xs[j].name..'}'
+		, depvars)
+end)
 local KVars = Tensor('_ij', function(i,j)
 	if i > j then i,j = j,i end 
 	return var('K_{'..xs[i].name..xs[j].name..'}', depvars) 
@@ -213,6 +223,8 @@ local ZVars = Tensor('_k', function(k)
 end)
 
 --[[
+NOTICE this is only necessary if your flux has gamma_ij and gamma^ij
+
 gamma^ij = inv(gamma_kl)^ij = 1/det(gamma_kl) adj(gamma_kl)^ij
 gamma_ij = inv(gamma^kl)_ij = 1/det(gamma^kl) adj(gamma^kl)_ij = det(gamma_kl) adj(gamma^kl)_ij
 TODO get 3x3 inverse to work automatically.  
@@ -395,7 +407,7 @@ return ]] .. file[symmathJacobianFilename]))(
 	))
 else
 	local pushOutputFile = outputFile
-	outputFile = io.open(headerExpressionFilename, 'w')
+	--outputFile = io.open(headerExpressionFilename, 'w')
 
 --[[
 	-- TODO start with EFE, apply Gauss-Codazzi-Ricci, then automatically recast all higher order derivatives as new variables of 1st derivatives
@@ -586,81 +598,112 @@ else
 		printbr(dbeta_for_b)
 	end
 
-	local d_def = d'_kij':eq(frac(1,2) * gamma'_ij,k')
-	printbr(d_def)
+	local d_def, dgamma_for_d
+	if not useConnInsteadOfD then
+		d_def = d'_kij':eq(frac(1,2) * gamma'_ij,k')
+		printbr(d_def)
 
-	dgamma_for_d = (d_def * 2)():switch()
-	printbr(dgamma_for_d)
+		dgamma_for_d = (d_def * 2)():switch()
+		printbr(dgamma_for_d)
+	end
+
+	printbr[[connections wrt aux vars]]
+	local conn_def = Gamma'^k_ij':eq(
+		frac(1,2) * gamma'^kl' * (
+			gamma'_li,j' + gamma'_lj,i' - gamma'_ij,l'
+		)
+	)
+	printbr(conn_def) 
+	
+	local connL_def = Gamma'_ijk':eq(frac(1,2) * (gamma'_ij,k' + gamma'_ik,j' - gamma'_jk,i'))
+	printbr(connL_def)
+
+	local dgamma_for_conn = gamma'_ij,k':eq(
+		 Gamma'_ijk' + Gamma'_jik'
+	)
+	printbr(dgamma_for_conn) 
+
+	local connL_for_d, conn_for_d 
+	if not useConnInsteadOfD then
+		connL_for_d = connL_def
+			:substIndex(dgamma_for_d)
+			:simplify()
+		printbr(connL_for_d)
+
+		-- [[ just raise Gamma, keep d and gamma separate
+		conn_for_d = (gamma'^il' * connL_for_d:reindex{ljk='ijk'})()
+			:replace(gamma'^il' * Gamma'_ljk', Gamma'^i_jk')
+		--]]
+		--[[ expand() is adding a -1 somewhere that makes the last replace() choke
+		conn_for_d = (gamma'^il' * connL_for_d:reindex{ljk='ijk'})()
+			:expand()
+			:replace(gamma'^il' * Gamma'_ljk', Gamma'^i_jk')
+			:replace(gamma'^il' * d'_jlk', d'_jk^i')
+			:replace(gamma'^il' * d'_klj', d'_kj^i')
+			:replace((-gamma'^il' * d'_ljk')():expand(), -d'^i_jk')
+		--]]
+		--[[ TODO raise expression / equation? this works only for dense tensors
+		conn_for_d = connL_for_d'^i_jk'()
+		--]]
+		--[[ if you want to raise d's indexes
+		conn_for_d = connL_for_d:map(function(expr)
+			if TensorRef.is(expr) then
+				for i=2,#expr do
+					if expr[i].symbol == 'i' then expr[i].lower = false end
+				end
+			end
+		end)
+		--]]
+		printbr(conn_for_d)
+	end
 
 	printbr[[${\gamma^{ij}}_{,k}$ wrt aux vars]]
 
 	local dgammaU_def = gamma'^ij_,k':eq(-gamma'^il' * gamma'_lm,k' * gamma'^mj')
 	printbr(dgammaU_def)
 
-	local dgammaU_for_d = dgammaU_def:substIndex(dgamma_for_d)()
-	printbr(dgammaU_for_d)
-
-	printbr[[connections wrt aux vars]]
-	local connL_def = Gamma'_ijk':eq(frac(1,2) * (gamma'_ij,k' + gamma'_ik,j' - gamma'_jk,i'))
-	printbr(connL_def)
-
-	local connL_for_d = connL_def
-		:substIndex(dgamma_for_d)
-		:simplify()
-	printbr(connL_for_d)
-
-	-- [[ just raise Gamma, keep d and gamma separate
-	local conn_for_d = (gamma'^il' * connL_for_d:reindex{ljk='ijk'})()
-		:replace(gamma'^il' * Gamma'_ljk', Gamma'^i_jk')
-	--]]
-	--[[ expand() is adding a -1 somewhere that makes the last replace() choke
-	local conn_for_d = (gamma'^il' * connL_for_d:reindex{ljk='ijk'})()
-		:expand()
-		:replace(gamma'^il' * Gamma'_ljk', Gamma'^i_jk')
-		:replace(gamma'^il' * d'_jlk', d'_jk^i')
-		:replace(gamma'^il' * d'_klj', d'_kj^i')
-		:replace((-gamma'^il' * d'_ljk')():expand(), -d'^i_jk')
-	--]]
-	--[[ TODO raise expression / equation? this works only for dense tensors
-	local conn_for_d = connL_for_d'^i_jk'()
-	--]]
-	--[[ if you want to raise d's indexes
-	local conn_for_d = connL_for_d:map(function(expr)
-		if TensorRef.is(expr) then
-			for i=2,#expr do
-				if expr[i].symbol == 'i' then expr[i].lower = false end
-			end
-		end
-	end)
-	--]]
-	printbr(conn_for_d)
-
+	local dgammaU_for_d 
+	if not useConnInsteadOfD then
+		dgammaU_for_d = dgammaU_def:substIndex(dgamma_for_d)()
+		printbr(dgammaU_for_d)
+	end
+	
+	local dgammaU_for_conn 
+	if useConnInsteadOfD then
+		dgammaU_for_conn = dgammaU_def:substIndex(dgamma_for_conn)()
+		printbr(dgammaU_for_conn)
+	end
+	
 	printbr[[Ricci wrt aux vars]]
 
 	local R_def = R'_ij':eq(Gamma'^k_ij'',k' - Gamma'^k_ik'',j' + Gamma'^k_lk' * Gamma'^l_ij' - Gamma'^k_lj' * Gamma'^l_ik')
 	printbr(R_def)
 
-	local R_for_d = R_def:substIndex(conn_for_d)
-	printbr(R_for_d)
+	local R_for_d 
+	if not useConnInsteadOfD then	
+		R_for_d = R_def:substIndex(conn_for_d)
+		printbr(R_for_d)
 
-	R_for_d = R_for_d()
-	printbr(R_for_d)
+		R_for_d = R_for_d()
+		printbr(R_for_d)
 
-	R_for_d = R_for_d:substIndex(dgammaU_for_d)()
-	printbr(R_for_d)
+		R_for_d = R_for_d:substIndex(dgammaU_for_d)()
+		printbr(R_for_d)
 
-	printbr'symmetrizing'
-	R_for_d = R_for_d
-		:symmetrizeIndexes(gamma, {1,2})()
-		:symmetrizeIndexes(d, {2,3})()
-		:symmetrizeIndexes(d, {1,4})()
-	printbr(R_for_d)
+		printbr'symmetrizing'
+		R_for_d = R_for_d
+			:symmetrizeIndexes(gamma, {1,2})()
+			:symmetrizeIndexes(d, {2,3})()
+			:symmetrizeIndexes(d, {1,4})()
+		printbr(R_for_d)
 
-	R_for_d = R_for_d:tidyIndexes()()
-		:symmetrizeIndexes(gamma, {1,2})()
-		:symmetrizeIndexes(d, {2,3})()
-		:symmetrizeIndexes(d, {1,4})()
-	printbr(R_for_d)
+		R_for_d = R_for_d:tidyIndexes()()
+			:symmetrizeIndexes(gamma, {1,2})()
+			:symmetrizeIndexes(d, {2,3})()
+			:symmetrizeIndexes(d, {1,4})()
+		printbr(R_for_d)
+	else
+	end
 
 	printbr[[time derivative of $\alpha_{,t}$]]
 
@@ -672,10 +715,13 @@ else
 
 	printbr(dt_gamma_def)
 
-	-- don't use substIndex to preserve gamma_ij,t
-	--dt_gamma_def = dt_gamma_def:substIndex(dgamma_for_d)
-	dt_gamma_def = dt_gamma_def
-		:subst(dgamma_for_d)
+	if not useConnInsteadOfD then
+		-- don't use substIndex to preserve gamma_ij,t
+		--dt_gamma_def = dt_gamma_def:substIndex(dgamma_for_d)
+		dt_gamma_def = dt_gamma_def
+			:subst(dgamma_for_d)
+	end
+	
 	if useShift then
 		dt_gamma_def = dt_gamma_def
 			:substIndex(dbeta_for_b)
@@ -709,18 +755,23 @@ else
 		:simplify()
 	printbr(dt_a_def)
 
-	dt_a_def = dt_a_def:substIndex(dgammaU_for_d)()
-	printbr(dt_a_def)
-
-	dt_a_def = dt_a_def
-		:replace(
-			-- TODO replace sub-portions of commutative operators like mul() add() etc
-			-- TODO don't require that simplify() on the find() portion of replace() -- instead simplify automatically?  i experimented with this once ...
-			-- TODO simplify gammas automatically ... define a tensor expression metric variable?
-			(2 * alpha * f * gamma'^im' * d'_kml' * gamma'^lj' * K'_ij')(), 
-			2 * alpha * f * d'_k^ij' * K'_ij'
-		)
-	printbr(dt_a_def)
+	if not useConnInsteadOfD then
+		dt_a_def = dt_a_def:substIndex(dgammaU_for_d)()
+		printbr(dt_a_def)
+	
+		dt_a_def = dt_a_def
+			:replace(
+				-- TODO replace sub-portions of commutative operators like mul() add() etc
+				-- TODO don't require that simplify() on the find() portion of replace() -- instead simplify automatically?  i experimented with this once ...
+				-- TODO simplify gammas automatically ... define a tensor expression metric variable?
+				(2 * alpha * f * gamma'^im' * d'_kml' * gamma'^lj' * K'_ij')(), 
+				2 * alpha * f * d'_k^ij' * K'_ij'
+			)
+		printbr(dt_a_def)
+	else
+		dt_a_def = dt_a_def:substIndex(dgammaU_for_conn)()
+		printbr(dt_a_def)
+	end
 
 	if useShift then
 		dt_a_def = dt_a_def:substIndex(dbeta_for_b)
@@ -767,15 +818,23 @@ else
 		dt_B_def = dt_B_def()
 		printbr(dt_B_def)
 		
+		dt_B_def = dt_B_def:substIndex(Gamma'^i':eq(Gamma'^i_jk' * gamma'^jk'))
+		
+		if not useConnInsteadOfD then
+			dt_B_def = dt_B_def:substIndex(conn_for_d)
+		end
+
 		dt_B_def = dt_B_def
-			:substIndex(Gamma'^i':eq(Gamma'^i_jk' * gamma'^jk'))
-			:substIndex(conn_for_d)
 			:substIndex(A_for_K_uu)
 			:substIndex(A_for_K_ll)
 			:substIndex(dbeta_for_b)
 			:substIndex(dbeta_for_b',k'())
-			:substIndex(R_for_d)
-			:simplify()
+		
+		if not useConnInsteadOfD then
+			dt_B_def = dt_B_def:substIndex(R_for_d)
+		end
+
+		dt_B_def = dt_B_def:simplify()
 
 		printbr(dt_B_def)
 
@@ -783,38 +842,84 @@ else
 		-- TODO prevent substIndex from using indexes already reserved for other coordinate sets
 		dt_B_def = dt_B_def
 			:symmetrizeIndexes(gamma, {1,2})()
-			:symmetrizeIndexes(d, {2,3})()
-			:symmetrizeIndexes(d, {1,4})()
+		
+		if not useConnInsteadOfD then
+			dt_B_def = dt_B_def
+				:symmetrizeIndexes(d, {2,3})()
+				:symmetrizeIndexes(d, {1,4})()
+		end
+		
 		printbr(dt_B_def)
 	end
 
-	printbr[[time derivative of $d_{kij,t}$]]
+	local dt_d_def 
+	if not useConnInsteadOfD then
+		printbr[[time derivative of $d_{kij,t}$]]
 
-	local dt_d_def = d_def',t'()
-	printbr(dt_d_def)
+		dt_d_def = d_def',t'()
+		printbr(dt_d_def)
 
-	dt_d_def = dt_d_def
-		:replace(gamma'_ij,k,t', gamma'_ij,t'',k')
-		-- TODO automatically relabel the sum indexes
-		-- ... this would require knowledge of the entire dt_d_def expression, to know what indexes are available
-		:subst(dt_gamma_def:reindex{ijl='ijk'})
-	printbr(dt_d_def)
+		dt_d_def = dt_d_def
+			:replace(gamma'_ij,k,t', gamma'_ij,t'',k')
+			-- TODO automatically relabel the sum indexes
+			-- ... this would require knowledge of the entire dt_d_def expression, to know what indexes are available
+			:subst(dt_gamma_def:reindex{ijl='ijk'})
+		printbr(dt_d_def)
 
-	dt_d_def = dt_d_def()
-	printbr(dt_d_def)
+		dt_d_def = dt_d_def()
+		printbr(dt_d_def)
 
-	dt_d_def = dt_d_def
-		:replace(gamma'_ij,l,k', gamma'_ij,l'',k')
-		:subst(dgamma_for_d:reindex{ijl='ijk'})
-		:subst(dgamma_for_d:reindex{ilk='ijk'})
-		:subst(dgamma_for_d:reindex{ljk='ijk'})
-		:subst(dalpha_for_a)
-	if useShift then
-		dt_d_def = dt_d_def:substIndex(dbeta_for_b)
-	end	
-	dt_d_def = dt_d_def:simplify()
-	printbr(dt_d_def)
+		dt_d_def = dt_d_def
+			:replace(gamma'_ij,l,k', gamma'_ij,l'',k')
+			:subst(dgamma_for_d:reindex{ijl='ijk'})
+			:subst(dgamma_for_d:reindex{ilk='ijk'})
+			:subst(dgamma_for_d:reindex{ljk='ijk'})
+			:subst(dalpha_for_a)
+		if useShift then
+			dt_d_def = dt_d_def:substIndex(dbeta_for_b)
+		end	
+		dt_d_def = dt_d_def:simplify()
+		printbr(dt_d_def)
+	end
 
+	local dt_conn_def 
+	if useConnInsteadOfD then
+		printbr[[time derivative of ${\Gamma^k}_{ij,t}$]]
+	
+		dt_conn_def = conn_def',t'()
+		printbr(dt_conn_def)
+		
+		dt_conn_def = dt_conn_def
+			:replace(gamma'_ij,l,t', gamma'_ij,t'',l')
+			:replace(gamma'_lj,i,t', gamma'_lj,t'',i')
+			:replace(gamma'_li,j,t', gamma'_li,t'',j')
+		printbr(dt_conn_def)
+
+		dt_conn_def = dt_conn_def
+			:substIndex(dgammaU_def:reindex{abcde='ijklm'})
+			-- TODO automatically relabel the sum indexes
+			-- ... this would require knowledge of the entire dt_d_def expression, to know what indexes are available
+		printbr(dt_conn_def)
+
+		-- TODO the ,t gets caught up in the substIndex...
+		dt_conn_def = dt_conn_def
+			--:substIndex(dt_gamma_def:reindex{abc='ijk'})
+			:subst(dt_gamma_def:reindex{abc='ijk'})
+			:subst(dt_gamma_def:reindex{ijl='ijk'})
+			:subst(dt_gamma_def:reindex{lij='ijk'})
+			:subst(dt_gamma_def:reindex{lji='ijk'})
+		printbr(dt_conn_def)
+
+		dt_conn_def = dt_conn_def:substIndex(dgamma_for_conn)()
+		printbr(dt_conn_def)
+
+		dt_conn_def = dt_conn_def:substIndex(dalpha_for_a)
+		printbr(dt_conn_def)
+
+		dt_conn_def = dt_conn_def()
+		printbr(dt_conn_def)
+	end
+	
 	printbr[[$K_{ij,t}$ with hyperbolic terms]]
 
 	printbr(dt_K_def)
@@ -835,14 +940,21 @@ else
 		:simplify()
 	printbr(dt_K_def)
 
-	dt_K_def = dt_K_def:subst(conn_for_d:reindex{kij='ijk'})
-	printbr(dt_K_def)
+	if not useConnInsteadOfD then
+		dt_K_def = dt_K_def:subst(conn_for_d:reindex{kij='ijk'})
+		printbr(dt_K_def)
 
-	dt_K_def = dt_K_def:subst(R_for_d)
-	printbr(dt_K_def)
+		dt_K_def = dt_K_def:subst(R_for_d)
+		printbr(dt_K_def)
+	else	
+		dt_K_def = dt_K_def:subst(R_def)
+		printbr(dt_K_def)
+	end
+
 	dt_K_def = dt_K_def()
 	printbr(dt_K_def)
 
+	--[=[
 	local dsym_def = d'_ijk,l':eq(frac(1,2) * (d'_ijk,l' + d'_ljk,i'))
 	--[[ substIndex works ... but replaces the replaced ...
 	dt_K_def = dt_K_def
@@ -858,6 +970,7 @@ else
 		:subst(dsym_def:reindex{jimk='ijkl'})
 		:subst(dsym_def:reindex{kijm='ijkl'})
 	--]]
+	--]=]
 	if useShift then
 		dt_K_def = dt_K_def:substIndex(dbeta_for_b)
 	end
@@ -870,7 +983,8 @@ else
 
 	local defs = table()
 
-
+	-- TODO make compat with conn^k_ij state var
+	-- TODO is Theta = Z^t or Z_t? Geom. etc paper doesn't say, Yano is missing alpha for its def, Alcubierre is missing beta for his (shiftless fwiw) def
 	if useZ4 then
 		
 		-- I'm taking this from 2008 Yano et al Flux-Vector-Splitting method for Z4 formalism and its numerical analysis
@@ -1172,7 +1286,7 @@ else
 		defs:insert(dt_alpha_def)
 		defs:insert(dt_a_def)
 		defs:insert(dt_gamma_def)
-		defs:insert(dt_d_def)
+		defs:insert(useConnInsteadOfD and dt_conn_def or dt_d_def)
 		--]]
 		
 		if useV then
@@ -1389,7 +1503,15 @@ else
 					end
 				end)
 				:replace(a, aVars)
-				:replace(d, dVars)
+			
+			if not useConnInsteadOfD then
+				def = def:replace(d, dVars)
+			else
+				-- TODO this won't work with Gamma^i state variable
+				def = def:replace(Gamma, connVars)
+			end
+
+			def = def
 				:replace(K, KVars)
 				:replace(Theta',t', Theta:diff(t))
 			
@@ -1610,7 +1732,7 @@ else
 	end
 	--]]
 
-	outputFile:close()
+	--outputFile:close()
 	outputFile = pushOutputFile
 end	-- done generating the header
 -- now we can copy the header into the main file
