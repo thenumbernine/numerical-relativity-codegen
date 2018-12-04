@@ -27,7 +27,7 @@ local useConnInsteadOfD = true	-- use conn^k_ij instead of d_kij = 1/2 g_ij,k = 
 local useV = false				-- ADM Bona-Masso with V constraint.  Not needed with use1D
 local useGamma = false			-- ADM Bona-Masso with Gamma^i_,t . Exclusive to useV ... 
 local useZ4 = false				-- Z4
-local showEigenfields = true	-- my attempt at using eigenfields to deduce the left eigenvectors
+local showEigenfields = false	-- my attempt at using eigenfields to deduce the left eigenvectors
 local forceRemakeHeader = true
 
 
@@ -202,6 +202,7 @@ end)
 -- TODO reorder from [k][i][j] to [i][j][k]
 
 local connVars = Tensor('^k_ij', function(k,i,j)
+	if i > j then i,j = j,i end 
 	return var('{\\Gamma^'
 		..xs[k].name..'}'
 		..'_{'..xs[i].name
@@ -407,7 +408,7 @@ return ]] .. file[symmathJacobianFilename]))(
 	))
 else
 	local pushOutputFile = outputFile
-	--outputFile = io.open(headerExpressionFilename, 'w')
+	outputFile = io.open(headerExpressionFilename, 'w')
 
 --[[
 	-- TODO start with EFE, apply Gauss-Codazzi-Ricci, then automatically recast all higher order derivatives as new variables of 1st derivatives
@@ -676,12 +677,12 @@ else
 	
 	printbr[[Ricci wrt aux vars]]
 
-	local R_def = R'_ij':eq(Gamma'^k_ij'',k' - Gamma'^k_ik'',j' + Gamma'^k_lk' * Gamma'^l_ij' - Gamma'^k_lj' * Gamma'^l_ik')
+	local R_def = R'_ij':eq(Gamma'^k_ij,k' - Gamma'^k_ik,j' + Gamma'^k_lk' * Gamma'^l_ij' - Gamma'^k_lj' * Gamma'^l_ik')
 	printbr(R_def)
 
 	local R_for_d 
 	if not useConnInsteadOfD then	
-		R_for_d = R_def:substIndex(conn_for_d)
+		R_for_d = R_def:splitOffDerivIndexes():substIndex(conn_for_d)
 		printbr(R_for_d)
 
 		R_for_d = R_for_d()
@@ -948,6 +949,10 @@ else
 		printbr(dt_K_def)
 	else	
 		dt_K_def = dt_K_def:subst(R_def)
+		dt_K_def = dt_K_def:replace(
+			Gamma'^k_ik,j',
+			frac(1,2) * (Gamma'^l_jl,i' + Gamma'^l_il,j')
+		)
 		printbr(dt_K_def)
 	end
 
@@ -976,8 +981,11 @@ else
 	end
 	dt_K_def = dt_K_def:tidyIndexes()()
 		:symmetrizeIndexes(gamma, {1,2})()
-		:symmetrizeIndexes(d, {2,3})()
-		:symmetrizeIndexes(d, {1,4})()
+	if not useConnInsteadOfD then
+		dt_K_def = dt_K_def:tidyIndexes()()
+			:symmetrizeIndexes(d, {2,3})()
+			:symmetrizeIndexes(d, {1,4})()
+	end
 	printbr(dt_K_def)
 
 
@@ -1732,7 +1740,7 @@ else
 	end
 	--]]
 
-	--outputFile:close()
+	outputFile:close()
 	outputFile = pushOutputFile
 end	-- done generating the header
 -- now we can copy the header into the main file
@@ -1881,7 +1889,7 @@ io.stderr:write('finding eigenvector of eigenvalue '..tostring(lambda)..'\n') io
 	--printbr(A_minus_lambda_I)
 
 	local sofar, reduce = A_minus_lambda_I:inverse(nil, function(AInv, A, i, j, k, reason)
-		-- [[
+		--[[
 		fixFluxJacobian(A, i, j, k, reason)
 		fixFluxJacobian(AInv, i, j, k, reason)
 		--]]
@@ -1891,7 +1899,7 @@ io.stderr:write('finding eigenvector of eigenvalue '..tostring(lambda)..'\n') io
 		printbr(A)
 		printbr(AInv)
 		--]]
-		-- [[
+		--[[
 		local f = assert(io.open(outputNameBase..'.progress.'..outputType,'w'))
 		f:write(tostring(ToString.header))
 		local function printbr(...)
