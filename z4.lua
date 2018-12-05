@@ -1,4 +1,4 @@
--- TODO remind me where again which paper this came from
+-- 2004 Bona et al "A symmetry-breaking mechanism for the Z4 general-covariant evolution system"
 
 local class = require 'ext.class'
 local table = require 'ext.table'

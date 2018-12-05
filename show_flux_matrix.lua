@@ -14,14 +14,15 @@ symmath.debugSimplifyLoops = true
 symmath.simplifyMaxIter = 20
 
 --local outputType = 'txt'		-- this will output a txt 
-local outputType = 'html'		-- this will output a html file
---local outputType = 'tex'		-- this will output a pdf file
+--local outputType = 'html'		-- this will output a html file
+local outputType = 'tex'		-- this will output a pdf file
 local outputMathematica = false	-- this will output the flux as mathematica and exit
 
 local keepSourceTerms = false	-- this goes slow with 3D
 local use1D = false				-- consider spatially x instead of xyz
 local removeZeroRows = true		-- whether to keep variables whose dt rows are entirely zero.  only really useful when shift is disabled.
 local useShift = true			-- whether to include beta^i_,t
+local useLowerShift = false		-- (TODO still) works with useShift.  uses beta_i,t instead of beta^i_,t
 -- these are all exclusive
 local useV = true				-- ADM Bona-Masso with V constraint.  Not needed with use1D
 local useGamma = false			-- ADM Bona-Masso with Gamma^i_,t . Exclusive to useV ... 
@@ -126,7 +127,7 @@ local outputSuffix = (useZ4 and 'z4' or 'adm')
 	..(keepSourceTerms and '_withSource' or '')
 	..(useV and '_useV' or '')
 	..(useGamma and '_useGamma' or '')
-	..(useShift and '_useShift' or '')
+	..(useShift and (useLowerShift and '_useLowerShift' or '_useShift') or '')
 	..(removeZeroRows and '_noZeroRows' or '')
 	..(use1D and '_1D' or '')
 
@@ -167,11 +168,12 @@ do
 end
 
 
-
-
-local betaVars = Tensor('^i', function(i)
-	return var('\\beta^'..xs[i].name)
-end)
+local betaVars 
+if not useLowerShift then
+	betaVars = Tensor('^i', function(i)
+		return var('\\beta^'..xs[i].name)
+	end)
+end
 
 local gammaUVars = Tensor('^ij', function(i,j) 
 	if i > j then i,j = j,i end 
@@ -182,6 +184,12 @@ local gammaLVars = Tensor('_ij', function(i,j)
 	if i > j then i,j = j,i end 
 	return var('\\gamma_{'..xs[i].name..xs[j].name..'}', depvars)
 end)
+
+local betaLVars
+if useShift and useLowerShift then
+	betaLVars = Tensor('_i', function(i) return var('\\beta_'..xs[i].name) end)
+	betaVars = (gammaUVars'^ij' * betaLVars'_j')()
+end
 
 local aVars = Tensor('_k', function(k)
 	return var('a_'..xs[k].name, depvars)
@@ -1073,9 +1081,12 @@ else
 
 		dt_K_def = dt_K_def()
 		printbr(dt_K_def)
+	
+		if var.is(xi) then
+			dt_K_def = dt_K_def:replaceIndex(xi'_,k', 0)
+		end
 
 		dt_K_def = dt_K_def
-			:replaceIndex(xi'_,k', 0)
 			:simplify()
 			:substIndex(dgammaU_for_d)
 			:substIndex(dgamma_for_d)
@@ -1530,11 +1541,25 @@ else
 			return to
 		end
 		local alpha = replaceAll(alpha, var'alpha')
-		local betaVars = clone(betaVars)
+		
+		local betaVarsClone, betaLVarsClone
+		if useShift and useLowerShift then
+			betaVarsClone = betaVars
+			betaLVarsClone = clone(betaLVars)
+		else
+			betaVarsClone = clone(betaVars)
+		end
+		local betaVars = betaVarsClone
+		local betaLVars = betaLVarsClone
+		
 		local gammaUVars = clone(gammaUVars)
 		local gammaLVars = clone(gammaLVars)
 		for i=1,3 do
-			betaVars[i] = replaceAll(betaVars[i], var('betaVars['..i..']'))
+			if useShift and useLowerShift then
+				betaLVars[i] = replaceAll(betaLVars[i], var('betaLVars['..i..']'))
+			else
+				betaVars[i] = replaceAll(betaVars[i], var('betaVars['..i..']'))
+			end
 			for j=1,3 do
 				local u,v
 				if i < j then u,v = i,j else u,v = j,i end
@@ -1548,7 +1573,11 @@ else
 
 		local vars = table{alpha, f, df}
 		for i=1,3 do
-			vars:insert(betaVars[i])
+			if useLowerShift then
+				vars:insert(betaLVars[i])
+			else
+				vars:insert(betaVars[i])
+			end
 		end
 		for i=1,3 do
 			for j=i,3 do
