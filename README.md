@@ -15,19 +15,19 @@ TODO with it
 - rearrange filenames so it is unique prefix, section (expressions, flux matrix, char poly, eigenvectors), ext.
 
 
-[flux matrix.adm](https://htmlpreview.github.io/?https://github.com/thenumbernine/numerical-relativity-codegen/blob/master/flux_matrix_output/flux_matrix%2eadm%2ehtml)
+[flux matrix.adm](https://thenumbernine.github.io/numrel-codegen/flux_matrix_output/flux_matrix.adm.html)
 
-[flux matrix.adm 1D](https://htmlpreview.github.io/?https://github.com/thenumbernine/numerical-relativity-codegen/blob/master/flux_matrix_output/flux_matrix%2eadm_1D%2ehtml)
+[flux matrix.adm 1D](https://thenumbernine.github.io/numrel-codegen/flux_matrix_output/flux_matrix.adm_1D.html)
 
-[flux matrix.adm useV](https://htmlpreview.github.io/?https://github.com/thenumbernine/numerical-relativity-codegen/blob/master/flux_matrix_output/flux_matrix%2eadm_useV%2ehtml)
+[flux matrix.adm useV](https://thenumbernine.github.io/numrel-codegen/flux_matrix_output/flux_matrix.adm_useV.html)
 
-[flux matrix.adm useV noZeroRows](https://htmlpreview.github.io/?https://github.com/thenumbernine/numerical-relativity-codegen/blob/master/flux_matrix_output/flux_matrix%2eadm_useV_noZeroRows%2ehtml)
+[flux matrix.adm useV noZeroRows](https://thenumbernine.github.io/numrel-codegen/flux_matrix_output/flux_matrix.adm_useV_noZeroRows.html)
 
-[flux matrix.adm useV useShift noZeroRows](https://htmlpreview.github.io/?https://github.com/thenumbernine/numerical-relativity-codegen/blob/master/flux_matrix_output/flux_matrix%2eadm_useV_useShift_noZeroRows%2ehtml)
+[flux matrix.adm useV useShift noZeroRows](https://thenumbernine.github.io/numrel-codegen/flux_matrix_output/flux_matrix.adm_useV_useShift_noZeroRows.html)
 
-[flux matrix.z4](https://htmlpreview.github.io/?https://github.com/thenumbernine/numerical-relativity-codegen/blob/master/flux_matrix_output/flux_matrix%2ez4%2ehtml)
+[flux matrix.z4](https://thenumbernine.github.io/numrel-codegen/flux_matrix_output/flux_matrix.z4.html)
 
-[flux matrix.z4 noZeroRows](https://htmlpreview.github.io/?https://github.com/thenumbernine/numerical-relativity-codegen/blob/master/flux_matrix_output/flux_matrix%2ez4_noZeroRows%2ehtml)
+[flux matrix.z4 noZeroRows](https://thenumbernine.github.io/numrel-codegen/flux_matrix_output/flux_matrix.z4_noZeroRows.html)
 
 
 ### Old Code:
