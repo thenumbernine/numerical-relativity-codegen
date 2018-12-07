@@ -566,9 +566,9 @@ else
 			beta'^k' * B'^i_,k'
 			+ alpha^2 * xi * (
 				Gamma'^i_jk,t' * gamma'^jk'
-				+ Gamma'^i_jk' * gamma'^jk_,t'
+				- Gamma'^ijk' * gamma'_jk,t'
 				- beta'^l' * Gamma'^i_jk,l' * gamma'^jk'
-				- beta'^l' * Gamma'^i_jk' * gamma'^jk_,l'
+				+ beta'^l' * Gamma'^ijk' * (Gamma'_jkl' + Gamma'_kjl')
 			)
 			- eta * B'^i'
 		)
@@ -1060,12 +1060,19 @@ else
 		printbr(dt_gamma_def)
 	
 		printbr[[time derivative of $B^i$]]
-	
-		dt_B_def = dt_B_def:substIndex(dt_conn_def)
-			:substIndex(dgammaU_def)
-			:substIndex(dt_gamma_def)
+		
+		printbr(dt_B_def)
+
+		dt_B_def = dt_B_def
+			:substIndex(dt_gamma_def:reindex{abc='ijk'})
 			:simplify()
 		printbr(dt_B_def)
+
+		dt_B_def = dt_B_def
+			:subst(dt_conn_def)
+			:simplify()
+		printbr(dt_B_def)
+		
 	end
 
 	printbr[[$K_{ij,t}$ with hyperbolic terms]]
