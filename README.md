@@ -44,14 +44,14 @@ Who knows what's in the future?  Plain hyperbolic ADM?  KST?
 
 This code can be used as follows:
 
-	./run.lua Lua		<- Generate the Lua code for the left and eigenvectors
+	./create_basis_from_waves.lua Lua		<- Generate the Lua code for the left and eigenvectors
 						and source terms used in the gravitational-waves-lua
 						project adm3d.lua file.
 
-	./run.lua C			<- Generate OpenCL code for HydrodynamicsGPU project.
-	./run.lua			<- Generate HTML + MathJax.
-	./run.lua SingleLine
-	./run.lua MultiLine <- Generate text output.  Not as readable as HTML.
+	./create_basis_from_waves.lua C			<- Generate OpenCL code for HydrodynamicsGPU project.
+	./create_basis_from_waves.lua			<- Generate HTML + MathJax.
+	./create_basis_from_waves.lua SingleLine
+	./create_basis_from_waves.lua MultiLine <- Generate text output.  Not as readable as HTML.
 
 This project is based on the symmath-lua project.
 
