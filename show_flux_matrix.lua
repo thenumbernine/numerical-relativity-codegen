@@ -14,8 +14,8 @@ symmath.debugSimplifyLoops = true
 symmath.simplifyMaxIter = 20
 
 --local outputType = 'txt'		-- this will output a txt 
---local outputType = 'html'		-- this will output a html file
-local outputType = 'tex'		-- this will output a pdf file
+local outputType = 'html'		-- this will output a html file
+--local outputType = 'tex'		-- this will output a pdf file
 local outputMathematica = false	-- this will output the flux as mathematica and exit
 
 local keepSourceTerms = false	-- this goes slow with 3D
@@ -529,7 +529,7 @@ else
 		printbr(dt_beta_def)
 		local xi = frac(3,4)
 		
-		-- is actually the MDE driver that i
+		--[[ is actually the MDE driver that i
 		dt_B_def = B'^i_,t':eq(
 			-- Lie derivative
 			beta'^k' * B'^i_,k'
@@ -559,6 +559,20 @@ else
 				- 2 * alpha * Gamma'^j_jk' * A'^ik'
 			)
 		)
+		--]]
+		-- [[ hyperbolic gamma driver
+		local eta = frac(3,4)
+		dt_B_def = B'^i_,t':eq(
+			beta'^k' * B'^i_,k'
+			+ alpha^2 * xi * (
+				Gamma'^i_jk,t' * gamma'^jk'
+				+ Gamma'^i_jk' * gamma'^jk_,t'
+				- beta'^l' * Gamma'^i_jk,l' * gamma'^jk'
+				- beta'^l' * Gamma'^i_jk' * gamma'^jk_,l'
+			)
+			- eta * B'^i'
+		)
+		--]]
 		printbr(dt_B_def)
 	end
 
@@ -1040,8 +1054,18 @@ else
 	end
 
 	if useConnInsteadOfD then
+		printbr[[time derivative of $\gamma_{ij}$]]
+		
 		dt_gamma_def[2] = dt_gamma_def[2]:substIndex(dgamma_for_connL)()
 		printbr(dt_gamma_def)
+	
+		printbr[[time derivative of $B^i$]]
+	
+		dt_B_def = dt_B_def:substIndex(dt_conn_def)
+			:substIndex(dgammaU_def)
+			:substIndex(dt_gamma_def)
+			:simplify()
+		printbr(dt_B_def)
 	end
 
 	printbr[[$K_{ij,t}$ with hyperbolic terms]]
