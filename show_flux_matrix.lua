@@ -21,9 +21,9 @@ local outputMathematica = false	-- this will output the flux as mathematica and 
 local keepSourceTerms = false	-- this goes slow with 3D
 local use1D = false				-- consider spatially x instead of xyz
 local removeZeroRows = true		-- whether to keep variables whose dt rows are entirely zero.  only really useful when shift is disabled.
-local useShift = true			-- whether to include beta^i_,t
+local useShift = false			-- whether to include beta^i_,t
 local useLowerShift = false		-- (TODO still) works with useShift.  uses beta_i,t instead of beta^i_,t.  not really that useful, since beta^i is more often paired with state vars. just make sure not to mix gamma_ij's and gamma^ij's in the flux.
-local useConnInsteadOfD = true	-- use conn^k_ij instead of d_kij = 1/2 g_ij,k = conn_(ij)k
+local useConnInsteadOfD = false	-- use conn^k_ij instead of d_kij = 1/2 g_ij,k = conn_(ij)k
 -- these are all exclusive
 local useV = false				-- ADM Bona-Masso with V constraint.  Not needed with use1D
 local useGamma = false			-- ADM Bona-Masso with Gamma^i_,t . Exclusive to useV ... 
@@ -474,7 +474,7 @@ return ]] .. file[symmathJacobianFilename]))(
 	))
 else
 	local pushOutputFile = outputFile
-	--outputFile = io.open(headerExpressionFilename, 'w')
+	outputFile = io.open(headerExpressionFilename, 'w')
 
 --[[
 	-- TODO start with EFE, apply Gauss-Codazzi-Ricci, then automatically recast all higher order derivatives as new variables of 1st derivatives
@@ -1058,21 +1058,22 @@ else
 		
 		dt_gamma_def[2] = dt_gamma_def[2]:substIndex(dgamma_for_connL)()
 		printbr(dt_gamma_def)
-	
-		printbr[[time derivative of $B^i$]]
-		
-		printbr(dt_B_def)
 
-		dt_B_def = dt_B_def
-			:substIndex(dt_gamma_def:reindex{abc='ijk'})
-			:simplify()
-		printbr(dt_B_def)
+		if useShift then
+			printbr[[time derivative of $B^i$]]
+			
+			printbr(dt_B_def)
 
-		dt_B_def = dt_B_def
-			:subst(dt_conn_def)
-			:simplify()
-		printbr(dt_B_def)
-		
+			dt_B_def = dt_B_def
+				:substIndex(dt_gamma_def:reindex{abc='ijk'})
+				:simplify()
+			printbr(dt_B_def)
+
+			dt_B_def = dt_B_def
+				:subst(dt_conn_def)
+				:simplify()
+			printbr(dt_B_def)
+		end
 	end
 
 	printbr[[$K_{ij,t}$ with hyperbolic terms]]
@@ -1920,7 +1921,7 @@ else
 	end
 	--]]
 
-	--outputFile:close()
+	outputFile:close()
 	outputFile = pushOutputFile
 end	-- done generating the header
 -- now we can copy the header into the main file
@@ -2068,93 +2069,11 @@ io.stderr:write('finding eigenvector of eigenvalue '..tostring(lambda)..'\n') io
 	--printbr'reducing'
 	--printbr(A_minus_lambda_I)
 
-	local sofar, reduce = A_minus_lambda_I:inverse(nil, function(AInv, A, i, j, k, reason)
-		--[[
-		fixFluxJacobian(A, i, j, k, reason)
-		fixFluxJacobian(AInv, i, j, k, reason)
-		--]]
-		--[[
-		printbr('eigenvalue', lambda)	
-		printbr('step', i, j, reason)
-		printbr(A)
-		printbr(AInv)
-		--]]
-		--[[
-		local f = assert(io.open(outputNameBase..'.progress.'..outputType,'w'))
-		f:write(tostring(ToString.header))
-		local function printbr(...)
-			for i=1,select('#', ...) do
-				if i>1 then f:write'\t' end
-				f:write(tostring(select(i, ...)))
-			end
-			f:write(lineEnding)
-			f:flush()
-		end
-		printbr('eigenvalue', lambda)	
-		printbr('step', i, j, k, reason)
-		printbr(A)
-		printbr(AInv)
-		f:close()
--- [=[ print
-print('generated '..i..', '..j..', '..k..' '..reason)
---]=]
---[=[ enable this to monitor the Gaussian elimination progress one step at a time
-io.write('generated '..i..', '..j..', '..k..' '..reason..' -- press enter ')
-io.flush()
-io.read'*l'
---]=]
---[=[ interactive prompt?
-require 'interpreter'(getfenv and getfenv() or _ENV)
---]=]
-		--]]
-	end)
-	
-	--printbr('done inverting:')
-	-- show the gaussian elimination results
-	--printbr(sofar)
-	--printbr(reduce)
+	local ev = A_minus_lambda_I:nullspace()
 
-	-- now find the eigenvector ...
-	
-	-- find all non-leading columns
-	local nonLeadingCols = table()
-	local j = 1
-	for i=1,n do
-		while reduce[i][j] == Constant(0) and j <= n do
-			nonLeadingCols:insert(j)
-			j=j+1
-		end
-		if j > n then break end
-		assert(reduce[i][j] == Constant(1), "found a column that doesn't lead with 1")
-		j = j + 1
-	end
-	nonLeadingCols:append(range(j,n))
-	if #nonLeadingCols == 0 then
-		print("found no eigenvectors associated with eigenvalue",lambda)
+	if not ev then
+		printbr("found no eigenvectors associated with eigenvalue",lambda_)
 	else
-
-		multiplicity:insert(#nonLeadingCols)
-
-		-- now build the eigenvector basis for this eigenvalue
-		local ev = Matrix:zeros{n, #nonLeadingCols}
-		
-		-- cycle through the rows
-		for i=1,n do
-			local k = nonLeadingCols:find(i) 
-			if k then
-				ev[i][k] = Constant(1)
-			else
-				-- j is the free param # (eigenvector col)
-				-- k is the non leading column
-				-- everything else in reduce[i][*] should be zero, except the leading 1
-				for k,j in ipairs(nonLeadingCols) do
-					ev[i][k] = ev[i][k] - reduce[i][j]
-				end
-			end
-		end
-		
-		ev = ev()
-		
 		--[[ try to remove any inverses ...
 		for i=1,3 do
 			for j=1,3 do
@@ -2165,6 +2084,7 @@ require 'interpreter'(getfenv and getfenv() or _ENV)
 		end
 		--]]
 
+		multiplicity:insert(#ev[1])
 		printbr('eigenvector:')
 		printbr(ev)
 		evs:insert(ev)
