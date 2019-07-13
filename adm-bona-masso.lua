@@ -280,7 +280,7 @@ function ADMBonaMasso:getSourceTerms()
 	local compileVars = self.compileVars
 	local varsFlattened = self.varsFlattened
 
-	local ToStringLua = require 'symmath.tostring.Lua'
+	local ToStringLua = symmath.export.Lua
 
 	if not self.useMomentumConstraints then
 		if not GammaL then
@@ -851,7 +851,7 @@ function ADMBonaMasso:getSourceTerms()
 				do
 					local symmath = require 'symmath'
 					local oldToString = symmath.tostring
-					symmath.tostring = require 'symmath.tostring.MathJax'
+					symmath.tostring = symmath.export.MathJax
 					local s = symmath.tostring.header
 					s=s..tostring(H)..'<br>'
 					pcall(function()

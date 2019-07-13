@@ -16,18 +16,18 @@ local outputMethod = ... or 'MathJax'
 
 local MathJax
 if outputMethod == 'MathJax' then
-	MathJax = require 'symmath.tostring.MathJax'
+	MathJax = symmath.export.MathJax
 	symmath.tostring = MathJax 
 	print(MathJax.header)
 elseif outputMethod == 'SingleLine' or outputMethod == 'GraphViz' then
-	symmath.tostring = require 'symmath.tostring.SingleLine'
+	symmath.tostring = symmath.export.SingleLine
 end
 
 local outputCode = outputMethod == 'Lua' or outputMethod == 'C' 
 
 local ToStringLua
 if outputCode then 
-	ToStringLua = require 'symmath.tostring.Lua'
+	ToStringLua = symmath.export.Lua
 end
 
 -- code generation functions

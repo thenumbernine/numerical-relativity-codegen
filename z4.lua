@@ -156,7 +156,7 @@ function Z4:getSourceTerms()
 	local compileVars = self.compileVars
 	local varsFlattened = self.varsFlattened
 
-	local ToStringLua = require 'symmath.tostring.Lua'
+	local ToStringLua = symmath.export.Lua
 
 	local V = (D'_im^m' - D'^m_mi' - Z'_i')()
 

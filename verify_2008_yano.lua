@@ -790,7 +790,7 @@ local Rv = (evr * vs)():T()[1]
 local Lambda_v = (Lambda * vs)():T()[1]
 local A_alpha_v = (A_alpha * vs)():T()[1]
 local o = assert(io.open('2008_yano.c', 'w'))
-local ToC = require 'symmath.tostring.C'
+local ToC = symmath.export.C
 local compileVars = table()
 	:append{alpha, f, g, m, Theta}
 	:append(gLvars)

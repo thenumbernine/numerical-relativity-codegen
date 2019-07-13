@@ -46,7 +46,7 @@ local depvars = table{t,fluxdirvar}
 
 local ToString
 if outputType == 'html' then -- [[ mathjax output
-	ToString = require 'symmath.tostring.MathJax'
+	ToString = symmath.export.MathJax
 elseif outputType == 'txt' then --]] 
 	--[[ text output - breaking
 	function var(s)
@@ -58,7 +58,7 @@ elseif outputType == 'txt' then --]]
 	end
 	--]]
 elseif outputType == 'tex' then
-	ToString = require 'symmath.tostring.LaTeX'
+	ToString = symmath.export.LaTeX
 end
 if ToString then
 	symmath.tostring = ToString
@@ -1873,7 +1873,7 @@ else
 		end
 		vars:insert(gamma)
 
-		file[symmathJacobianFilename] = require 'symmath.tostring.Mathematica'(fluxJacobian, vars):gsub('}, {', '},\n\t{')
+		file[symmathJacobianFilename] = symmath.export.Mathematica(fluxJacobian, vars):gsub('}, {', '},\n\t{')
 	end
 
 
@@ -1917,7 +1917,7 @@ else
 		end
 		vars:insert(gamma)
 
-		file['flux_matrix_output/mathematica.'..outputSuffix..'.txt'] = require 'symmath.tostring.Mathematica'(fluxJacobian, vars):gsub('}, {', '},\n\t{')
+		file['flux_matrix_output/mathematica.'..outputSuffix..'.txt'] = symmath.export.Mathematica(fluxJacobian, vars):gsub('}, {', '},\n\t{')
 	end
 	--]]
 
