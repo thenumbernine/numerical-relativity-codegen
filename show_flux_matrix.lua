@@ -713,11 +713,11 @@ else
 		printbr(connL_for_d)
 
 		-- [[ just raise Gamma, keep d and gamma separate
-		conn_for_d = (gamma'^il' * connL_for_d:reindex{ljk='ijk'})()
+		conn_for_d = (gamma'^il' * connL_for_d:reindex{ijk='ljk'})()
 			:replace(gamma'^il' * Gamma'_ljk', Gamma'^i_jk')
 		--]]
 		--[[ expand() is adding a -1 somewhere that makes the last replace() choke
-		conn_for_d = (gamma'^il' * connL_for_d:reindex{ljk='ijk'})()
+		conn_for_d = (gamma'^il' * connL_for_d:reindex{ijk='ljk'})()
 			:expand()
 			:replace(gamma'^il' * Gamma'_ljk', Gamma'^i_jk')
 			:replace(gamma'^il' * d'_jlk', d'_jk^i')
@@ -790,7 +790,7 @@ else
 	printbr[[time derivative of $\alpha_{,t}$]]
 
 	-- don't subst alpha,t ..
-	dt_alpha_def = dt_alpha_def:subst(dalpha_for_a:reindex{i='k'})
+	dt_alpha_def = dt_alpha_def:subst(dalpha_for_a:reindex{k='i'})
 	printbr(dt_alpha_def)
 
 	printbr[[time derivative of $\gamma_{ij,t}$]]
@@ -870,7 +870,7 @@ else
 
 		-- can't use substIndex or it'll pick up the ,t
 		--dt_beta_def = dt_beta_def:substIndex(dbeta_for_b)
-		dt_beta_def = dt_beta_def:subst(dbeta_for_b:reindex{ki='ij'})
+		dt_beta_def = dt_beta_def:subst(dbeta_for_b:reindex{ij='ki'})
 		printbr(dt_beta_def)
 
 
@@ -948,7 +948,7 @@ else
 			:replace(gamma'_ij,k,t', gamma'_ij,t'',k')
 			-- TODO automatically relabel the sum indexes
 			-- ... this would require knowledge of the entire dt_d_def expression, to know what indexes are available
-			:subst(dt_gamma_def:reindex{ijl='ijk'})
+			:subst(dt_gamma_def:reindex{ijk='ijl'})
 		printbr(dt_d_def)
 
 		dt_d_def = dt_d_def()
@@ -956,9 +956,9 @@ else
 
 		dt_d_def = dt_d_def
 			:replace(gamma'_ij,l,k', gamma'_ij,l'',k')
-			:subst(dgamma_for_d:reindex{ijl='ijk'})
-			:subst(dgamma_for_d:reindex{ilk='ijk'})
-			:subst(dgamma_for_d:reindex{ljk='ijk'})
+			:subst(dgamma_for_d:reindex{ijk='ijl'})
+			:subst(dgamma_for_d:reindex{ijk='ilk'})
+			:subst(dgamma_for_d:reindex{ijk='ljk'})
 			:subst(dalpha_for_a)
 		if useShift then
 			dt_d_def = dt_d_def:substIndex(dbeta_for_b)
@@ -980,7 +980,7 @@ else
 			:replace(gamma'_jk,i,t', gamma'_jk,t'',i')	
 			:substIndex(
 				dt_gamma_def
-					:reindex{a='k'}
+					:reindex{k='a'}
 					:replaceIndex(b'^a_b', beta'^a_,b')
 			)
 		printbr(dt_connL_def)
@@ -1010,7 +1010,7 @@ else
 		printbr(dt_conn_def)
 
 		dt_conn_def = dt_conn_def
-			:subst(dt_connL_def:reindex{ab='ia'})
+			:subst(dt_connL_def:reindex{ia='ab'})
 		printbr(dt_conn_def)
 		
 		dt_conn_def = dt_conn_def
@@ -1018,7 +1018,7 @@ else
 			
 			-- hmm, substindex does make sure to not use previous sum indexes
 			-- but it doesn't replace sum-indexes of expressions it's inserting
-			:substIndex(dt_gamma_def:reindex{e='k'})
+			:substIndex(dt_gamma_def:reindex{k='e'})
 			
 			:simplify()
 		printbr(dt_conn_def)
@@ -1065,7 +1065,7 @@ else
 			printbr(dt_B_def)
 
 			dt_B_def = dt_B_def
-				:substIndex(dt_gamma_def:reindex{abc='ijk'})
+				:substIndex(dt_gamma_def:reindex{ijk='abc'})
 				:simplify()
 			printbr(dt_B_def)
 
@@ -1082,8 +1082,8 @@ else
 
 	dt_K_def = dt_K_def
 		:replace(alpha',ij', frac(1,2) * (alpha',i'',j' + alpha',j'',i'))
-		:subst(dalpha_for_a:reindex{i='k'})
-		:subst(dalpha_for_a:reindex{j='k'})
+		:subst(dalpha_for_a:reindex{k='i'})
+		:subst(dalpha_for_a:reindex{k='j'})
 		:subst(dalpha_for_a)
 	printbr(dt_K_def)
 		
@@ -1091,13 +1091,13 @@ else
 	printbr(dt_K_def)
 
 	dt_K_def = dt_K_def
-		:subst(dalpha_for_a:reindex{j='k'})
-		:subst(dalpha_for_a:reindex{i='k'})
+		:subst(dalpha_for_a:reindex{k='j'})
+		:subst(dalpha_for_a:reindex{k='i'})
 		:simplify()
 	printbr(dt_K_def)
 
 	if not useConnInsteadOfD then
-		dt_K_def = dt_K_def:subst(conn_for_d:reindex{kij='ijk'})
+		dt_K_def = dt_K_def:subst(conn_for_d:reindex{ijk='kij'})
 		printbr(dt_K_def)
 
 		dt_K_def = dt_K_def:subst(R_for_d)
@@ -1118,17 +1118,17 @@ else
 	local dsym_def = d'_ijk,l':eq(frac(1,2) * (d'_ijk,l' + d'_ljk,i'))
 	--[[ substIndex works ... but replaces the replaced ...
 	dt_K_def = dt_K_def
-		:substIndex(dsym_def:reindex{ijlk='ijkl'})
-		:substIndex(dsym_def:reindex{iklj='ijkl'})
-		:substIndex(dsym_def:reindex{jilk='ijkl'})
-		:substIndex(dsym_def:reindex{kijl='ijkl'})
+		:substIndex(dsym_def:reindex{ijkl='ijlk'})
+		:substIndex(dsym_def:reindex{ijkl='iklj'})
+		:substIndex(dsym_def:reindex{ijkl='jilk'})
+		:substIndex(dsym_def:reindex{ijkl='kijl'})
 	--]]
 	--[[
 	dt_K_def = dt_K_def
-		:subst(dsym_def:reindex{ijmk='ijkl'})
-		:subst(dsym_def:reindex{ikmj='ijkl'})
-		:subst(dsym_def:reindex{jimk='ijkl'})
-		:subst(dsym_def:reindex{kijm='ijkl'})
+		:subst(dsym_def:reindex{ijkl='ijmk'})
+		:subst(dsym_def:reindex{ijkl='ikmj'})
+		:subst(dsym_def:reindex{ijkl='jimk'})
+		:subst(dsym_def:reindex{ijkl='kijm'})
 	--]]
 	--]=]
 	if useShift then
@@ -1638,7 +1638,7 @@ else
 							to = to .. 'x'
 						end
 					end
-					printbr(def:reindex{[to]=from})
+					printbr(def:reindex{[from]=to})
 					return 0
 				end)
 			end
