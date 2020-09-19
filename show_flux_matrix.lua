@@ -455,11 +455,11 @@ local headerExpressionFilename = 'flux_matrix_output/header.'..outputSuffix..'.'
 local fluxJacobian
 
 if not forceRemakeHeader
-and (io.fileexists(headerExpressionFilename) 
-	or io.fileexists(symmathJacobianFilename))
+and (os.fileexists(headerExpressionFilename) 
+	or os.fileexists(symmathJacobianFilename))
 then
-	if not (io.fileexists(headerExpressionFilename) 
-		and io.fileexists(symmathJacobianFilename))
+	if not (os.fileexists(headerExpressionFilename) 
+		and os.fileexists(symmathJacobianFilename))
 	then
 		error("you need both "..headerExpressionFilename.." and "..symmathJacobianFilename..", but you only have one")
 	end
