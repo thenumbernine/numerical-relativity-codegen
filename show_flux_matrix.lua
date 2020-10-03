@@ -6,6 +6,7 @@ io.stdout:setvbuf'no'
 -- I just wanted a script to create a flux jacobian matrix from tensor index equations
 require 'ext'
 require 'symmath'.setup()
+op = symmath.op	--override ext.op
 local TensorRef = require 'symmath.tensor.TensorRef'
 
 TensorRef:pushRule'Prune/replacePartial'
@@ -27,7 +28,7 @@ local useConnInsteadOfD = false	-- use conn^k_ij instead of d_kij = 1/2 g_ij,k =
 -- these are all exclusive
 local useV = false				-- ADM Bona-Masso with V constraint.  Not needed with use1D
 local useGamma = false			-- ADM Bona-Masso with Gamma^i_,t . Exclusive to useV ... 
-local useZ4 = false				-- Z4
+local useZ4 = true				-- Z4
 local showEigenfields = false	-- my attempt at using eigenfields to deduce the left eigenvectors
 local forceRemakeHeader = true
 
@@ -66,11 +67,13 @@ if ToString then
 end
 
 -- kronecher delta
-local delta = var'\\delta'
+local delta = Tensor:deltaSymbol()	-- for simpliyMetrics
+local gamma = var'\\gamma'
+Tensor.metricVariable = gamma	-- override for simplifyMetrics()
+
 -- adm metric
 local alpha = var'\\alpha'
 local beta = var'\\beta'
-local gamma = var'\\gamma'
 -- pi
 local pi = var'\\pi'
 -- stress-energy T^ab n_a n_b
@@ -116,6 +119,7 @@ Tensor.coords{
 	--]]
 }
 
+-- looking like the 'betterSimplify' found in a few other projects
 local function simplify(expr)
 	expr = expr():factorDivision()
 	if op.add.is(expr) then
@@ -384,65 +388,6 @@ do return end
 		end
 	end
 --]]
-end
-
-
--- hmm...
-local function simplifyMetrics(expr, metric)
-	local found
-	repeat
-		found = false
-		expr = expr:map(function(term)
-			if op.mul.is(term) then
-				local exprsForSymbol = term:getExprsForIndexSymbols()
-				for j=#term,1,-1 do
-					local x = term[j]
-					if TensorRef.is(x)
-					and x[1].name == metric.name
-					and #x == 3
-					then
---printbr('applying to ', term, 'metric', x)
-						for i=2,#x do
-							local sym = x[i].symbol
-							if #exprsForSymbol[sym] > 1 then
-								assert(#exprsForSymbol[sym] == 2)
-								local a,b = table.unpack(exprsForSymbol[sym])
-								if b.expr == x then a,b = b,a end
-								
-								-- why is this not always true after the first index of the metric is raised/lowered?
-								if a.expr == x 
-								-- don't raise if *any* indexes have a derivative...
-								--and not b.expr[b.index].derivative
-								and not table.sub(b.expr, 2):find(nil, function(index) return index.derivative end)
-								then
-									local result = table{table.unpack(term)}
-									result:remove(j)
-								
-									-- raise/lower the index'th index of b.expr
-									-- modify in place
-									b.expr[b.index].lower = x[5-i].lower
-									b.expr[b.index].symbol = x[5-i].symbol	-- set it to the other index of the metric
-									
-									found = true
-									if #result == 1 then
-										result = result[1]
-									else
-										result = op.mul(result:unpack())
-									end
---printbr('now we have', result)
-									return result
-									--break
-								end
-							end
-						end
-					end
-					if found then break end
-				end
-			end
-			if found then return term end
-		end)
-	until not found
-	return expr
 end
 
 
@@ -775,14 +720,14 @@ else
 		printbr'symmetrizing'
 		R_for_d = R_for_d
 			:symmetrizeIndexes(gamma, {1,2})()
-			:symmetrizeIndexes(d, {2,3})()
-			:symmetrizeIndexes(d, {1,4})()
+			:symmetrizeIndexes(d, {2,3})()		-- g_ab,cd = 1/2 d_cabd ... so d is symmetric on terms 23 and on terms 14
+			:symmetrizeIndexes(d, {1,4}, true)()
 		printbr(R_for_d)
 
 		R_for_d = R_for_d:tidyIndexes()()
 			:symmetrizeIndexes(gamma, {1,2})()
 			:symmetrizeIndexes(d, {2,3})()
-			:symmetrizeIndexes(d, {1,4})()
+			:symmetrizeIndexes(d, {1,4}, true)()
 		printbr(R_for_d)
 	else
 	end
@@ -834,7 +779,7 @@ else
 
 	dt_a_def = dt_a_def()
 		:substIndex(dalpha_for_a)
-		:symmetrizeIndexes(a, {1,2})
+		:symmetrizeIndexes(a, {1,2}, true)
 		:simplify()
 	printbr(dt_a_def)
 
@@ -931,7 +876,7 @@ else
 		if not useConnInsteadOfD then
 			dt_B_def = dt_B_def
 				:symmetrizeIndexes(d, {2,3})()
-				:symmetrizeIndexes(d, {1,4})()
+				:symmetrizeIndexes(d, {1,4}, true)()
 		end
 		
 		printbr(dt_B_def)
@@ -1041,7 +986,7 @@ else
 		printbr(dt_conn_def)
 
 		dt_conn_def = dt_conn_def:replaceIndex(b'^a_b', beta'^a_,b')
-		dt_conn_def = simplifyMetrics(dt_conn_def, gamma)()
+		dt_conn_def = dt_conn_def:simplifyMetrics()()
 		printbr(dt_conn_def)
 
 		dt_conn_def  = dt_conn_def:tidyIndexes()()
@@ -1139,7 +1084,7 @@ else
 	if not useConnInsteadOfD then
 		dt_K_def = dt_K_def:tidyIndexes()()
 			:symmetrizeIndexes(d, {2,3})()
-			:symmetrizeIndexes(d, {1,4})()
+			:symmetrizeIndexes(d, {1,4}, true)()
 	end
 	printbr(dt_K_def)
 
@@ -1278,7 +1223,7 @@ else
 
 		dt_d_def = dt_d_def
 			:substIndex(dgamma_for_d'_,l'())
-			:symmetrizeIndexes(d, {1,4})()
+			:symmetrizeIndexes(d, {1,4}, true)()
 		printbr(dt_d_def)
 		defs:insert(dt_d_def)
 
@@ -2037,10 +1982,20 @@ elseif useGamma and not useShift then	-- same for both removeZeroRows and not re
 		alpha * sqrt((f-2) * gammaUjj),
 	}
 else
+
+-- for adm noZeroRows:
+-- a = alpha, g = gamma, x = lambda
+-- -x^5 (3 a^4 g^2 x^4 - a^6 g^3 x^2 - 3 g a^2 x^6 - f g a^2 x^6 + x^8 + 3 f a^4 g^2 x^4 - 3 f a^6 g^3 x^2 + f a^8 g^4) = 0
+-- for y = x^2, b = a^2 g
+-- x^5 (y^4 - (f + 3) b y^3 + 3 b^2 (f + 1) y^2 - b^3 (3 f + 1) y + f b^4) = 0
+-- x^5 (b f - y) (b - y)^3 = 0
+-- x^5 = 0, (a^2 g - x^2)^3 = 0, a^2 g f - x^2 = 0
+-- {x = 0} x5, {x = ±a sqrt(g)} x3, {x = ±a sqrt(f g)} x1
+
 	lambdas = table{
 		-- the more multiplicity, the easier it is to factor
 		-- also, without useV, the 1-multiplicity eigenvectors take forever and the expressions get huge and take forever
-		-- [[
+		--[[
 		-alpha * sqrt(f * gammaUjj),
 		-alpha * sqrt(gammaUjj),
 		0,
@@ -2049,12 +2004,12 @@ else
 		--]]
 		
 		
-		--[[
+		-- [[
 		0,
-		-alpha * sqrt(gammaUjj),
 		alpha * sqrt(gammaUjj),
-		-alpha * sqrt(f * gammaUjj),
+		-alpha * sqrt(gammaUjj),
 		alpha * sqrt(f * gammaUjj),
+		-alpha * sqrt(f * gammaUjj),
 		--]]
 	}
 end
