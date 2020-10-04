@@ -14,22 +14,26 @@ TensorRef:pushRule'Prune/replacePartial'
 symmath.debugSimplifyLoops = true
 symmath.simplifyMaxIter = 20
 
---local outputType = 'txt'		-- this will output a txt 
-local outputType = 'html'		-- this will output a html file
---local outputType = 'tex'		-- this will output a pdf file
-local outputMathematica = false	-- this will output the flux as mathematica and exit
+--local outputType = 'txt'				-- this will output a txt 
+local outputType = 'html'				-- this will output a html file
+--local outputType = 'tex'				-- this will output a pdf file
+local outputMathematica = false			-- this will output the flux as mathematica and exit
 
-local keepSourceTerms = false	-- this goes slow with 3D
-local use1D = false				-- consider spatially x instead of xyz
-local removeZeroRows = true		-- whether to keep variables whose dt rows are entirely zero.  only really useful when shift is disabled.
-local useShift = false			-- whether to include beta^i_,t
-local useLowerShift = false		-- (TODO still) works with useShift.  uses beta_i,t instead of beta^i_,t.  not really that useful, since beta^i is more often paired with state vars. just make sure not to mix gamma_ij's and gamma^ij's in the flux.
-local useConnInsteadOfD = false	-- use conn^k_ij instead of d_kij = 1/2 g_ij,k = conn_(ij)k
--- these are all exclusive
-local useV = false				-- ADM Bona-Masso with V constraint.  Not needed with use1D
-local useGamma = false			-- ADM Bona-Masso with Gamma^i_,t . Exclusive to useV ... 
-local useZ4 = true				-- Z4
-local showEigenfields = false	-- my attempt at using eigenfields to deduce the left eigenvectors
+local keepSourceTerms = false			-- this goes slow with 3D
+local outputCodeForSourceTerms = false	-- this goes really really slow.  exclusive with 'keepSourceTerms'
+
+local use1D = false						-- consider spatially x instead of xyz
+local removeZeroRows = true				-- whether to keep variables whose dt rows are entirely zero.  only really useful when shift is disabled.
+local useShift = false					-- whether to include beta^i_,t
+local useLowerShift = false				-- (TODO still) works with useShift.  uses beta_i,t instead of beta^i_,t.  not really that useful, since beta^i is more often paired with state vars. just make sure not to mix gamma_ij's and gamma^ij's in the flux.
+local useConnInsteadOfD = false			-- use conn^k_ij instead of d_kij = 1/2 g_ij,k = conn_(ij)k
+
+-- these are all exclusive with one another:
+local useV = false						-- ADM Bona-Masso with V constraint.  Not needed with use1D
+local useGamma = false					-- ADM Bona-Masso with Gamma^i_,t . Exclusive to useV ... 
+local useZ4 = true						-- Z4
+
+local showEigenfields = false			-- my attempt at using eigenfields to deduce the left eigenvectors
 local forceRemakeHeader = true
 
 
@@ -442,9 +446,36 @@ else
 	printbr(EFEdef)
 --]]
 
+	local K_trK_term = K'^k_k'
+	if useZ4 then
+		K_trK_term = K_trK_term - 2 * Theta
+	end
+
 	printbr[[gauge vars]]
 
-	local Q_def = Q:eq(alpha * f * K'^i_i')
+	--[[
+	2005 Bona, Lehner, Palenzuela-Luque:
+	alpha_,t = -alpha^2 Q
+	Algebraic gauge condition (eqn 10)
+	Q = -beta^k alpha_,k / alpha^2 + K
+	alpha_,t = beta^k alpha_,k - alpha^2 K
+	Semialgebraic gauge condition (eqn 11)
+	Q = -beta^k alpha_,k / alpha^2 + f (K - 2 Theta)
+	alpha_,t = beta^k alpha_,k - alpha^2 f (K - 2 Theta)
+
+	2009 Alic, Bona, Bona-Casas: 
+	alpha_,t = -alpha^2 Q 
+	Q = f (K - m Theta)
+	alpha_,t = -alpha^2 f (K - m Theta)
+	
+	so to include the Z4 term, and to neglect the Lie derivative, use:
+	Q = f (K - 2 Theta)
+	
+	TODO fully derive the Z4 so you know where the 'm' coefficient comes about
+	2009 Alic section 4 says choosing m=2 makes Z4 coincide with BSSN
+	--]]
+	local Q_def = Q:eq(alpha * f * K_trK_term:reindex{k='i'})
+
 	printbr(Q_def)
 
 	local Qu_def 
@@ -455,7 +486,11 @@ else
 
 	printbr[[primitive $\partial_t$ defs]]
 
-	local dt_alpha_def = alpha'_,t':eq(alpha'_,i' * beta'^i' - alpha * Q)
+	local dt_alpha_def = alpha'_,t':eq(
+		-alpha * Q
+		-- Lie derivative terms.   Note that the 2005 Bona et al and 2009 Alic et al combine this into the Q function
+		+ alpha'_,i' * beta'^i' 
+	)
 	printbr(dt_alpha_def)
 
 	dt_alpha_def = dt_alpha_def:substIndex(Q_def)()
@@ -465,11 +500,13 @@ else
 	if useShift then
 		-- hyperbolic Gamma driver
 		-- 2008 Alcubierre eqns 4.3.31 & 4.3.32
-		-- B^i = beta^i_,t
+		-- beta^i_,t = B^i
 		-- so what should be used for beta^i_,j ? Bona&Masso use B for that in their papers ...
 		-- I'll use b for the spatial derivative and B for the time derivative
 		dt_beta_def = beta'^k_,t':eq(
-			beta'^i' * beta'^k_,i' + B'^k'
+			B'^k'
+			-- advection term.  (not Lie derivative.)
+			+ beta'^i' * beta'^k_,i' 
 		)
 		printbr(dt_beta_def)
 		local xi = frac(3,4)
@@ -508,14 +545,15 @@ else
 		-- [[ hyperbolic gamma driver
 		local eta = frac(3,4)
 		dt_B_def = B'^i_,t':eq(
-			beta'^k' * B'^i_,k'
-			+ alpha^2 * xi * (
+			alpha^2 * xi * (
 				Gamma'^i_jk,t' * gamma'^jk'
 				- Gamma'^ijk' * gamma'_jk,t'
 				- beta'^l' * Gamma'^i_jk,l' * gamma'^jk'
 				+ beta'^l' * Gamma'^ijk' * (Gamma'_jkl' + Gamma'_kjl')
 			)
 			- eta * B'^i'
+			-- advection term.  (not Lie derivative.)
+			+ beta'^k' * B'^i_,k'
 		)
 		--]]
 		printbr(dt_B_def)
@@ -523,6 +561,7 @@ else
 
 	local dt_gamma_def = gamma'_ij,t':eq( 
 		-2 * alpha * K'_ij' 
+		-- Lie derivative terms
 		+ gamma'_ij,k' * beta'^k' 
 		+ gamma'_kj' * beta'^k_,i' 
 		+ gamma'_ik' * beta'^k_,j' 
@@ -534,22 +573,29 @@ else
 		K_R_term = K_R_term + Z'_j,i' - Gamma'^k_ji' * Z'_k' + Z'_i,j' - Gamma'^k_ij' * Z'_k'
 	end
 
-	local K_trK_term = K'^k_k'
-	if useZ4 then
-		K_trK_term = K_trK_term - 2 * Theta
-	end
-
+	-- K_ij,t def
 	local dt_K_def = K'_ij,t':eq(
-		K'_ij,k' * beta'^k' 
-		+ K'_ki' * beta'^k_,j'
-		+ K'_kj' * beta'^k_,i'
-		- alpha',ij'
-		+ Gamma'^k_ij' * alpha',k'
+		
+		- alpha',ij'				-- \__ -alpha_;ij
+		+ Gamma'^k_ij' * alpha',k'	-- /
+		-- random fact:
+		-- in 1995 Bona, Masso, Seidel, Stela "new formalism for numerical relativity" eqn 2
+		-- in 2005 Bona, Lehner, Palenzuela-Luque "geometrically motivated ... " eqn 20
+		-- in 2007 Alic, Bona, Bona-Casas, Masso "efficient implementation ..." eqn 33
+		-- in 2009 Alic, Bona, Bona-Casas, "towards a gauge ..." eqn 4
+		-- in 2012 Alic, Bona-Casas, Bona, Rezzolla, Palenzuela "conformal and covariant ..." eqn 7
+		--  ...
+		-- -alpha_;ij is written as -alpha_i;j or -nabla_i alpha_j ... even though alpha is a scalar.  should be nabla_i nabla_j alpha
+
 		+ alpha * (
 			K_R_term
 			+ K_trK_term * K'_ij' 
 			- 2 * K'_ik' * K'^k_j'
 		)
+		-- Lie derivative terms
+		+ K'_ij,k' * beta'^k' 
+		+ K'_ki' * beta'^k_,j'
+		+ K'_kj' * beta'^k_,i'
 		-- stress-energy terms	
 		+ 4 * pi * alpha * (gamma'_ij' * (S - rho) - 2 * S'_ij')
 	)
@@ -561,15 +607,16 @@ else
 			(beta'^k' * Theta)'_,k'
 			- (alpha * (d'^kj_j' - d'_j^jk' - Z'^k'))'_,k'
 			-- 2005 Bona et al eqn A.3 of S(Theta)
-			-Theta * b'^k_k'
+			- Theta * b'^k_k'
 			+ alpha/2 * (
 				2 * a'_k' * (d'^kj_j' - d'_j^jk' - 2 * Z'^k')
 				+ d'_k^rs' * Gamma'^k_rs'
 				- d'^kj_j' * (d'_kl^l' - 2 * Z'_k')
 				- K'^k_r' * K'^r_k'
-				+ K'^k_k' * (K'^l_l' - 2 * Theta)
+				+ K'^k_k' * K_trK_term:reindex{k='l'}
 			)
-			- 8 * pi * alpha * rho
+			-- stress-energy terms	
+			- 16 * pi * alpha * rho
 		)
 		printbr(dt_Theta_def) 
 
@@ -1526,11 +1573,12 @@ else
 		end
 	end
 
+	local sourceTerms
 	if not keepSourceTerms then
 		-- for all summed terms, for all coefficients, 
 		--	if none have derivatives then remove them
 		-- remove from defs any equations that no longer have any terms
-		local sourceTerms = table()
+		sourceTerms = table()
 		defs = defs:map(function(def,i,t)
 			local lhs, rhs = table.unpack(defs[i])
 			
@@ -1553,12 +1601,18 @@ else
 		for _,def in ipairs(defs) do
 			printbr(def)
 		end
+		
+		-- TODO here - print out the x-direction source terms in C code.  expand all indexes, neglect all _,y _,z terms, (only use _,x), and then replace all U (state) and U_,x with U variables
+
 		printbr'...and those source terms are...'
 		for i,def in ipairs(defs) do
 			local lhs, rhs = table.unpack(def)
 			printbr(lhs..'$ + \\dots = $'..sourceTerms[i])
 		end
+		
+		-- TODO here - print out the source terms in C code
 	end
+
 
 	if showEigenfields then
 		printbr'separating x from other dimensions:'
@@ -1591,11 +1645,64 @@ else
 	end
 
 
+	local function makeTensorExpressionDense(def)
+		def = def
+			:map(function(expr)
+				if TensorRef.is(expr)
+				and expr[1] == gamma
+				then
+					-- warn if there are any gamma^ij_,k...
+					for i=4,#expr do	-- expr[1] is the variable, 2,3 are the ij indexes, so start at 4 for derivatives
+						assert(not expr[i].lower, "found a gamma_ij term: "..tostring(expr))
+					end
+					return TensorRef(gammaUVars, table.unpack(expr, 2))
+				end
+			end)
+			:replace(a, aVars)
+		
+		if not useConnInsteadOfD then
+			def = def:replace(d, dVars)
+		else
+			-- TODO this won't work with Gamma^i state variable
+			def = def:replace(Gamma, connVars)
+		end
+
+		def = def
+			:replace(K, KVars)
+			:replace(Theta'_,t', Theta:diff(t))
+		
+		if useShift then
+			def = def
+				:replace(beta, betaVars)
+				:replace(b, bVars)
+				:replace(B, BVars)
+		end
+		if useV then 
+			def = def:replace(V, VVars)
+		end
+		if useGamma then
+			def = def:replace(Gamma, GammaVars)
+		end
+		if useZ4 then
+			def = def:replace(Theta'_,k', Tensor('_k', function(k) return Theta:diff(xs[k]) end))
+			def = def:replace(Theta'_,i', Tensor('_i', function(k) return Theta:diff(xs[k]) end))
+			def = def:replace(Z, ZVars)
+		end
+		def = def()
+		return def
+	end
+
+	
 	printbr('spelled out')
 	local allLhs = table()
 	local allRhs = table()
 	local defsForLhs = table()	-- check to make sure symmetric terms have equal rhs's.  key by the lhs
-	for _,def in ipairs(defs) do
+	local allSrcs
+	if not keepSourceTerms and outputCodeForSourceTerms then
+		assert(#defs == #sourceTerms)
+		allSrcs = table()
+	end
+	for j,def in ipairs(defs) do
 		local var = def:lhs()[1]
 		
 		-- these should be zero anyways ...
@@ -1605,50 +1712,12 @@ else
 		then	
 			assert(def:rhs() == Constant(0), "expected zero")
 		else
-			def = def
-				:map(function(expr)
-					if TensorRef.is(expr)
-					and expr[1] == gamma
-					then
-						-- warn if there are any gamma^ij_,k...
-						for i=4,#expr do	-- expr[1] is the variable, 2,3 are the ij indexes, so start at 4 for derivatives
-							assert(not expr[i].lower, "found a gamma_ij term: "..tostring(expr))
-						end
-						return TensorRef(gammaUVars, table.unpack(expr, 2))
-					end
-				end)
-				:replace(a, aVars)
+			def = makeTensorExpressionDense(def)
 			
-			if not useConnInsteadOfD then
-				def = def:replace(d, dVars)
-			else
-				-- TODO this won't work with Gamma^i state variable
-				def = def:replace(Gamma, connVars)
+			local sourceTerm
+			if not keepSourceTerms and outputCodeForSourceTerms then
+				sourceTerm = makeTensorExpressionDense(sourceTerms[j])
 			end
-
-			def = def
-				:replace(K, KVars)
-				:replace(Theta',t', Theta:diff(t))
-			
-			if useShift then
-				def = def
-					:replace(beta, betaVars)
-					:replace(b, bVars)
-					:replace(B, BVars)
-			end
-			if useV then 
-				def = def:replace(V, VVars)
-			end
-			if useGamma then
-				def = def:replace(Gamma, GammaVars)
-			end
-			if useZ4 then
-				def = def:replace(Theta'_,k', Tensor('_k', function(k) return Theta:diff(xs[k]) end))
-				def = def:replace(Theta'_,i', Tensor('_i', function(k) return Theta:diff(xs[k]) end))
-				def = def:replace(Z, ZVars)
-			end
-			
-			def = def()
 
 			local lhs, rhs = table.unpack(def)
 			if not lhs.dim then
@@ -1662,7 +1731,7 @@ else
 			else
 				local dim = lhs:dim()
 				assert(dim[#dim] == 1)	-- the ,t ...
-
+				
 				-- remove the ,t dimension
 				lhs = Tensor(table.sub(lhs.variance, 1, #dim-1), function(...)
 					local lhs_i = lhs[{...}][1]
@@ -1675,6 +1744,12 @@ else
 				if not rhs.dim then
 					rhs = Tensor(lhs.variance, function() return rhs end)
 				end
+				
+				if not keepSourceTerms and outputCodeForSourceTerms then
+					if not sourceTerm.dim then
+						sourceTerm = Tensor(lhs.variance, function() return sourceTerm end)
+					end
+				end
 			end
 
 			local eqns = lhs:eq(rhs):unravel()
@@ -1683,9 +1758,12 @@ else
 				local lhsstr = tostring(lhs)
 				rhs = simplify(rhs)
 
+				--[[ moved below, optionally after codegen
 				if removeZeroRows and rhs == Constant(0) then
 					printbr('removing zero row '..lhs:eq(rhs))
-				elseif defsForLhs[lhsstr] then
+				else
+				--]]
+				if defsForLhs[lhsstr] then
 					if rhs ~= defsForLhs[lhsstr] then
 						printbr'mismatch'
 						printbr(lhs:eq(rhs))
@@ -1704,17 +1782,122 @@ else
 					--]]
 						allLhs:insert(lhs)
 						allRhs:insert(rhs)
+						if not keepSourceTerms and outputCodeForSourceTerms then
+							allSrcs:insert(sourceTerm)
+						end
 					end
 				end
 			end
 		end
 	end
-
 	assert(#allLhs == #allRhs)
+	if not keepSourceTerms and outputCodeForSourceTerms then
+		assert(#allLhs == #allSrcs)
+	end
+
+	
+	-- not sure if I should remove zero rows before or after codegen
+	if removeZeroRows then
+		local newLhs = table()
+		local newRhs = table()
+		for i=1,#allLhs do
+			local lhs = allLhs[i]
+			local rhs = allRhs[i]
+			if rhs == Constant(0) then
+				printbr('removing zero row '..lhs:eq(rhs))
+			else
+				newLhs:insert(lhs)
+				newRhs:insert(rhs)
+			end
+		end
+		allLhs, allRhs = newLhs, newRhs
+	end
+
+
 	for i=1,#allLhs do
 		local lhs = allLhs[i]
 		local rhs = allRhs[i]
 		printbr(lhs:eq(rhs))
+	end
+
+
+	-- CODEGEN
+	local function doCodegen(eqns)
+		-- TODO  do this before removing the rhs == 0 equations
+		-- I could use the 'inputs' in codegen ...
+		-- but I want the lhs ones to turn into F., and the rhs ones to turn into U. or Dx.
+		local function nameToC(name)
+			return (name
+				:gsub('^\\alpha$', 'alpha')
+				:gsub('^\\Theta$', 'Theta')
+				:gsub('^\\gamma%^{(..)}$', 'gamma_uu.%1')
+				:gsub('^\\gamma_{(..)}$', 'gamma_ll.%1')
+				:gsub('^K_{(..)}$', 'K_ll.%1')
+				:gsub('^d_{(.)(..)}$', 'd_lll.%1.%2')
+				:gsub('^a_(.)$', 'a_l.%1')
+				:gsub('^Z_(.)$', 'Z_l.%1')
+			)
+		end
+		local codegenOutputs = table()
+		eqns:mapi(function(eqn)
+			local lhs, rhs = table.unpack(eqn)
+			assert(Derivative.is(lhs))
+			assert(#lhs == 2)
+			assert(lhs[2] == t)
+			lhs = lhs[1]
+			assert(Variable.is(lhs))-- or TensorRef.is(lhs))
+			if Variable.is(lhs) then
+				lhs = Variable('F.'..nameToC(lhs.name))
+			end
+			rhs = rhs:map(function(expr)
+				if Derivative.is(expr) then
+					-- use the Dx prefix if you want to keep the deriv variables separate ... this would be used in my hydro-cl 'eigen_fluxTransform'
+					-- omit it if you want to use the same state ... this would be in 'fluxFromCons' 
+					-- NOTICE if you omit it here then later in the simplification and codegen it can optimize out more common structures
+					-- but in that case, you'd need to run this a separate time to get the eigen_fluxTransform code
+					assert(#expr == 2)
+					assert(expr[2] == x)
+					expr = Variable('Dx.'..nameToC(expr[1].name))
+					return expr
+				end
+			end)
+			rhs = rhs:map(function(expr)
+				if Variable.is(expr) 
+				and not expr.name:match'^Dx%.'
+				and expr.name ~= 'f'
+				then
+					local name = nameToC(expr.name)
+					--[[ no worries, I copy them to local variables anyways
+					if not name:match'^gamma_uu' then
+						name = 'U.'..name
+					end
+					--]]
+					return Variable(name)
+				end
+			end)
+			codegenOutputs:insert{[lhs.name] = (-rhs)()}
+		end)
+		printbr()
+		printbr'as C code:'
+		printbr'<code>'
+		printbr((symmath.export.C:toCode{
+			output = codegenOutputs,
+		}
+			:gsub('\n', '<br>\n')			-- add html newlines to our <code> block
+			:gsub('double F%.', 'F.')		-- don't declare struct vars
+			:gsub('double ', 'real ')		-- and for our temp vars, declare as 'real'
+		))
+		printbr'</code>'
+	end
+	doCodegen(range(#allLhs):mapi(function(i)
+		return allLhs[i]:eq(allRhs[i])
+	end))
+
+	if not keepSourceTerms and outputCodeForSourceTerms then
+		printbr'source terms:'
+		doCodegen(range(#allLhs):mapi(function(i)
+			return allLhs[i]:eq(allSrcs[i])
+		end))
 	end
 
 	local allDxs = allLhs:map(function(lhs)
