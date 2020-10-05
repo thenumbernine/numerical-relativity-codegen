@@ -20,7 +20,7 @@ local outputType = 'html'				-- this will output a html file
 local outputMathematica = false			-- this will output the flux as mathematica and exit
 
 local keepSourceTerms = false			-- this goes slow with 3D
-local outputCodeForSourceTerms = false	-- this goes really really slow.  exclusive with 'keepSourceTerms'
+local outputCodeForSourceTerms = true	-- this goes really really slow.  exclusive with 'keepSourceTerms'
 
 local use1D = false						-- consider spatially x instead of xyz
 local removeZeroRows = true				-- whether to keep variables whose dt rows are entirely zero.  only really useful when shift is disabled.
@@ -31,7 +31,7 @@ local useConnInsteadOfD = false			-- use conn^k_ij instead of d_kij = 1/2 g_ij,k
 -- these are all exclusive with one another:
 local useV = false						-- ADM Bona-Masso with V constraint.  Not needed with use1D
 local useGamma = false					-- ADM Bona-Masso with Gamma^i_,t . Exclusive to useV ... 
-local useZ4 = true						-- Z4
+local useZ4 = false						-- Z4
 
 local showEigenfields = false			-- my attempt at using eigenfields to deduce the left eigenvectors
 local forceRemakeHeader = true
@@ -76,7 +76,7 @@ local gamma = var'\\gamma'
 Tensor.metricVariable = gamma	-- override for simplifyMetrics()
 
 -- adm metric
-local alpha = var'\\alpha'
+local alpha = var('\\alpha', depvars)
 local beta = var'\\beta'
 -- pi
 local pi = var'\\pi'
@@ -237,6 +237,11 @@ local GammaVars = Tensor('_k', function(k)
 end)
 local ZVars = Tensor('_k', function(k)
 	return var('Z_'..xs[k].name, depvars)
+end)
+
+local SVars = Tensor('_ij', function(i,j) 
+	if i > j then i,j = j,i end 
+	return var('S_{'..xs[i].name..xs[j].name..'}', depvars)
 end)
 
 --[[
@@ -776,6 +781,16 @@ else
 			:symmetrizeIndexes(d, {2,3})()
 			:symmetrizeIndexes(d, {1,4}, true)()
 		printbr(R_for_d)
+	
+		--[[ there's still 3 terms that could cancel, but aren't cancelling ...
+		printbr(R_for_d
+			:simplifyMetrics()()
+			:tidyIndexes()()
+			:symmetrizeIndexes(gamma, {1,2})()
+			:symmetrizeIndexes(d, {2,3})()
+			:symmetrizeIndexes(d, {1,4}, true)()	-- 'true' means 'break the rules', aka 'symmetrize across comma derivatives'
+		)
+		--]]
 	else
 	end
 
@@ -1651,11 +1666,30 @@ else
 				if TensorRef.is(expr)
 				and expr[1] == gamma
 				then
-					-- warn if there are any gamma^ij_,k...
-					for i=4,#expr do	-- expr[1] is the variable, 2,3 are the ij indexes, so start at 4 for derivatives
-						assert(not expr[i].lower, "found a gamma_ij term: "..tostring(expr))
+					--for i=4,#expr do	-- expr[1] is the variable, 2,3 are the ij indexes, so start at 4 for derivatives
+					--	assert(not expr[i].lower, "found a gamma_ij term: "..tostring(expr))
+					--end
+					-- warn if there are any gamma^ij_,k... or gamma_ij,k for that matter
+					if #expr == 3 then
+						assert(not expr:hasDerivIndex())
+						if expr[2].lower and expr[3].lower then
+							return TensorRef(gammaLVars, table.unpack(expr, 2))
+						end
+						if not expr[2].lower and not expr[3].lower then
+							return TensorRef(gammaUVars, table.unpack(expr, 2))
+						end
+						error("failed on "..expr)
+					elseif #expr == 4 then
+						if expr[2].lower and not expr[1].derivative
+						and expr[3].lower and not expr[2].derivative
+						and expr[4].derivative == ','
+						and expr[4].symbol == 't'
+						then
+							return TensorRef(gammaLVars, table.unpack(expr, 2))
+						end
 					end
-					return TensorRef(gammaUVars, table.unpack(expr, 2))
+					error("failed on "..expr)
+					--return TensorRef(gammaUVars, table.unpack(expr, 2))
 				end
 			end)
 			:replace(a, aVars)
@@ -1669,6 +1703,8 @@ else
 
 		def = def
 			:replace(K, KVars)
+			:replace(S, SVars)
+			:replace(alpha'_,t', alpha:diff(t))
 			:replace(Theta'_,t', Theta:diff(t))
 		
 		if useShift then
@@ -1684,8 +1720,16 @@ else
 			def = def:replace(Gamma, GammaVars)
 		end
 		if useZ4 then
-			def = def:replace(Theta'_,k', Tensor('_k', function(k) return Theta:diff(xs[k]) end))
-			def = def:replace(Theta'_,i', Tensor('_i', function(k) return Theta:diff(xs[k]) end))
+			def = def:map(function(expr)
+				if TensorRef.is(expr)
+				and expr[1] == Theta
+				then
+					assert(#expr == 2)	-- only Theta_,i
+					return Tensor(table.sub(expr, 2), function(...) local is = table{...} return Theta:diff(is:mapi(function(i) return xs[i] end):unpack()) end)
+			--def = def:replace(Theta'_,k', Tensor('_k', function(k) return Theta:diff(xs[k]) end))
+			--def = def:replace(Theta'_,i', Tensor('_i', function(k) return Theta:diff(xs[k]) end))
+				end
+			end)
 			def = def:replace(Z, ZVars)
 		end
 		def = def()
@@ -1697,123 +1741,97 @@ else
 	local allLhs = table()
 	local allRhs = table()
 	local defsForLhs = table()	-- check to make sure symmetric terms have equal rhs's.  key by the lhs
-	local allSrcs
+	local allSrcEqns
 	if not keepSourceTerms and outputCodeForSourceTerms then
 		assert(#defs == #sourceTerms)
-		allSrcs = table()
+		allSrcEqns = table()
 	end
 	for j,def in ipairs(defs) do
 		local var = def:lhs()[1]
 		
-		-- these should be zero anyways ...
-		if var == alpha 
-		or var == beta 
-		or var == gamma 
-		then	
-			assert(def:rhs() == Constant(0), "expected zero")
+		def = makeTensorExpressionDense(def)
+		
+		local sourceTerm
+		if not keepSourceTerms and outputCodeForSourceTerms then
+			sourceTerm = makeTensorExpressionDense(sourceTerms[j])
+		end
+
+		local lhs, rhs = table.unpack(def)
+		if not lhs.dim then
+			-- then it's already a constant
+			-- TODO maybe don't automatically convert x,t into x:diff(t) ... maybe make a separate function for that
+			--[[
+			printbr'failed to find lhs.dim'
+			printbr(tostring(lhs))
+			error'here'
+			--]]
 		else
-			def = makeTensorExpressionDense(def)
+			local dim = lhs:dim()
+			assert(dim[#dim] == 1)	-- the ,t ...
 			
-			local sourceTerm
+			-- remove the ,t dimension
+			lhs = Tensor(table.sub(lhs.variance, 1, #dim-1), function(...)
+				local lhs_i = lhs[{...}][1]
+				assert(Expression.is(lhs_i), "expected an Expression here, but got "..tostring(lhs_i).." from "..tostring(lhs))
+				return lhs[{...}][1]
+			end)
+
+			-- if it's a constant expression
+			-- TODO put this in :unravel() ?
+			if not rhs.dim then
+				rhs = Tensor(lhs.variance, function() return rhs end)
+			end
+			
 			if not keepSourceTerms and outputCodeForSourceTerms then
-				sourceTerm = makeTensorExpressionDense(sourceTerms[j])
+				if not sourceTerm.dim then
+					sourceTerm = Tensor(lhs.variance, function() return sourceTerm end)
+				end
 			end
+		end
 
-			local lhs, rhs = table.unpack(def)
-			if not lhs.dim then
-				-- then it's already a constant
-				-- TODO maybe don't automatically convert x,t into x:diff(t) ... maybe make a separate function for that
-				--[[
-				printbr'failed to find lhs.dim'
-				printbr(tostring(lhs))
-				error'here'
-				--]]
+		local fluxdefs = lhs:eq(rhs):unravel()
+		local srcdefs 
+		if not keepSourceTerms and outputCodeForSourceTerms then
+			srcdefs = lhs:eq(sourceTerm):unravel()
+			assert(#fluxdefs == #srcdefs)
+		end
+		for k,fluxdef in ipairs(fluxdefs) do
+			local lhsi, rhsi = table.unpack(fluxdef)
+			local srci
+			if not keepSourceTerms and outputCodeForSourceTerms then
+				local _
+				_, srci = table.unpack(srcdefs[k])
+			end
+			local lhsstr = tostring(lhsi)
+			rhsi = simplify(rhsi)
+
+			if defsForLhs[lhsstr] then
+				if rhsi ~= defsForLhs[lhsstr] then
+					printbr'mismatch'
+					printbr(lhsi:eq(rhsi))
+					printbr'difference'
+					printbr(simplify(rhsi - defsForLhs[lhsstr]))
+					printbr()
+				end
 			else
-				local dim = lhs:dim()
-				assert(dim[#dim] == 1)	-- the ,t ...
-				
-				-- remove the ,t dimension
-				lhs = Tensor(table.sub(lhs.variance, 1, #dim-1), function(...)
-					local lhs_i = lhs[{...}][1]
-					assert(Expression.is(lhs_i), "expected an Expression here, but got "..tostring(lhs_i).." from "..tostring(lhs))
-					return lhs[{...}][1]
-				end)
+				defsForLhs[lhsstr] = rhsi:clone()
 
-				-- if it's a constant expression
-				-- TODO put this in :unravel() ?
-				if not rhs.dim then
-					rhs = Tensor(lhs.variance, function() return rhs end)
-				end
-				
+				--printbr('adding expr:')
+				--printbr('lhs:', lhsi)
+				allLhs:insert(lhsi)
+				--printbr('rhs:', rhsi)
+				allRhs:insert(rhsi)
 				if not keepSourceTerms and outputCodeForSourceTerms then
-					if not sourceTerm.dim then
-						sourceTerm = Tensor(lhs.variance, function() return sourceTerm end)
-					end
-				end
-			end
-
-			local eqns = lhs:eq(rhs):unravel()
-			for _,eqn in ipairs(eqns) do		
-				local lhs, rhs = table.unpack(eqn)
-				local lhsstr = tostring(lhs)
-				rhs = simplify(rhs)
-
-				--[[ moved below, optionally after codegen
-				if removeZeroRows and rhs == Constant(0) then
-					printbr('removing zero row '..lhs:eq(rhs))
-				else
-				--]]
-				if defsForLhs[lhsstr] then
-					if rhs ~= defsForLhs[lhsstr] then
-						printbr'mismatch'
-						printbr(lhs:eq(rhs))
-						printbr'difference'
-						printbr(simplify(rhs - defsForLhs[lhsstr]))
-						printbr()
-					end
-				else
-					defsForLhs[lhsstr] = rhs:clone()
-
-					--[[ exclude dt terms that are zero -- that means these dx terms belong in the source terms 
-					if rhs ~= Constant(0) then
-					--]]
-					-- [[
-					do
-					--]]
-						allLhs:insert(lhs)
-						allRhs:insert(rhs)
-						if not keepSourceTerms and outputCodeForSourceTerms then
-							allSrcs:insert(sourceTerm)
-						end
-					end
+					--printbr('src:', srci)
+					-- store this as an equation lhs = src in case we prune zeroes beforehand and srcs vs rhss mismatch in size
+					allSrcEqns:insert(lhsi:eq(srci))
 				end
 			end
 		end
 	end
 	assert(#allLhs == #allRhs)
-	if not keepSourceTerms and outputCodeForSourceTerms then
-		assert(#allLhs == #allSrcs)
-	end
 
 	
-	-- not sure if I should remove zero rows before or after codegen
-	if removeZeroRows then
-		local newLhs = table()
-		local newRhs = table()
-		for i=1,#allLhs do
-			local lhs = allLhs[i]
-			local rhs = allRhs[i]
-			if rhs == Constant(0) then
-				printbr('removing zero row '..lhs:eq(rhs))
-			else
-				newLhs:insert(lhs)
-				newRhs:insert(rhs)
-			end
-		end
-		allLhs, allRhs = newLhs, newRhs
-	end
-
-
 	for i=1,#allLhs do
 		local lhs = allLhs[i]
 		local rhs = allRhs[i]
@@ -1828,6 +1846,7 @@ else
 		-- but I want the lhs ones to turn into F., and the rhs ones to turn into U. or Dx.
 		local function nameToC(name)
 			return (name
+				:gsub('^f$', 'dalpha_f')
 				:gsub('^\\alpha$', 'alpha')
 				:gsub('^\\Theta$', 'Theta')
 				:gsub('^\\gamma%^{(..)}$', 'gamma_uu.%1')
@@ -1839,13 +1858,16 @@ else
 			)
 		end
 		local codegenOutputs = table()
-		eqns:mapi(function(eqn)
+		for _,eqn in ipairs(eqns) do
 			local lhs, rhs = table.unpack(eqn)
-			assert(Derivative.is(lhs))
-			assert(#lhs == 2)
-			assert(lhs[2] == t)
+			if not Derivative.is(lhs) 
+			or #lhs ~= 2
+			or lhs[2] ~= t
+			or not Variable.is(lhs[1]) -- or TensorRef.is(lhs))
+			then
+				error("expected lhs of eqn to be a time derivative, got "..lhs)
+			end
 			lhs = lhs[1]
-			assert(Variable.is(lhs))-- or TensorRef.is(lhs))
 			if Variable.is(lhs) then
 				lhs = Variable('F.'..nameToC(lhs.name))
 			end
@@ -1876,12 +1898,13 @@ else
 				end
 			end)
 			codegenOutputs:insert{[lhs.name] = (-rhs)()}
-		end)
+		end
 		printbr()
 		printbr'as C code:'
 		printbr'<code>'
 		printbr((symmath.export.C:toCode{
 			output = codegenOutputs,
+			--notmp = true,	-- don't write temp variables
 		}
 			:gsub('\n', '<br>\n')			-- add html newlines to our <code> block
 			:gsub('double F%.', 'F.')		-- don't declare struct vars
@@ -1893,12 +1916,31 @@ else
 		return allLhs[i]:eq(allRhs[i])
 	end))
 
+
+	-- VERY slow at the moment
 	if not keepSourceTerms and outputCodeForSourceTerms then
 		printbr'source terms:'
-		doCodegen(range(#allLhs):mapi(function(i)
-			return allLhs[i]:eq(allSrcs[i])
-		end))
+		doCodegen(allSrcEqns)
 	end
+
+
+	-- not sure if I should remove zero rows before or after codegen
+	if removeZeroRows then
+		local newLhs = table()
+		local newRhs = table()
+		for i=1,#allLhs do
+			local lhs = allLhs[i]
+			local rhs = allRhs[i]
+			if rhs == Constant(0) then
+				printbr('removing zero row '..lhs:eq(rhs))
+			else
+				newLhs:insert(lhs)
+				newRhs:insert(rhs)
+			end
+		end
+		allLhs, allRhs = newLhs, newRhs
+	end
+
 
 	local allDxs = allLhs:map(function(lhs)
 		assert(diff.is(lhs), "somehow got a non-derivative on the lhs: "..tostring(lhs))
