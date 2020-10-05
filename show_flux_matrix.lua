@@ -451,7 +451,7 @@ else
 	printbr(EFEdef)
 --]]
 
-	local K_trK_term = K'^k_k'
+	local K_trK_term = gamma'^kl' * K'_kl'
 	if useZ4 then
 		K_trK_term = K_trK_term - 2 * Theta
 	end
@@ -595,7 +595,7 @@ else
 		+ alpha * (
 			K_R_term
 			+ K_trK_term * K'_ij' 
-			- 2 * K'_ik' * K'^k_j'
+			- 2 * K'_ik' * gamma'^kl' * K'_jl'
 		)
 		-- Lie derivative terms
 		+ K'_ij,k' * beta'^k' 
@@ -617,8 +617,8 @@ else
 				2 * a'_k' * (d'^kj_j' - d'_j^jk' - 2 * Z'^k')
 				+ d'_k^rs' * Gamma'^k_rs'
 				- d'^kj_j' * (d'_kl^l' - 2 * Z'_k')
-				- K'^k_r' * K'^r_k'
-				+ K'^k_k' * K_trK_term:reindex{k='l'}
+				- K'_kl' * gamma'^km' * gamma'^ln' * K'_mn'
+				+ gamma'^kl' * K'_kl' * K_trK_term:reindex{kl='mn'}
 			)
 			-- stress-energy terms	
 			- 16 * pi * alpha * rho
@@ -627,16 +627,16 @@ else
 
 		dt_Z_def = Z'_i,t':eq(
 			(beta'^k' * Z'_i')'_,k'
-			+ (alpha * K'^k_i')'_,k'
-			- (alpha * (K'^k_k' - Theta))'_,i'
+			+ (alpha * gamma'^kl' * K'_li')'_,k'
+			- (alpha * (gamma'^kl' * K'_kl' - Theta))'_,i'
 			-- 2005 Bona et al eqn A.2 S(Z_i)
 			- Z'_i' * b'^k_k'
 			+ Z'_k' * b'^k_i'
 			+ alpha * (
-				a'_i' * (K'^k_k' - 2 * Theta)
-				- a'_k' * K'^k_i'
-				- K'^k_r' * Gamma'^r_ki'
-				+ K'^k_i' * (d'kl^l' - 2 * Z'_k')
+				a'_i' * (gamma'^kl' * K'_kl' - 2 * Theta)
+				- a'_k' * gamma'^kl' * K'_li'
+				- gamma'^kl' * K'_lr' * Gamma'^r_ki'
+				+ gamma'^kl' * K'_li' * (d'_km^m' - 2 * Z'_k')
 			)
 			- 8 * pi * alpha * S'_i'
 		)
@@ -833,7 +833,7 @@ else
 
 	dt_a_def = dt_a_def
 		:replace(alpha',ik', frac(1,2) * ( alpha',i'',k' + alpha',k'',i' )) 
-		:replace(K'^i_i,k', (gamma'^ij' * K'_ij')'_,k')
+		--:replace(K'^i_i,k', (gamma'^ij' * K'_ij')'_,k')
 	printbr(dt_a_def)
 
 	dt_a_def = dt_a_def:substIndex(df_def, dalpha_for_a)
@@ -1164,7 +1164,7 @@ else
 
 		local dt_a_def = a'_i,t':eq(
 			(beta'^j' * a'_i')',j' 
-			- (alpha * f * K'^j_j' + beta'^j' * a'_j')'_,i' 
+			- (alpha * f * gamma'^jk' * K'_jk' + beta'^j' * a'_j')'_,i' 
 			+ b'^j_i' * a'_j' 
 			- b'^j_j' * a'_i'
 		)
@@ -1182,7 +1182,7 @@ else
 
 		dt_a_def = dt_a_def 
 			:splitOffDerivIndexes()
-			:replace(K'^j_j', gamma'^jk' * K'_jk')()
+			--:replace(K'^j_j', gamma'^jk' * K'_jk')()
 			:substIndex(dgammaU_for_d)()
 			-- TODO simplifyMetric(gamma) operation to do just this ...
 			:replace((2 * alpha * f * gamma'^jm' * d'_iml' * gamma'^lk' * K'_jk')(), 2 * alpha * f * d'_i^jk' * K'_jk')
@@ -1342,8 +1342,8 @@ else
 				+ (d'_kl^l' + a'_k' - 2 * Z'_k') * Gamma'^k_ij'
 				- Gamma'^k_mj' * Gamma'^m_ki'
 				- (a'_i' * Z'_j' + a'_j' * Z'_i')
-				+ 2 * K'^k_i' * K'_kj'
-				+ (K'^k_k' - 2 * Theta) * K'_ij'
+				+ 2 * gamma'^kl' * K'_il' * K'_kj'
+				+ (gamma'^kl' * K'_kl' - 2 * Theta) * K'_ij'
 			)
 			-- stress-energy terms	
 			+ 4 * pi * alpha * (gamma'_ij' * (S - rho) - 2 * S'_ij')
@@ -1415,7 +1415,7 @@ else
 		printbr(dt_Z_def) 
 		
 		dt_Z_def = dt_Z_def
-			:replaceIndex(K'^i_j', gamma'^ik' * K'_kj')
+			--:replaceIndex(K'^i_j', gamma'^ik' * K'_kj')
 			:replaceIndex(d'^i_jk', gamma'^il' * d'_ljk')
 			:replaceIndex(d'_ij^k', d'_ijl' * gamma'^lk')
 
@@ -1489,9 +1489,9 @@ else
 					+ 2 * d'_j^kl' * d'_kli'
 					- 3 * d'_i^kl' * d'_jkl'
 							
-					+ K'^k_k' * K'_ij'
-					- K'_i^k' * K'_kj'
-					- K'_j^k' * K'_ki'
+					+ gamma'^kl' * K'_kl' * K'_ij'
+					- gamma'^kl' * K'_il' * K'_kj'
+					- gamma'^kl' * K'_jl' * K'_ki'
 				)
 				+ K'_ij,k' * beta'^k'
 				+ K'_kj' * beta'^k_,i'
@@ -1534,9 +1534,9 @@ else
 					+ 4 * d'_i^kl' * d'_klj'
 					+ 4 * d'_j^kl' * d'_kli'
 							
-					+ K'^k_k' * K'_ij'
-					- K'_i^k' * K'_kj'
-					- K'_j^k' * K'_ki'
+					+ gamma'^kl' * K'_kl' * K'_ij'
+					- gamma'^kl' * K'_il' * K'_kj'
+					- gamma'^kl' * K'_jl' * K'_ki'
 				)
 				+ K'_ij,k' * beta'^k'
 				+ K'_kj' * beta'^k_,i'
@@ -1553,7 +1553,7 @@ else
 				+ gamma'_kl' * beta'^l_,ij' * gamma'^ij'
 				- 2 * alpha * K'_ik' * Gamma'^i'
 				- 2 * alpha * a'^i' * K'_ki'
-				+ alpha * a'_k' * K'^k_k'
+				+ alpha * a'_k' * gamma'^kl' * K'_kl'
 				+ 4 * alpha * d'_i^ij' * K'_kj'
 				- 2 * alpha * d'^ji_i' * K'_kj'
 				+ 4 * alpha * d'^ij_k' * K'_ij'
@@ -1660,6 +1660,9 @@ else
 	end
 
 
+	-- TODO there seems to be a problem when I make sense S * gamma'_ij'
+	-- esp when S'_ij' itself is a separate dense tensor
+	-- it is turning the first into S'_ij' * gamma'_ij' (esp in K_ij,t's source terms)
 	local function makeTensorExpressionDense(def)
 		def = def
 			:map(function(expr)
@@ -1703,10 +1706,25 @@ else
 
 		def = def
 			:replace(K, KVars)
-			:replace(S, SVars)
 			:replace(alpha'_,t', alpha:diff(t))
 			:replace(Theta'_,t', Theta:diff(t))
 		
+		
+		--[[ you can't just replace S directly, since SVars is for a dense degree-2 tensor
+		def = def:replace(S, SVars)
+		--]]
+		-- [[
+		def = def:map(function(x)
+			if TensorRef.is(x)
+			and x[1] == S
+			then
+				x = x:clone()
+				x[1] = SVars
+				return x
+			end
+		end)
+		--]]
+
 		if useShift then
 			def = def
 				:replace(beta, betaVars)
@@ -1846,11 +1864,14 @@ else
 		-- but I want the lhs ones to turn into F., and the rhs ones to turn into U. or Dx.
 		local function nameToC(name)
 			return (name
-				:gsub('^f$', 'dalpha_f')
+				:gsub('^\\pi$', 'M_PI')
+				:gsub("^f'$", 'dalpha_f')
 				:gsub('^\\alpha$', 'alpha')
+				:gsub('^\\rho$', 'rho')
 				:gsub('^\\Theta$', 'Theta')
 				:gsub('^\\gamma%^{(..)}$', 'gamma_uu.%1')
 				:gsub('^\\gamma_{(..)}$', 'gamma_ll.%1')
+				:gsub('^S_{(..)}$', 'S_ll.%1')
 				:gsub('^K_{(..)}$', 'K_ll.%1')
 				:gsub('^d_{(.)(..)}$', 'd_lll.%1.%2')
 				:gsub('^a_(.)$', 'a_l.%1')
@@ -1897,7 +1918,7 @@ else
 					return Variable(name)
 				end
 			end)
-			codegenOutputs:insert{[lhs.name] = (-rhs)()}
+			codegenOutputs:insert{[lhs.name] = rhs()}
 		end
 		printbr()
 		printbr'as C code:'
@@ -1912,8 +1933,9 @@ else
 		))
 		printbr'</code>'
 	end
+	
 	doCodegen(range(#allLhs):mapi(function(i)
-		return allLhs[i]:eq(allRhs[i])
+		return allLhs[i]:eq((-allRhs[i])())		-- flux terms are u_i,t + f^ijk u_j,k = s_i ... so they appear on the lhs of the eqn, so negative them
 	end))
 
 
