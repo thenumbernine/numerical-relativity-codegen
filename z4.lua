@@ -307,7 +307,8 @@ io.write'warning -- LambdaULL is only true for zeta=-1\n'
 			lambda = -beta[dir] + sign * alpha * sqrt(gammaUU[dir][dir]),
 		})
 		-- gauge -+
-		
+
+		-- from 2004 Bona et al eqn A.20
 		local lambdaParam1 = symmath.var'\\lambda_1' -- equal to (2 - lambda) / (f - 1)
 		local lambdaParam2 = symmath.var'\\lambda_2' -- equal to (2 * f - lambda) / (f - 1)
 		

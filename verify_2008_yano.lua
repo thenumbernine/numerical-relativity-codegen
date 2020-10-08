@@ -11,7 +11,7 @@ require 'ext'
 require 'symmath'.setup{MathJax={title='2008 Yano based implementation of Z4'}}
 
 -- enable to verify the left and right eigenvectors work
-local verify = false
+local verify = true
 
 local f = var'f'
 local m = var'm'
@@ -807,7 +807,7 @@ for _,info in ipairs{
 	for i=1,n do
 		local s = 
 			'\tresult['..(i-1)..'] = '
-			..(ToC:compile( exprs[i], compileVars ))
+			..(ToC:toCode{output={exprs[i]}, input=compileVars})
 				:match('{ return (.*); }')
 				:gsub('\\gamma%^{(..)}', function(ij)
 					return 'gamma_uu.'..ij

@@ -20,18 +20,18 @@ local outputType = 'html'				-- this will output a html file
 local outputMathematica = false			-- this will output the flux as mathematica and exit
 
 local keepSourceTerms = false			-- this goes slow with 3D
-local outputCodeForSourceTerms = true	-- this goes really really slow.  exclusive with 'keepSourceTerms'
+local outputCodeForSourceTerms = true 	-- this goes really really slow.  exclusive with 'keepSourceTerms'
 
 local use1D = false						-- consider spatially x instead of xyz
-local removeZeroRows = true				-- whether to keep variables whose dt rows are entirely zero.  only really useful when shift is disabled.
-local useShift = false					-- whether to include beta^i_,t
+local removeZeroRows = true				-- whether to keep variables whose dt rows are entirely zero.  only really useful when shift is disabled. TODO don't allow derivs in the source, so for those, only introduce those zero rows?
+local useShift = false					-- whether to include beta^i_,t.  TODO this is set to hyperbolic gamma driver .. which still needs evaluation of Gamma^i_jk,t
 local useLowerShift = false				-- (TODO still) works with useShift.  uses beta_i,t instead of beta^i_,t.  not really that useful, since beta^i is more often paired with state vars. just make sure not to mix gamma_ij's and gamma^ij's in the flux.
 local useConnInsteadOfD = false			-- use conn^k_ij instead of d_kij = 1/2 g_ij,k = conn_(ij)k
 
 -- these are all exclusive with one another:
 local useV = false						-- ADM Bona-Masso with V constraint.  Not needed with use1D
 local useGamma = false					-- ADM Bona-Masso with Gamma^i_,t . Exclusive to useV ... 
-local useZ4 = false						-- Z4
+local useZ4 = true						-- Z4
 
 local showEigenfields = false			-- my attempt at using eigenfields to deduce the left eigenvectors
 local forceRemakeHeader = true
@@ -149,31 +149,37 @@ local lineEnding = ({
 	tex = ' \\\\\n',
 })[outputType] or '\n'
 
-local printbr, outputFile
+local printbr, outputFiles
 local closeFile
 do
 	local filename = outputNameBase..'.'..outputType
 	print('writing to '..filename)
-	outputFile = assert(io.open(filename, 'w'))
-	outputFile:setvbuf'no'
-	if ToString then outputFile:write(tostring(ToString.header)) end
+	outputFiles = table{assert(io.open(filename, 'w'))}
+	for _,f in ipairs(outputFiles) do
+		f:setvbuf'no'
+		if ToString then f:write(tostring(ToString.header)) end
+	end
 	printbr = function(...)
-		assert(outputFile)
-		local n = select('#', ...)
-		for i=1,n do
-			outputFile:write(tostring(select(i, ...)))
-			if i<n then outputFile:write'\t' end
+		assert(#outputFiles > 0)
+		for _,f in ipairs(outputFiles) do
+			local n = select('#', ...)
+			for i=1,n do
+				f:write(tostring(select(i, ...)))
+				if i<n then f:write'\t' end
+			end
+			f:write(lineEnding)
+			-- TODO why not just setvbuf?
+			f:flush()
 		end
-		outputFile:write(lineEnding)
-		-- TODO why not just setvbuf?
-		outputFile:flush()
 	end
 	closeFile = function()
-		outputFile:write[[
+		for _,f in ipairs(outputFiles) do
+			f:write[[
 	</body>
 </html>
 ]]
-		outputFile:close()
+			f:close()
+		end
 	end
 end
 
@@ -239,7 +245,11 @@ local ZVars = Tensor('_k', function(k)
 	return var('Z_'..xs[k].name, depvars)
 end)
 
-local SVars = Tensor('_ij', function(i,j) 
+local SLVars = Tensor('_j', function(i) 
+	return var('S_{'..xs[i].name..'}', depvars)
+end)
+
+local SLLVars = Tensor('_ij', function(i,j) 
 	if i > j then i,j = j,i end 
 	return var('S_{'..xs[i].name..xs[j].name..'}', depvars)
 end)
@@ -427,8 +437,7 @@ return ]] .. file[symmathJacobianFilename]))(
 		)
 	))
 else
-	local pushOutputFile = outputFile
-	outputFile = io.open(headerExpressionFilename, 'w')
+	outputFiles:insert(assert(io.open(headerExpressionFilename, 'w')))
 
 --[[
 	-- TODO start with EFE, apply Gauss-Codazzi-Ricci, then automatically recast all higher order derivatives as new variables of 1st derivatives
@@ -609,10 +618,10 @@ else
 	local dt_Theta_def, dt_Z_def 
 	if useZ4 then
 		dt_Theta_def = Theta'_,t':eq(
-			(beta'^k' * Theta)'_,k'
-			- (alpha * (d'^kj_j' - d'_j^jk' - Z'^k'))'_,k'
+			-- Lie derivative
+			beta'^k' * Theta'_,k'
 			-- 2005 Bona et al eqn A.3 of S(Theta)
-			- Theta * b'^k_k'
+			- (alpha * (d'^kj_j' - d'_j^jk' - Z'^k'))'_,k'
 			+ alpha/2 * (
 				2 * a'_k' * (d'^kj_j' - d'_j^jk' - 2 * Z'^k')
 				+ d'_k^rs' * Gamma'^k_rs'
@@ -621,7 +630,7 @@ else
 				+ gamma'^kl' * K'_kl' * K_trK_term:reindex{kl='mn'}
 			)
 			-- stress-energy terms	
-			- 16 * pi * alpha * rho
+			- 8 * pi * alpha * rho
 		)
 		printbr(dt_Theta_def) 
 
@@ -1104,7 +1113,12 @@ else
 	printbr(dt_K_def)
 
 	if not useConnInsteadOfD then
-		dt_K_def = dt_K_def:subst(conn_for_d:reindex{ijk='kij'})
+		if useZ4 then
+			dt_K_def = dt_K_def:substIndex(conn_for_d)
+		else
+			-- this seems safe enough for adm ... will substIndex work?
+			dt_K_def = dt_K_def:subst(conn_for_d:reindex{ijk='kij'})
+		end
 		printbr(dt_K_def)
 
 		dt_K_def = dt_K_def:subst(R_for_d)
@@ -1161,35 +1175,7 @@ else
 		-- ... and from its source paper, 2005 Bona et al "Geometrically motivated hyperbolic coordinate condions for numerical relativity- Analysis, issues and implementation"
 
 		printbr'Z4 terms'
-
-		local dt_a_def = a'_i,t':eq(
-			(beta'^j' * a'_i')',j' 
-			- (alpha * f * gamma'^jk' * K'_jk' + beta'^j' * a'_j')'_,i' 
-			+ b'^j_i' * a'_j' 
-			- b'^j_j' * a'_i'
-		)
-		printbr(dt_a_def)
-
-		dt_a_def = dt_a_def():substIndex(df_def)
-		printbr(dt_a_def)
-		
-		dt_a_def = dt_a_def
-			:substIndex(dalpha_for_a)
-		
-		if useShift then
-			dt_a_def = dt_a_def:substIndex(dbeta_for_b)
-		end
-
-		dt_a_def = dt_a_def 
-			:splitOffDerivIndexes()
-			--:replace(K'^j_j', gamma'^jk' * K'_jk')()
-			:substIndex(dgammaU_for_d)()
-			-- TODO simplifyMetric(gamma) operation to do just this ...
-			:replace((2 * alpha * f * gamma'^jm' * d'_iml' * gamma'^lk' * K'_jk')(), 2 * alpha * f * d'_i^jk' * K'_jk')
-		printbr(dt_a_def)
-
-		defs:insert(dt_a_def)
-		
+	
 		if useShift then
 		
 			local Qu_def = Q'^i':eq( -1/alpha * beta'^k' * b'^i_k' - alpha * gamma'^ki' * (gamma'_jk,l' * gamma'^jl' - Gamma'^j_kj' - a'_k'))
@@ -1241,148 +1227,8 @@ else
 				:simplify()
 			printbr(dt_b_def)
 			
-			defs:insert(dt_b_def)
-
 		end
 
-		-- 2005 Bona et al eqn 24: gamma_ij,t = -2 alpha Q_ij ... and from eqn 3 I'm betting I've got gamma_ij,t right
-		-- 2008 Yano et al doesn't give an equation for Q_ij
-		local Qll_def = Q'_ij':eq(
-			-1/(2*alpha) * dt_gamma_def:rhs()
-		)
-		printbr(Qll_def)
-
-		dt_d_def = d'_kij,t':eq(
-			(beta'^l' * d'_kij')'_,l'
-			- (alpha * Q'_ij' + beta'^l' * d'_lij')'_,k'
-			+ b'^l_k' * d'_lij' 
-			- b'^l_l' * d'_kij'
-		)
-		printbr(dt_d_def)
-
-		dt_d_def = dt_d_def:substIndex(Qll_def)	
-		printbr(dt_d_def)
-		
-		dt_d_def = dt_d_def()
-		printbr(dt_d_def)
-
-		dt_d_def = dt_d_def
-			:substIndex(dalpha_for_a)()
-			
-		if useShift then	
-			dt_d_def = dt_d_def
-				:substIndex(dbeta_for_b)()
-		end
-
-		dt_d_def = dt_d_def
-			:substIndex(dgamma_for_d)()
-			-- splitOffDerivIndexes isn't fully compatible with substIndex ...
-		
-		if useShift then
-			dt_d_def = dt_d_def
-				:substIndex(dbeta_for_b'_,k'())
-		end
-
-		dt_d_def = dt_d_def
-			:substIndex(dgamma_for_d'_,l'())
-			:symmetrizeIndexes(d, {1,4}, true)()
-		printbr(dt_d_def)
-		defs:insert(dt_d_def)
-
-		local xi = 1	--var'\\xi'
-		dt_K_def = K'_ij,t':eq(
-			(beta'^k' * K'_ij')'_,k'
-		
-			-- (alpha lambda^k_ij),k
-			- (alpha * (
-				d'^k_ij' 
-				- frac(1,2) * (1 + xi) * (d'_ij^k' + d'_ji^k')
-			))'_,k'
-			- (alpha * (
-				frac(1,2) * (
-					a'_j'
-					+ d'_jl^l'
-					- (1 - xi) * d'^l_lj'
-					- 2 * Z'_j'
-				)
-			))'_,i'
-			- (alpha * (
-				frac(1,2) * (
-					a'_i'
-					+ d'_il^l'
-					- (1 - xi) * d'^l_li'
-					- 2 * Z'_i'
-				)
-			))'_,j'
-			
-			-- 2005 Bona et al eqn A.1 of S(K_ij) 
-			- K'_ij' * b'^k_k'
-			+ K'_ik' * b'^k_j'
-			+ K'_jk' * b'^k_i'
-			+ alpha * (
-				frac(1,2) * (1 + xi) * (
-					-a'_k' * Gamma'^k_ij'
-					+ frac(1,2) * (
-						a'_i' * d'_jk^k'
-						+ a'_j' * d'_ik^k'
-					)
-				)
-				+ frac(1,2) * (1 - xi) * (
-					a'_k' * d'^k_ij'
-					- frac(1,2) * (
-						a'_j' * (2 * d'^k_ki' - d'_ik^k')
-						+ a'_i' * (2 * d'^k_kj' - d'_jk^k')
-					)
-					+ 2 * (
-						d'_ir^m' * d'^r_mj'
-						+ d'_jr^m' * d'^r_mi'
-					)
-					- 2 * d'^l_lk' * (d'_ij^k' + d'_ji^k')
-				)
-				+ (d'_kl^l' + a'_k' - 2 * Z'_k') * Gamma'^k_ij'
-				- Gamma'^k_mj' * Gamma'^m_ki'
-				- (a'_i' * Z'_j' + a'_j' * Z'_i')
-				+ 2 * gamma'^kl' * K'_il' * K'_kj'
-				+ (gamma'^kl' * K'_kl' - 2 * Theta) * K'_ij'
-			)
-			-- stress-energy terms	
-			+ 4 * pi * alpha * (gamma'_ij' * (S - rho) - 2 * S'_ij')
-		)
-		printbr(dt_K_def)
-
-		-- do this before simplify, or splitOffDerivIndexes before this
-		dt_K_def = dt_K_def
-			:replaceIndex(d'^i_jk', gamma'^il' * d'_ljk')
-			:replaceIndex(d'_ij^k', d'_ijl' * gamma'^lk')
-
-		dt_K_def = dt_K_def()
-		printbr(dt_K_def)
-	
-		if var.is(xi) then
-			dt_K_def = dt_K_def:replaceIndex(xi'_,k', 0)
-		end
-
-		dt_K_def = dt_K_def
-			:simplify()
-			:substIndex(dgammaU_for_d)
-			:substIndex(dgamma_for_d)
-			:substIndex(conn_for_d)
-			:substIndex(dalpha_for_a)
-		
-		if useShift then
-			dt_K_def = dt_K_def
-				:substIndex(dbeta_for_b)
-		end
-
-		dt_K_def = dt_K_def
-			:substIndex(conn_for_d)()
-			:tidyIndexes()()
-		printbr(dt_K_def)
-
-		-- TODO function to simplify gammas and deltas
-
-		defs:insert(dt_K_def)
-		
 		dt_Theta_def = dt_Theta_def
 			:replaceIndex(Z'^i', gamma'^ij' * Z'_j')
 			:replaceIndex(d'^i_jk', gamma'^il' * d'_ljk')
@@ -1410,7 +1256,6 @@ else
 			:simplify()
 		printbr(dt_Theta_def)
 
-		defs:insert(dt_Theta_def)
 
 		printbr(dt_Z_def) 
 		
@@ -1439,7 +1284,19 @@ else
 			:simplify()
 		printbr(dt_Z_def)
 
-
+		defs:insert(dt_beta_def)
+		defs:insert(dt_b_def)
+		defs:insert(dt_B_def)
+		defs:insert(dt_alpha_def)
+		defs:insert(dt_gamma_def)
+		defs:insert(dt_a_def)
+		if useConnInsteadOfD then
+			defs:insert(dt_conn_def)
+		else
+			defs:insert(dt_d_def)
+		end
+		defs:insert(dt_K_def)
+		defs:insert(dt_Theta_def)
 		defs:insert(dt_Z_def)
 
 	else
@@ -1690,8 +1547,17 @@ else
 						then
 							return TensorRef(gammaLVars, table.unpack(expr, 2))
 						end
+						
+						-- if it's a gamma^i_j,k derivative then it should really be a delta^i_j,k, and that is zero
+						-- TODO this should
+						if expr[4].derivative
+						and (not not expr[2].lower) ~= (not not expr[3].lower)
+						then
+							printbr('warning, looks like a ${\\gamma^i}_{j,k}$ snuck in there')
+							return 0
+						end
 					end
-					error("failed on "..expr)
+					error("failed on "..expr.." inside of "..def)
 					--return TensorRef(gammaUVars, table.unpack(expr, 2))
 				end
 			end)
@@ -1718,8 +1584,15 @@ else
 			if TensorRef.is(x)
 			and x[1] == S
 			then
+				assert(not x:hasDerivIndex()) 
 				x = x:clone()
-				x[1] = SVars
+				if #x == 3 then			-- S'_ij'
+					x[1] = SLLVars
+				elseif #x == 2 then		-- S'_i'
+					x[1] = SLVars
+				else
+					error("how did I get here with "..x)
+				end
 				return x
 			end
 		end)
@@ -1743,7 +1616,10 @@ else
 				and expr[1] == Theta
 				then
 					assert(#expr == 2)	-- only Theta_,i
-					return Tensor(table.sub(expr, 2), function(...) local is = table{...} return Theta:diff(is:mapi(function(i) return xs[i] end):unpack()) end)
+					return Tensor(table.sub(expr, 2), function(...) 
+						local is = table{...} 
+						return Theta:diff(is:mapi(function(i) return xs[i] end):unpack()) 
+					end)
 			--def = def:replace(Theta'_,k', Tensor('_k', function(k) return Theta:diff(xs[k]) end))
 			--def = def:replace(Theta'_,i', Tensor('_i', function(k) return Theta:diff(xs[k]) end))
 				end
@@ -2009,6 +1885,11 @@ else
 
 	-- save cached 'fluxJacobian'
 	do 
+		-- *Vars are only as big as the metric # of indexes
+		-- so using 1D means only '.x' exists
+		-- soo ... do I want it fake-1D and really 3D underneath?  do I want an 'r' coord equivalent (with spherical metric ds^2 = dr^2 + r^2 dOmega^2 ?
+		local n = #xs
+		
 		local fluxJacobian = clone(fluxJacobian)
 		local function replaceAll(from, to)
 			fluxJacobian = fluxJacobian:replace(from, to)
@@ -2028,13 +1909,13 @@ else
 		
 		local gammaUVars = clone(gammaUVars)
 		local gammaLVars = clone(gammaLVars)
-		for i=1,3 do
+		for i=1,n do
 			if useShift and useLowerShift then
 				betaLVars[i] = replaceAll(betaLVars[i], var('betaLVars['..i..']'))
 			else
 				betaVars[i] = replaceAll(betaVars[i], var('betaVars['..i..']'))
 			end
-			for j=1,3 do
+			for j=1,n do
 				local u,v
 				if i < j then u,v = i,j else u,v = j,i end
 				local suffix = '['..u..']['..v..']'
@@ -2046,20 +1927,20 @@ else
 		local df = replaceAll(df, var'df')
 
 		local vars = table{alpha, f, df}
-		for i=1,3 do
+		for i=1,n do
 			if useLowerShift then
 				vars:insert(betaLVars[i])
 			else
 				vars:insert(betaVars[i])
 			end
 		end
-		for i=1,3 do
-			for j=i,3 do
+		for i=1,n do
+			for j=i,n do
 				vars:insert(gammaUVars[i][j])
 			end
 		end
-		for i=1,3 do
-			for j=i,3 do
+		for i=1,n do
+			for j=i,n do
 				vars:insert(gammaLVars[i][j])
 			end
 		end
@@ -2113,12 +1994,14 @@ else
 	end
 	--]]
 
-	outputFile:close()
-	outputFile = pushOutputFile
+	assert(#outputFiles == 2)
+	outputFiles:remove():close()
 end	-- done generating the header
 -- now we can copy the header into the main file
-
-outputFile:write(file[headerExpressionFilename])
+--for _,f in ipairs(outputFiles) do
+--	f:write(file[headerExpressionFilename])
+--end
+-- nope -already copied
 
 local A = fluxJacobian
 local n = #fluxJacobian
