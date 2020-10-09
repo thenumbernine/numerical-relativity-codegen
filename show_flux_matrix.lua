@@ -791,17 +791,47 @@ else
 			:symmetrizeIndexes(d, {1,4}, true)()
 		printbr(R_for_d)
 	
-		--[[ there's still 3 terms that could cancel, but aren't cancelling ...
-		printbr(R_for_d
+		-- [[ there's still 3 terms that could cancel, but aren't cancelling ...
+		-- to do this automatically, add support for simplifying d_a^a => d^a_a.  I think right now tidyIndexes() will simplify g^ab d_ba => g^ab d_ab ... but not traces
+		local rest = R_for_d
+		rest = rest:replaceIndex(d'_ijk' * gamma'^jk', d'_i')
+		printbr(rest)
+		rest = rest:replaceIndex(d'_jki' * gamma'^jk', e'_i')
+		printbr(rest)
+		rest = rest
 			:simplifyMetrics()()
 			:tidyIndexes()()
 			:symmetrizeIndexes(gamma, {1,2})()
 			:symmetrizeIndexes(d, {2,3})()
 			:symmetrizeIndexes(d, {1,4}, true)()	-- 'true' means 'break the rules', aka 'symmetrize across comma derivatives'
-		)
+		printbr(rest)
+		local e = var'e'
+		rest = rest
+			:replace(d'^a_ab', e'_b')
+			:replace(d'^b_ab', e'_a')
+			:replace(d'_a^b_b', d'_a')()
+			:tidyIndexes()()
+		printbr(rest)
+		rest = rest
+			:replace(d'_a^b_i' * d'_b^a_j', d'^b_ai' * d'^a_bj')
+			:replace(d'_a^b_i' * d'_j^a_b', d'^a_bi' * d'_ja^b')
+			:replace(d'_a^b_j' * d'^a_bi', d'^a_bj' * d'_a^b_i')
+			:replace(d'_a^b_j' * d'_i^a_b', d'^a_bj' * d'_ia^b')
+			:replace(d'_ia^b' * d'_j^a_b', d'_i^a_b' * d'_ja^b')
+			:simplify()
+		printbr(rest)
+		rest = rest
+			:replace(d'_a', d'_acd' * gamma'^cd')
+			:replace(e'_a', d'_cda' * gamma'^cd')
+			:replaceIndex(d'^a_bc', d'_dbc' * gamma'^da')
+			:replaceIndex(d'_a^b_c', d'_adc' * gamma'^db')
+			:replaceIndex(d'_ab^c', d'_abd' * gamma'^db')
+			:tidyIndexes()
+			:simplify()
+		printbr(rest)
 		--]]
-	else
 	end
+
 
 	printbr[[time derivative of $\alpha_{,t}$]]
 
@@ -1725,13 +1755,18 @@ else
 	end
 	assert(#allLhs == #allRhs)
 
-	
+
 	for i=1,#allLhs do
 		local lhs = allLhs[i]
 		local rhs = allRhs[i]
 		printbr(lhs:eq(rhs))
 	end
 
+
+	-- TODO somewhere in here I should replace f with var'alpha_f' / alpha and f' with var'alphaSq_dalpha_f' / alpha^2.
+	-- This will make both variables O(1) rather than O(1/alpha) and O(1/alpha^2) respectively.
+	-- Should I do it outside of doCodegen or only inside it?
+	-- This optimization might not be so compatible with the eigen-decomposition.
 
 	-- CODEGEN
 	local function doCodegen(eqns)
@@ -1747,6 +1782,7 @@ else
 				:gsub('^\\Theta$', 'Theta')
 				:gsub('^\\gamma%^{(..)}$', 'gamma_uu.%1')
 				:gsub('^\\gamma_{(..)}$', 'gamma_ll.%1')
+				:gsub('^S_{(.)}$', 'S_l.%1')
 				:gsub('^S_{(..)}$', 'S_ll.%1')
 				:gsub('^K_{(..)}$', 'K_ll.%1')
 				:gsub('^d_{(.)(..)}$', 'd_lll.%1.%2')
@@ -1764,10 +1800,15 @@ else
 			then
 				error("expected lhs of eqn to be a time derivative, got "..lhs)
 			end
-			lhs = lhs[1]
+			lhs = lhs[1]		-- convert var_,t to just var
 			if Variable.is(lhs) then
 				lhs = Variable('F.'..nameToC(lhs.name))
-			end
+			end	-- TODO when wouldn't it be a Variable?
+		
+			-- optimize out our reciprocal alphas for 1+log slicing
+			rhs = rhs:replace(f, var'f_alpha' / alpha)
+			rhs = rhs:replace(df, var'alphaSq_dalpha_f' / alpha^2)
+			
 			rhs = rhs:map(function(expr)
 				if Derivative.is(expr) then
 					-- use the Dx prefix if you want to keep the deriv variables separate ... this would be used in my hydro-cl 'eigen_fluxTransform'
