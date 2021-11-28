@@ -5,14 +5,30 @@ io.stdout:setvbuf'no'
 -- idk where to put this, or what it should do
 -- I just wanted a script to create a flux jacobian matrix from tensor index equations
 require 'ext'
-require 'symmath'.setup()
+require 'symmath'.setup()	-- TODO setup within _env ?
 op = symmath.op	--override ext.op
 local TensorRef = require 'symmath.tensor.TensorRef'
 
-TensorRef:pushRule'Prune/replacePartial'
+-- hmm, why did I push this? I forgot
+symmath.TensorRef:pushRule'Prune/replacePartial'
 
-symmath.debugSimplifyLoops = true
-symmath.simplifyMaxIter = 20
+-- [[ one of these is running slow. maybe all?  
+-- I was testing this in 'symmath/tests/BSSN - index'
+
+-- I think this is getting stuck
+-- but with only this pushed I'm still getting simplification loops
+-- hmm, gotta find a better fix
+--symmath.op.div:pushRule'Prune/conjOfSqrtInDenom'	-- I redid this to not use Wildcard, so hopefully now it is fast enough.
+--symmath.op.div:pushRule'Factor/polydiv'			-- though I bet this will be helpful with the eigen solver.
+--symmath.op.pow.wildcardMatches = nil
+--symmath.matchMulUnknownSubstitution = false
+--]]
+
+-- [[ this will lose some memory, but it will be handy in knowing what isn't simplifying correctly
+-- so enable this if you see 'simplification loop' warnings.
+symmath.simplify.debugLoops = true
+symmath.simplify.maxIter = 20
+--]]
 
 --local outputType = 'txt'				-- this will output a txt 
 local outputType = 'html'				-- this will output a html file
@@ -20,10 +36,10 @@ local outputType = 'html'				-- this will output a html file
 local outputMathematica = false			-- this will output the flux as mathematica and exit
 
 local keepSourceTerms = false			-- this goes slow with 3D
-local outputCodeForSourceTerms = true 	-- this goes really really slow.  exclusive with 'keepSourceTerms'
+local outputCodeForSourceTerms = false	-- this goes really really slow.  exclusive with 'keepSourceTerms'
 
 local use1D = false						-- consider spatially x instead of xyz
-local removeZeroRows = true				-- whether to keep variables whose dt rows are entirely zero.  only really useful when shift is disabled. TODO don't allow derivs in the source, so for those, only introduce those zero rows?
+local removeZeroRows = true			-- whether to keep variables whose dt rows are entirely zero.  only really useful when shift is disabled. TODO don't allow derivs in the source, so for those, only introduce those zero rows?
 local useShift = false					-- whether to include beta^i_,t.  TODO this is set to hyperbolic gamma driver .. which still needs evaluation of Gamma^i_jk,t
 local useLowerShift = false				-- (TODO still) works with useShift.  uses beta_i,t instead of beta^i_,t.  not really that useful, since beta^i is more often paired with state vars. just make sure not to mix gamma_ij's and gamma^ij's in the flux.
 local useConnInsteadOfD = false			-- use conn^k_ij instead of d_kij = 1/2 g_ij,k = conn_(ij)k
@@ -31,10 +47,15 @@ local useConnInsteadOfD = false			-- use conn^k_ij instead of d_kij = 1/2 g_ij,k
 -- these are all exclusive with one another:
 local useV = false						-- ADM Bona-Masso with V constraint.  Not needed with use1D
 local useGamma = false					-- ADM Bona-Masso with Gamma^i_,t . Exclusive to useV ... 
-local useZ4 = true						-- Z4
+local useZ4 = false						-- Z4
 
 local showEigenfields = false			-- my attempt at using eigenfields to deduce the left eigenvectors
 local forceRemakeHeader = true
+
+-- TODO a same thing for Q as a whole
+-- this is specific to Bona-Masso slicing, where Q = f (K - m Theta)
+--local bakeF = 'harmonic'
+local bakeF = '1+log'						-- set this to true to bake f's value into the expression.  otherwise 'f' is a free variable (function of alpha), and who knows how that affects the flux determinant, inverse and eigensystem.
 
 
 local t,x,y,z = vars('t','x','y','z')
@@ -51,6 +72,7 @@ local depvars = table{t,fluxdirvar}
 
 local ToString
 if outputType == 'html' then -- [[ mathjax output
+	symmath.export.MathJax.useCommaDerivative = true
 	ToString = symmath.export.MathJax
 elseif outputType == 'txt' then --]] 
 	--[[ text output - breaking
@@ -67,6 +89,7 @@ elseif outputType == 'tex' then
 end
 if ToString then
 	symmath.tostring = ToString
+	ToString.showDivConstAsMulFrac = true
 	ToString.usePartialLHSForDerivative = true
 end
 
@@ -140,6 +163,8 @@ local outputSuffix = (useZ4 and 'z4' or 'adm')
 	..(useShift and (useLowerShift and '_useLowerShift' or '_useShift') or '')
 	..(removeZeroRows and '_noZeroRows' or '')
 	..(use1D and '_1D' or '')
+	..(bakeF and ('_'..bakeF) or '')
+
 
 local outputNameBase = 'flux_matrix_output/flux_matrix.'..outputSuffix
 
@@ -410,6 +435,25 @@ do return end
 end
 
 
+local function replaceBakedF(expr)
+	if not bakeF then return expr end
+
+	expr = clone(expr)
+	
+	local fixes = {
+		harmonic = function()
+			expr = expr:replace(f, 1)()
+		end,
+		['1+log'] = function()
+			expr = expr:replace(f, 2 / alpha)()
+		end,
+	}
+	local fix = assert(fixes[bakeF], "couldn't figure out how to bake in that f(alpha) value for bakeF="..require 'ext.tolua'(bakeF))
+	fix()
+	return expr
+end
+
+
 -- if modify time of show_flux_matrix.lua is newer than the symmath A cache then rebuild
 -- otherwise use the cached prefix
 -- (TODO store the prefix in a separate file)
@@ -510,6 +554,13 @@ else
 	dt_alpha_def = dt_alpha_def:substIndex(Q_def)()
 	printbr(dt_alpha_def)
 
+	if bakeF then
+		dt_alpha_def = replaceBakedF(dt_alpha_def)
+		printbr'substituting f value...'
+		dt_alpha_def = dt_alpha_def:substIndex(Q_def)()
+		printbr(dt_alpha_def)
+	end
+
 	local dt_beta_def, dt_B_def
 	if useShift then
 		-- hyperbolic Gamma driver
@@ -585,13 +636,17 @@ else
 	local K_R_term = R'_ij'
 	if useZ4 then
 		K_R_term = K_R_term + Z'_j,i' - Gamma'^k_ji' * Z'_k' + Z'_i,j' - Gamma'^k_ij' * Z'_k'
+--		if not useConnInsteadOfD then
+-- TODO don't use gamma
+--			K_R_term = K_R_term:replaceIndex
+--		end
 	end
 
 	-- K_ij,t def
 	local dt_K_def = K'_ij,t':eq(
 		
-		- alpha',ij'				-- \__ -alpha_;ij
-		+ Gamma'^k_ij' * alpha',k'	-- /
+		- alpha'_,ij'				-- \__ -alpha_;ij
+		+ Gamma'^k_ij' * alpha'_,k'	-- /
 		-- random fact:
 		-- in 1995 Bona, Masso, Seidel, Stela "new formalism for numerical relativity" eqn 2
 		-- in 2005 Bona, Lehner, Palenzuela-Luque "geometrically motivated ... " eqn 20
@@ -655,7 +710,7 @@ else
 	printbr[[lapse vars]]
 
 	-- TODO functions, dependent variables, and total derivatives 
-	local df_def = f',k':eq(df * alpha * a'_k')
+	local df_def = f'_,k':eq(df * alpha * a'_k')
 	printbr(df_def)
 
 	printbr[[hyperbolic state variables]]
@@ -859,11 +914,11 @@ else
 	printbr[[time derivative of $a_{k,t}$]]
 
 	-- TODO splitDerivs
-	local dt_a_def = a_def',t'()
+	local dt_a_def = a_def'_,t'()
 	printbr(dt_a_def)
 
 	dt_a_def = dt_a_def
-		:replace(alpha',kt', alpha',t'',k')
+		:replace(alpha'_,kt', alpha'_,t''_,k')
 		:subst(dt_alpha_def)
 	printbr(dt_a_def)
 
@@ -871,7 +926,7 @@ else
 	printbr(dt_a_def)
 
 	dt_a_def = dt_a_def
-		:replace(alpha',ik', frac(1,2) * ( alpha',i'',k' + alpha',k'',i' )) 
+		:replace(alpha'_,ik', frac(1,2) * ( alpha'_,i''_,k' + alpha',k'',i' )) 
 		--:replace(K'^i_i,k', (gamma'^ij' * K'_ij')'_,k')
 	printbr(dt_a_def)
 
@@ -922,11 +977,11 @@ else
 
 		printbr[[time derivative of ${b^i}_{j,t}$]]
 
-		dt_b_def = dt_beta_def',j'():reindex{ij='ji'}
+		dt_b_def = dt_beta_def'_,j'():reindex{ij='ji'}
 		printbr(dt_b_def)
 
 		dt_b_def = dt_b_def
-			:replace(beta'^k_,ti', beta'^k_,i'',t')
+			:replace(beta'^k_,ti', beta'^k_,i''_,t')
 			:substIndex(dbeta_for_b)
 			-- hmm, without this, we have problems down when splitting pdes off
 			:simplify()
@@ -957,7 +1012,7 @@ else
 			:substIndex(A_for_K_uu)
 			:substIndex(A_for_K_ll)
 			:substIndex(dbeta_for_b)
-			:substIndex(dbeta_for_b',k'())
+			:substIndex(dbeta_for_b'_,k'())
 		
 		if not useConnInsteadOfD then
 			dt_B_def = dt_B_def:substIndex(R_for_d)
@@ -987,11 +1042,11 @@ else
 	if not useConnInsteadOfD then
 		printbr[[time derivative of $d_{kij,t}$]]
 
-		dt_d_def = d_def',t'()
+		dt_d_def = d_def'_,t'()
 		printbr(dt_d_def)
 
 		dt_d_def = dt_d_def
-			:replace(gamma'_ij,k,t', gamma'_ij,t'',k')
+			:replace(gamma'_ij,k,t', gamma'_ij,t''_,k')
 			-- TODO automatically relabel the sum indexes
 			-- ... this would require knowledge of the entire dt_d_def expression, to know what indexes are available
 			:subst(dt_gamma_def:reindex{ijk='ijl'})
@@ -1001,7 +1056,7 @@ else
 		printbr(dt_d_def)
 
 		dt_d_def = dt_d_def
-			:replace(gamma'_ij,l,k', gamma'_ij,l'',k')
+			:replace(gamma'_ij,l,k', gamma'_ij,l''_,k')
 			:subst(dgamma_for_d:reindex{ijk='ijl'})
 			:subst(dgamma_for_d:reindex{ijk='ilk'})
 			:subst(dgamma_for_d:reindex{ijk='ljk'})
@@ -1017,13 +1072,13 @@ else
 	if useConnInsteadOfD then
 		printbr[[time derivative of $\Gamma_{ijk,t}$]]
 	
-		local dt_connL_def = connL_def',t'()
+		local dt_connL_def = connL_def'_,t'()
 		printbr(dt_connL_def)
 		
 		dt_connL_def = dt_connL_def
-			:replace(gamma'_ij,k,t', gamma'_ij,t'',k')
-			:replace(gamma'_ik,j,t', gamma'_ik,t'',j')
-			:replace(gamma'_jk,i,t', gamma'_jk,t'',i')	
+			:replace(gamma'_ij,k,t', gamma'_ij,t''_,k')
+			:replace(gamma'_ik,j,t', gamma'_ik,t''_,j')
+			:replace(gamma'_jk,i,t', gamma'_jk,t''_,i')	
 			:substIndex(
 				dt_gamma_def
 					:reindex{k='a'}
@@ -1049,7 +1104,7 @@ else
 
 		printbr[[time derivative of ${\Gamma^k}_{ij,t}$]]
 	
-		dt_conn_def = Gamma'^i_jk,t':eq(Gamma'^i_jk'',t')
+		dt_conn_def = Gamma'^i_jk,t':eq(Gamma'^i_jk''_,t')
 		dt_conn_def[2] = dt_conn_def[2]:substIndex(
 			Gamma'^i_jk':eq(gamma'^il' * Gamma'_ljk')
 		)()
@@ -1070,7 +1125,7 @@ else
 		printbr(dt_conn_def)
 
 		local tmp = Gamma'^i_jk':eq(gamma'^ia' * Gamma'_ajk')
-		tmp = tmp',b'()
+		tmp = tmp'_,b'()
 		tmp = ((tmp - gamma'^ia_,b' * Gamma'_ajk') * beta'^b' )():switch()
 		printbr(tmp)
 		
@@ -1127,7 +1182,7 @@ else
 	printbr(dt_K_def)
 
 	dt_K_def = dt_K_def
-		:replace(alpha',ij', frac(1,2) * (alpha',i'',j' + alpha',j'',i'))
+		:replace(alpha'_,ij', frac(1,2) * (alpha'_,i''_,j' + alpha'_,j''_,i'))
 		:subst(dalpha_for_a:reindex{k='i'})
 		:subst(dalpha_for_a:reindex{k='j'})
 		:subst(dalpha_for_a)
@@ -1719,6 +1774,7 @@ else
 			srcdefs = lhs:eq(sourceTerm):unravel()
 			assert(#fluxdefs == #srcdefs)
 		end
+		local foundDifference
 		for k,fluxdef in ipairs(fluxdefs) do
 			local lhsi, rhsi = table.unpack(fluxdef)
 			local srci
@@ -1735,6 +1791,7 @@ else
 					printbr(lhsi:eq(rhsi))
 					printbr'difference'
 					printbr(simplify(rhsi - defsForLhs[lhsstr]))
+					foundDifference = true
 					printbr()
 				end
 			else
@@ -1752,6 +1809,17 @@ else
 				end
 			end
 		end
+	end
+	if foundDifference then
+		printbr[[
+Symmetric differences can be caused from symmetries that contain partial derivatives, since the flux is only evaluated in a single direction, the other symmetric half of the derivative is discarded.<br>
+Ex: for $K_{(ij),t} + 2 \alpha Z_{(i,j)} = ...$,<br>
+expanded will become $K_{xy,t} + \alpha Z_{x,y} + \alpha Z_{y,x} = ...$,<br>
+which will match to the flux equation $K_{xy,t} + {\textbf{F}^x}_{,x} + {\textbf{F}^y}_{,y} = ...$,<br>
+for ${\textbf{F}^x}_{,x} = \alpha Z_{y,x}, {\textbf{F}^y}_{,y} = \alpha Z_{x,y}$,<br>
+But this means (TODO) if you are going to rotate fluxes into normal, verify mathematically that this will work.<br>
+It's an easy problem to verify for the Euler fluid equations, but idk if I have for any of these EFE decompositions.<br>
+]]
 	end
 	assert(#allLhs == #allRhs)
 
@@ -2185,6 +2253,19 @@ else
 	}
 end
 
+
+if bakeF then
+	for i=#lambdas,1,-1 do
+		lambdas[i] = replaceBakedF(lambdas[i])
+		for j=i+1,#lambdas do
+			if lambdas[i] == lambdas[j] then
+				table.remove(lambdas[j])
+			end
+		end
+	end
+end
+
+
 local evs = table()
 local multiplicity = table()
 for _,lambda in ipairs(lambdas) do
@@ -2192,10 +2273,12 @@ io.stderr:write('finding eigenvector of eigenvalue '..tostring(lambda)..'\n') io
 	printbr('eigenvalue:', lambda)
 	
 	local A_minus_lambda_I = ((A - Matrix.identity(n) * lambda))()
-	--printbr'reducing'
-	--printbr(A_minus_lambda_I)
+	printbr'reducing'
+	printbr(A_minus_lambda_I)
 
-	local ev = A_minus_lambda_I:nullspace()
+	local ev = A_minus_lambda_I:nullspace(
+		--printbr	-- to debug
+	)
 
 	if not ev then
 		printbr("found no eigenvectors associated with eigenvalue",lambda_)
