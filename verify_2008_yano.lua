@@ -752,7 +752,7 @@ A_alpha = clone(A_alpha)
 --[[
 for i=1,3 do
 	for j=1,3 do
-		assert(op.sub.is(detg_gL_def[i][j]))
+		assert(op.sub:isa(detg_gL_def[i][j]))
 		local a,b = table.unpack(detg_gL_def[i][j])
 		
 		--printbr(detg_gL_def[i][j], ' => ', g * gL[i][j])

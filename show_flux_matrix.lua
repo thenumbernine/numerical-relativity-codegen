@@ -149,7 +149,7 @@ Tensor.coords{
 -- looking like the 'betterSimplify' found in a few other projects
 local function simplify(expr)
 	expr = expr():factorDivision()
-	if op.add.is(expr) then
+	if op.add:isa(expr) then
 		for i=1,#expr do expr[i] = expr[i]() end
 	end
 	return expr
@@ -336,7 +336,7 @@ do
 								+ gammaUVars[k][c] * det_gamma_times_gammaUInv[l][c])()
 					
 					local sign = 1
-					if op.unm.is(find) then find = find[1] sign = -1 end
+					if op.unm:isa(find) then find = find[1] sign = -1 end
 					local repl = (sign * gamma * (delta_kl - gammaUVars[k][a] * gammaLVars[l][a]))()
 					
 --					printbr(k,',',l,',',find:eq(repl))
@@ -396,7 +396,7 @@ local function fixJacobianCell(fluxJacobian,i,j)
 			local expr_eq = gamma * gammaLVars[k][l]
 			fluxJacobian[i][j] = fluxJacobian[i][j]:replace( expr(), expr_eq)()
 			
-			assert(op.sub.is(expr) and #expr == 2)
+			assert(op.sub:isa(expr) and #expr == 2)
 			local neg = expr[2] - expr[1]
 			local neg_eq = -gamma * gammaLVars[k][l]
 			fluxJacobian[i][j] = fluxJacobian[i][j]:replace( neg, neg_eq)()
@@ -790,7 +790,7 @@ else
 		--]]
 		--[[ if you want to raise d's indexes
 		conn_for_d = connL_for_d:map(function(expr)
-			if TensorRef.is(expr) then
+			if TensorRef:isa(expr) then
 				for i=2,#expr do
 					if expr[i].symbol == 'i' then expr[i].lower = false end
 				end
@@ -1516,7 +1516,7 @@ else
 			local lhs, rhs = table.unpack(defs[i])
 			
 			rhs = rhs:map(function(expr)
-				if TensorRef.is(expr) 
+				if TensorRef:isa(expr) 
 				and (expr[1] == beta or expr[1] == b or expr[1] == B)
 				then return 0 end
 			end)()
@@ -1540,7 +1540,7 @@ else
 			local lhs, rhs = table.unpack(defs[i])
 			
 			sourceTerms[i] = rhs:map(function(expr)
-				if TensorRef.is(expr) then
+				if TensorRef:isa(expr) then
 					for j=2,#expr do
 						if expr[j].derivative then return 0 end
 					end
@@ -1575,7 +1575,7 @@ else
 		printbr'separating x from other dimensions:'
 		for _,def in ipairs(defs) do
 			local lhs, rhs = table.unpack(def)
-			assert(TensorRef.is(lhs))
+			assert(TensorRef:isa(lhs))
 			local indexes = table()
 			for i=2,#lhs do
 				if lhs[i].derivative then break end
@@ -1608,7 +1608,7 @@ else
 	local function makeTensorExpressionDense(def)
 		def = def
 			:map(function(expr)
-				if TensorRef.is(expr)
+				if TensorRef:isa(expr)
 				and expr[1] == gamma
 				then
 					--for i=4,#expr do	-- expr[1] is the variable, 2,3 are the ij indexes, so start at 4 for derivatives
@@ -1666,7 +1666,7 @@ else
 		--]]
 		-- [[
 		def = def:map(function(x)
-			if TensorRef.is(x)
+			if TensorRef:isa(x)
 			and x[1] == S
 			then
 				assert(not x:hasDerivIndex()) 
@@ -1697,7 +1697,7 @@ else
 		end
 		if useZ4 then
 			def = def:map(function(expr)
-				if TensorRef.is(expr)
+				if TensorRef:isa(expr)
 				and expr[1] == Theta
 				then
 					assert(#expr == 2)	-- only Theta_,i
@@ -1751,7 +1751,7 @@ else
 			-- remove the ,t dimension
 			lhs = Tensor(table.sub(lhs.variance, 1, #dim-1), function(...)
 				local lhs_i = lhs[{...}][1]
-				assert(Expression.is(lhs_i), "expected an Expression here, but got "..tostring(lhs_i).." from "..tostring(lhs))
+				assert(Expression:isa(lhs_i), "expected an Expression here, but got "..tostring(lhs_i).." from "..tostring(lhs))
 				return lhs[{...}][1]
 			end)
 
@@ -1861,15 +1861,15 @@ It's an easy problem to verify for the Euler fluid equations, but idk if I have 
 		local codegenOutputs = table()
 		for _,eqn in ipairs(eqns) do
 			local lhs, rhs = table.unpack(eqn)
-			if not Derivative.is(lhs) 
+			if not Derivative:isa(lhs) 
 			or #lhs ~= 2
 			or lhs[2] ~= t
-			or not Variable.is(lhs[1]) -- or TensorRef.is(lhs))
+			or not Variable:isa(lhs[1]) -- or TensorRef:isa(lhs))
 			then
 				error("expected lhs of eqn to be a time derivative, got "..lhs)
 			end
 			lhs = lhs[1]		-- convert var_,t to just var
-			if Variable.is(lhs) then
+			if Variable:isa(lhs) then
 				lhs = Variable('F.'..nameToC(lhs.name))
 			end	-- TODO when wouldn't it be a Variable?
 		
@@ -1878,7 +1878,7 @@ It's an easy problem to verify for the Euler fluid equations, but idk if I have 
 			rhs = rhs:replace(df, var'alphaSq_dalpha_f' / alpha^2)
 			
 			rhs = rhs:map(function(expr)
-				if Derivative.is(expr) then
+				if Derivative:isa(expr) then
 					-- use the Dx prefix if you want to keep the deriv variables separate ... this would be used in my hydro-cl 'eigen_fluxTransform'
 					-- omit it if you want to use the same state ... this would be in 'fluxFromCons' 
 					-- NOTICE if you omit it here then later in the simplification and codegen it can optimize out more common structures
@@ -1890,7 +1890,7 @@ It's an easy problem to verify for the Euler fluid equations, but idk if I have 
 				end
 			end)
 			rhs = rhs:map(function(expr)
-				if Variable.is(expr) 
+				if Variable:isa(expr) 
 				and not expr.name:match'^Dx%.'
 				and expr.name ~= 'f'
 				then
@@ -1950,7 +1950,7 @@ It's an easy problem to verify for the Euler fluid equations, but idk if I have 
 
 
 	local allDxs = allLhs:map(function(lhs)
-		assert(diff.is(lhs), "somehow got a non-derivative on the lhs: "..tostring(lhs))
+		assert(diff:isa(lhs), "somehow got a non-derivative on the lhs: "..tostring(lhs))
 		assert(lhs[2] == t)
 		assert(#lhs == 2)
 		return diff(lhs[1], fluxdirvar)

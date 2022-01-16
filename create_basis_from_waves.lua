@@ -277,7 +277,7 @@ for dir=1,maxdirs do
 	for i=1,delta:dim()[1].value do
 		for j=1,delta:dim()[2].value do
 			local Constant = require 'symmath.Constant'
-			assert(Constant.is(delta[i][j]))
+			assert(Constant:isa(delta[i][j]))
 			assert(delta[i][j].value == (i == j and 1 or 0))
 		end
 	end
