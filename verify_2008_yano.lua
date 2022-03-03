@@ -273,8 +273,10 @@ evl[1+30][1+27] = (2 - f * m) / (-2 * gUxx + 2 * f * gUxx)
 evl[1+30][1+28] = sqrt(f) * (-2 + m) / (2 * (-1 + f) * sqrt(gUxx))
 evl[1+30][1+29] = sqrt(f) * gUxy * (-2 + m) / (2 * (-1 + f) * gUxx * sqrt(gUxx))
 evl[1+30][1+30] = sqrt(f) * gUxz * (-2 + m) / (2 * (-1 + f) * gUxx * sqrt(gUxx))
-clone(evl)
---printbr(var'L':eq(evl))	-- print L before g_ij substitution
+evl = clone(evl)
+
+printbr(var'L':eq(evl))	-- print L before g_ij substitution
+
 
 local evr = Matrix:zeros{31,31}
 evr[1+0][1+0] = -2 * gUxz / gUxx
@@ -354,7 +356,7 @@ evr[1+6][1+27] = (gUxz^2 - gUxx * gUzz) / (sqrt(gUxx) * (-gUxy^2 + gUxx * gUyy))
 evr[1+6][1+28] = (-2 * (gUxy * gUxz - gUxx * gUyz)) / (sqrt(gUxx) * (gUxy^2 - gUxx * gUyy))
 evr[1+7][1+3] = -gUxz / (2 * gUxx)
 evr[1+7][1+4] = gUxy / (2 * gUxx)
---evr[1+7][1+6] = frac(1,2)	-- 0 in the paper
+evr[1+7][1+6] = frac(1,2)	-- 0 in the paper
 evr[1+7][1+8] = gUxz / (2 * gUxx)
 evr[1+7][1+9] = -gUxy / (2 * gUxx)
 evr[1+7][1+11] = frac(1,2)
@@ -388,7 +390,7 @@ evr[1+21][1+22] = (2 * gUxy * (gUxz * gUyy - gUxy * gUyz)) / (gUxx * (-gUxy^2 + 
 evr[1+21][1+23] = gUxz * gUyy / (sqrt(gUxx) * (-gUxy^2 + gUxx * gUyy))
 evr[1+21][1+24] = gUxy * gUyy / (sqrt(gUxx) * (-gUxy^2 + gUxx * gUyy))
 
---evr[1+21][1+25] = (2 * (gUxy * gUxy)^2 - gUxx * gUyy) / (sqrt(gUxx) * (-gUxy^2 + gUxx * gUyy))		-- in paper 
+--evr[1+21][1+25] = (2 * (gUxy * gUxy)^2 - gUxx * gUyy) / (sqrt(gUxx) * (-gUxy^2 + gUxx * gUyy))		-- in paper
 evr[1+21][1+25] = (2 * gUxy^2 - gUxx * gUyy) / (sqrt(gUxx) * (-gUxy^2 + gUxx * gUyy))
 
 evr[1+21][1+26] = (gUxy^2 / (-gUxy^2 + gUxx * gUyy) + (-1 + f * (-1 + m)) / (-1 + f)) / gUxx
@@ -442,8 +444,9 @@ evr[1+29][1+24] = 1
 evr[1+30][1+0] = 1
 evr[1+30][1+17] = 1
 evr[1+30][1+23] = 1
-clone(evr)
---printbr(var'R':eq(evr))	-- print R before g_ij substitution
+evr = clone(evr)
+
+printbr(var'R':eq(evr))	-- print R before g_ij substitution
 
 
 local numErrors = 0
@@ -451,6 +454,8 @@ local n = #evr	-- hope everything is square ...
 
 if verify then
 	local evr_evl = ( evr * evl )()
+	-- hmm ... simplify() isn't fully doing its job ...
+	evr_evl = evr_evl()
 	printbr( (var'R' * var'L'):eq(evr_evl) )
 	for i=1,n do
 		for j=1,n do
@@ -471,6 +476,8 @@ end
 
 if verify then
 	local evl_evr = ( evl * evr )()
+	-- hmm ... simplify() isn't fully doing its job ...
+	evl_evr = evl_evr()
 	printbr( (var'L' * var'R'):eq(evl_evr) )
 	for i=1,n do
 		for j=1,n do
@@ -512,7 +519,7 @@ local lambdaDiags = range(0,30):map(function(i)
 	if i == 30 then return alpha * sqrt(f * gUxx) end
 end)
 local Lambda = Matrix.diagonal(lambdaDiags:unpack())
---printbr(var'\\Lambda':eq(Lambda))
+printbr(var'\\Lambda':eq(Lambda))
 
 -- A_ij / alpha
 local A_alpha = Matrix:zeros{31,31}
@@ -613,6 +620,7 @@ A_alpha[1+29][1+25] = -gUxz
 A_alpha[1+30][1+23] = -gUxx
 A_alpha[1+30][1+25] = -gUxy
 A_alpha[1+30][1+26] = -gUxz
+A_alpha = clone(A_alpha)
 
 if verify then
 	local A_check = (evr * Lambda * evl)()
@@ -710,13 +718,13 @@ for i,xi in ipairs(xs) do
 	Us:insert(var('Z_'..xi))
 end
 local U = Matrix(Us):transpose()
---printbr(var'U':eq(U))
+printbr(var'U':eq(U))
 
 local F = (A * U)()
---printbr(var'F':eq(F))
+printbr(var'F':eq(F))
 
 --[[ TODO verify flux
--- shiftless time derivatives in the 'l' direction 
+-- shiftless time derivatives in the 'l' direction
 local dt_ai = delta'^r_i' * (alpha * Q)
 local dt_dijk = delta'^r_k' * (alpha * Qij'_ij')
 local dt_Kij = alpha * lambda'^r_ij'
@@ -776,7 +784,7 @@ end
 --]]
 
 -- print after g_ij substitution
-printbr(var'L':eq(evl))	
+printbr(var'L':eq(evl))
 printbr(var'R':eq(evr))
 printbr(var'\\Lambda':eq(Lambda))
 printbr((var'A' / alpha):eq(A_alpha))
@@ -805,7 +813,7 @@ for _,info in ipairs{
 	local name, exprs = table.unpack(info)
 	o:write('void compute'..name..'() {\n')
 	for i=1,n do
-		local s = 
+		local s =
 			'\tresult['..(i-1)..'] = '
 			..(ToC:toCode{output={exprs[i]}, input=compileVars})
 				:match('{ return (.*); }')
