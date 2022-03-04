@@ -11,7 +11,8 @@ require 'ext'
 require 'symmath'.setup{MathJax={title='2008 Yano based implementation of Z4'}}
 
 -- enable to verify the left and right eigenvectors work
-local verify = true
+local verify = false
+local verifyFlux = false
 
 local f = var'f'
 local m = var'm'
@@ -20,25 +21,42 @@ local alpha = var'\\alpha'
 local xs = table{'x', 'y', 'z'}
 local syms = table{'xx', 'xy', 'xz', 'yy', 'yz', 'zz'}
 
-local gUvars = syms:map(function(xij)
-	return var('\\gamma^{'..xij..'}')
-end)
-local gUxx, gUxy, gUxz, gUyy, gUyz, gUzz = gUvars:unpack()
-local gU = Matrix(
-	{gUxx, gUxy, gUxz},
-	{gUxy, gUyy, gUyz},
-	{gUxz, gUyz, gUzz}
-)
+local function sym(i,j)
+	if i > j then i,j = j,i end
+	return xs[i]..xs[j]
+end
 
-local gLvars = syms:map(function(xij)
-	return var('\\gamma_{'..xij..'}')
-end)
+local chart = Tensor.Chart{coords=xs:mapi(function(x) return var(x) end)}
+
+local gUvars = syms:mapi(function(xij) return var('\\gamma^{'..xij..'}') end)
+local gUxx, gUxy, gUxz, gUyy, gUyz, gUzz = gUvars:unpack()
+local gU = Tensor('^ij', function(i,j) return gUvars[assert(syms:find(sym(i,j)))] end)
+
+local gLvars = syms:mapi(function(xij) return var('\\gamma_{'..xij..'}') end)
 local gLxx, gLxy, gLxz, gLyy, gLyz, gLzz = gLvars:unpack()
-local gL = Matrix(
-	{gLxx, gLxy, gLxz},
-	{gLxy, gLyy, gLyz},
-	{gLxz, gLyz, gLzz}
-)
+local gL = Tensor('_ij', function(i,j) return gLvars[assert(syms:find(sym(i,j)))] end)
+
+local dLvars = table()
+for k,xk in ipairs(xs) do
+	for _,xij in ipairs(syms) do
+		dLvars:insert(var('d_{'..xk..xij..'}'))
+	end
+end
+local dL = Tensor('_kij', function(k,i,j) return dLvars[6*(k-1)+syms:find(sym(i,j))] end)
+
+local KLvars = syms:mapi(function(xij) return var('K_{'..xij..'}') end)
+local KL = Tensor('_ij', function(i,j) return KLvars[assert(syms:find(sym(i,j)))] end)
+
+local aL = Tensor('_i', function(i) return var('a_'..xs[i]) end)
+local ZL = Tensor('_i', function(i) return var('Z_'..xs[i]) end)
+
+local Theta = var'\\Theta'
+
+local betaU = Tensor('^i', function(i) return var('\\beta^'..xs[i]) end)
+local bUL = Tensor('^l_i', function(l,i) return var('{b^'..xs[l]..'}_'..xs[i]) end)
+local Q1L = Tensor('_i', function(i) return var('Q1_{'..xs[i]..'}') end)
+local Q2L = Tensor('_ij', function(i,j) return var('Q2_{'..sym(i,j)..'}') end)
+
 
 local g = var'\\gamma'
 
@@ -275,7 +293,7 @@ evl[1+30][1+29] = sqrt(f) * gUxy * (-2 + m) / (2 * (-1 + f) * gUxx * sqrt(gUxx))
 evl[1+30][1+30] = sqrt(f) * gUxz * (-2 + m) / (2 * (-1 + f) * gUxx * sqrt(gUxx))
 evl = clone(evl)
 
-printbr(var'L':eq(evl))	-- print L before g_ij substitution
+--printbr(var'L':eq(evl))	-- print L before g_ij substitution
 
 
 local evr = Matrix:zeros{31,31}
@@ -446,7 +464,7 @@ evr[1+30][1+17] = 1
 evr[1+30][1+23] = 1
 evr = clone(evr)
 
-printbr(var'R':eq(evr))	-- print R before g_ij substitution
+--printbr(var'R':eq(evr))	-- print R before g_ij substitution
 
 
 local numErrors = 0
@@ -511,7 +529,7 @@ printbr'difference:'
 printbr((evr - evrCheck)())
 --]]
 
-local lambdaDiags = range(0,30):map(function(i)
+local lambdaDiags = range(0,30):mapi(function(i)
 	if i >= 0 and i <= 16 then return 0 end
 	if i >= 17 and i <= 22 then return -alpha * sqrt(gUxx) end
 	if i >= 23 and i <= 28 then return alpha * sqrt(gUxx) end
@@ -519,7 +537,7 @@ local lambdaDiags = range(0,30):map(function(i)
 	if i == 30 then return alpha * sqrt(f * gUxx) end
 end)
 local Lambda = Matrix.diagonal(lambdaDiags:unpack())
-printbr(var'\\Lambda':eq(Lambda))
+-- printbr(var'\\Lambda':eq(Lambda))
 
 -- A_ij / alpha
 local A_alpha = Matrix:zeros{31,31}
@@ -624,8 +642,8 @@ A_alpha = clone(A_alpha)
 
 if verify then
 	local A_check = (evr * Lambda * evl)()
-	printbr((var'A' / alpha):eq(A_alpha))
-	printbr((var'A_{check}' / alpha):eq(A_check))
+	-- printbr((var'A' / alpha):eq(A_alpha))
+	-- printbr((var'A_{check}' / alpha):eq(A_check))
 	for i=1,n do
 		for j=1,n do
 			local A_check_ij_alpha = (A_check[i][j] / alpha)()
@@ -678,15 +696,15 @@ end
 evr = permuteCols(permIndexes, evr)
 evl = permuteRows(permIndexes, evl)
 Lambda = permuteRows(permIndexes, permuteCols(permIndexes, Lambda))
-printbr(var'L':eq(evl))
-printbr(var'R':eq(evr))
-printbr(var'\\Lambda':eq(Lambda))
+-- printbr(var'L':eq(evl))
+-- printbr(var'R':eq(evr))
+-- printbr(var'\\Lambda':eq(Lambda))
 --]]
 
 if verify then
 	local A_check = (evr * Lambda * evl)()
-	printbr((var'A' / alpha):eq(A_alpha))
-	printbr((var'A_{check}' / alpha):eq(A_check))
+	-- printbr((var'A' / alpha):eq(A_alpha))
+	-- printbr((var'A_{check}' / alpha):eq(A_check))
 	for i=1,n do
 		for j=1,n do
 			local A_check_ij_alpha = (A_check[i][j] / alpha)()
@@ -698,44 +716,197 @@ if verify then
 	end
 end
 
-
-local A = (A_alpha * alpha)()
-
 local Us = table()
-for i,xi in ipairs(xs) do
-	Us:insert(var('a_'..xi))
+for i,aLi in ipairs(aL) do
+	Us:insert(aLi)
 end
-for k,xk in ipairs(xs) do
-	for ij,xij in ipairs(syms) do
-		Us:insert(var('d_{'..xk..xij..'}'))
-	end
+for kij,dLkij in ipairs(dLvars) do
+	Us:insert(dLkij)
 end
-for ij,xij in ipairs(syms) do
-	Us:insert(var('K_{'..xij..'}'))
+for ij,KLij in ipairs(KLvars) do
+	Us:insert(KLij)
 end
-Us:insert(var'\\Theta')
-for i,xi in ipairs(xs) do
-	Us:insert(var('Z_'..xi))
+Us:insert(Theta)
+for i,ZLi in ipairs(ZL) do
+	Us:insert(ZLi)
 end
 local U = Matrix(Us):transpose()
 printbr(var'U':eq(U))
 
-local F = (A * U)()
-printbr(var'F':eq(F))
+-- [[ verify flux in the 'r' direction
+local Fv
+if verifyFlux then
+	local delta = var'\\delta'
+	local gamma = var'\\gamma'
+	local alpha = var'\\alpha'
+	local beta = var'\\beta'
+	local b = var'b'
+	local K = var'K'
+	local a = var'a'
+	local d = var'd'
+	local Z = var'Z'
+	--local Q0 = var'Q0'
+	local Q1 = var'Q1'	-- hmm ... TODO find out what this should be
+	--local Q2 = var'Q2'	-- not described in the paper
+	-- based on comparing the flux jacobian times state with the flux in eqns 1-6 and matching terms ...
+	local Q0 = f * (K'_mn' * gamma'^mn' - Theta * m)
+	local Q2 = K	-- to-be-indexed as Q2'_ij' == K'_ij'
+	--local lambda = var'\\lambda'
+	local xi = 0	--var'\\xi'
+	local lambda_rij = gamma'^rm' * (d'_mij' - frac(1,2) * (1 + xi) * (d'_ijm' + d'_jim'))
+		+ frac(1,2) * delta'^r_i' * (a'_j' + (d'_jmn' - (1 - xi) * d'_mnj') * gamma'^mn' - 2 * Z'_j')
+		+ frac(1,2) * delta'^r_j' * (a'_i' + (d'_imn' - (1 - xi) * d'_mni') * gamma'^mn' - 2 * Z'_i')
+	local F_alpha = 0
+	local F_gamma = 0
+	local F_beta = 0
+	local F_ai = -beta'^r' * a'_i' + delta'^r_i' * (alpha * Q0 + beta'^m' * a'_m')
+	local F_bli = -beta'^r' * b'^i_l' + delta'^r_l' * (alpha * Q1'_i' + beta'^m' * b'^i_m')
+	local F_dkij = -beta'^r' * d'_kij' + delta'^r_k' * (alpha * Q2'_ij' + beta'^m' * d'_mij')
+	local F_Kij = -beta'^r' * K'_ij' + alpha * lambda_rij	--lambda'^r_ij'
+	local F_Theta = -beta'^r' * Theta + alpha * (gamma'^rm' * ((d'_mpq' - d'_pqm') * gamma'^pq' - Z'_m'))
+	local F_Zi = -beta'^r' * Z'_i' + alpha * (-gamma'^rm' * K'_mi' + delta'^r_i' * (K'_mn' * gamma'^mn' - Theta))
+	
+	local F_lhsVarsIndexed = Matrix{
+		var'F(\\alpha)''_r',
+		var'F(\\gamma)''_rij',
+		var'F(\\beta)''_r^l',
+		var'F(b)''_r^l_i',
+		-- these match with Us, which doesn't include any shift variables right now
+		var'F(a)''_ri',
+		var'F(d)''_rkij',
+		var'F(K)''_rij',
+		var'F(\\Theta)''_r',
+		var'F(Z)''_ri',
+	}:T()
+	
+	local F_rhsIndexed = Matrix{
+		F_alpha,
+		F_gamma,
+		F_beta,
+		F_bli,
+		F_ai,
+		F_dkij,
+		F_Kij,
+		F_Theta,
+		F_Zi
+	}:T()
+	
+	printbr(var'F_r':eq(F_lhsVarsIndexed):eq(F_rhsIndexed))
 
---[[ TODO verify flux
--- shiftless time derivatives in the 'l' direction
-local dt_ai = delta'^r_i' * (alpha * Q)
-local dt_dijk = delta'^r_k' * (alpha * Qij'_ij')
-local dt_Kij = alpha * lambda'^r_ij'
-local dt_Theta = alpha * (D'^r' - E'^r' - Z'^r')
-local dt_Zi = alpha * (-K'^r_i' * delta'^r_i' * (K'_mn' * gamma'^mn' - Theta))
+	
+	local repls = table{
+		delta'^i_j':eq(Tensor('^i_j', Matrix.identity(3):unpack())'^i_j'),
+		gamma'_ij':eq(gL'_ij'),
+		gamma'^ij':eq(gU'^ij'),
+		a'_i':eq(aL'_i'),
+		Z'_i':eq(ZL'_i'),
+		beta'^i':eq(betaU'^i'),
+		b'^l_i':eq(bUL'^l_i'),
+		K'_ij':eq(KL'_ij'),
+		d'_kij':eq(dL'_kij'),
+		Q1'_i':eq(Q1L'_i'),
+		Q2'_ij':eq(Q2L'_ij'),
+	}
+
+	local lhsDense = table()
+	local rhsDense = table()
+	
+	local numrows = #F_rhsIndexed
+	assert(numrows == #F_lhsVarsIndexed)
+	for row=1,numrows do
+		local lhs = F_lhsVarsIndexed[row][1]
+		local rhs = F_rhsIndexed[row][1]
+		for _,repl in ipairs(repls) do
+			rhs = rhs:substIndex(repl)
+		end
+		rhs = rhs()
+		local permutestr = range(2,#lhs):mapi(function(i) return tostring(lhs[i]) end):concat()
+		if Constant.isValue(rhs, 0) then
+			rhs = Tensor(permutestr)
+		else
+			rhs = rhs:permute(permutestr)
+		end
+
+		lhs = lhs:reindex{r='x'}
+		rhs = rhs[1]
+		
+		assert(Tensor.Ref:isa(lhs))
+		assert(Variable:isa(lhs[1]))
+		assert(lhs[2].lower)
+
+		-- return true if we should skip this index permutation
+		-- this way we skip symmetric index duplicates
+		local function skip(is)
+			if #lhs == 4 and lhs[3].lower and lhs[4].lower then	-- K_ij, gamma_ij
+				return is[1] > is[2]
+			elseif #lhs == 5 and lhs[3].lower and lhs[4].lower and lhs[5].lower then	-- d_kij
+				return is[2] > is[3]
+			end
+		end
+
+		local degree = #lhs-2
+		-- template for variable-nesting for-loop
+		local is = range(degree):mapi(function() return 1 end)
+		while true do
+			-- iterator callback
+			if not skip(is) then
+				local thislhs = lhs
+				local thisrhs = rhs
+				for i,j in ipairs(is) do
+					thislhs = thislhs:reindex{[lhs[i+2].symbol] = xs[j]}
+					thisrhs = thisrhs[j]
+				end
+				lhsDense:insert(thislhs)
+				rhsDense:insert(thisrhs)
+			end
+
+			if degree == 0 then break end
+			local done
+			for j=degree,1,-1 do
+				is[j] = is[j] + 1
+				if is[j] > #xs then
+					is[j] = 1
+					if j == 1 then
+						done = true
+						break
+					end
+				else
+					break
+				end
+			end
+			if done then break end
+		end
+	end
+	for i=1,#lhsDense do
+		printbr(lhsDense[i]:eq(rhsDense[i]))
+	end
+	printbr'Flux described in the paper, eqns 1-6:'
+	printbr(Matrix(lhsDense):T():eq(Matrix(rhsDense):T()))
+	
+	local A = (A_alpha * alpha)()
+	Fv = (A * U)()	-- this is only the flux if the system has the homogeneity property ... which idk if it does
+	printbr'Flux from homogeneity, from flux-jacobian matrix in paper:'
+	printbr((-U'_t'):eq(Fv))
+
+	-- well, the good news is, all the differences only involve the shift
+	-- this means CHECK homogeneity is true
+	-- it also means that I can output the flux in code ... 
+	printbr'difference:'
+	for i=1,#Fv do
+		printbr(i, ':', (rhsDense[i + #rhsDense - #Fv] - Fv[i][1])())
+	end
+	os.exit()
+end
 --]]
 
 printbr('found '..numErrors..' errors')
 printbr()
 printbr()
 
+evl = clone(evl)
+evr = clone(evr)
+A_alpha = clone(A_alpha)
+--[[
 local detg_gL_def= Matrix(
 	{
 		gUyy * gUzz - gUyz^2,
@@ -753,11 +924,6 @@ local detg_gL_def= Matrix(
 		gUxx * gUyy - gUxy^2,
 	}
 )
-
-evl = clone(evl)
-evr = clone(evr)
-A_alpha = clone(A_alpha)
---[[
 for i=1,3 do
 	for j=1,3 do
 		assert(op.sub:isa(detg_gL_def[i][j]))
@@ -784,12 +950,13 @@ end
 --]]
 
 -- print after g_ij substitution
-printbr(var'L':eq(evl))
-printbr(var'R':eq(evr))
-printbr(var'\\Lambda':eq(Lambda))
-printbr((var'A' / alpha):eq(A_alpha))
+-- printbr(var'L':eq(evl))
+-- printbr(var'R':eq(evr))
+-- printbr(var'\\Lambda':eq(Lambda))
+-- printbr((var'A' / alpha):eq(A_alpha))
 -- output the code to a separate file ...
-local vVars = range(n):map(function(i)
+print'<pre>'
+local vVars = range(n):mapi(function(i)
 	return var('input['..(i-1)..']')
 end)
 local vs = Matrix(vVars):T()
@@ -798,25 +965,36 @@ local Rv = (evr * vs)():T()[1]
 local Lambda_v = (Lambda * vs)():T()[1]
 local A_alpha_v = (A_alpha * vs)():T()[1]
 local o = assert(io.open('2008_yano.c', 'w'))
-local ToC = symmath.export.C
 local compileVars = table()
 	:append{alpha, f, g, m, Theta}
 	:append(gLvars)
 	:append(gUvars)
 	:append(vVars)
-for _,info in ipairs{
+for _,info in ipairs(table{
 	{'L', Lv},
 	{'R', Rv},
 	{'Lambda', Lambda_v},
 	{'A_alpha', A_alpha_v},
-} do
+}:append{Fv and {'flux', Fv} or nil}) do
 	local name, exprs = table.unpack(info)
-	o:write('void compute'..name..'() {\n')
-	for i=1,n do
+	print(name)
+--	o:write('void compute'..name..'() {\n')
+--	for i=1,n do
 		local s =
-			'\tresult['..(i-1)..'] = '
-			..(ToC:toCode{output={exprs[i]}, input=compileVars})
-				:match('{ return (.*); }')
+--[[			
+			'\tresult['..(i-1)..'] = '..
+--]]			
+			(symmath.export.C:toCode{
+				output = range(n):mapi(function(i) 
+					return {['result['..(i-1)..']'] = exprs[i]}
+				end),
+				notmp = true,	-- tmpvars goes really slow
+				assignOnly = true,
+				--input = compileVars
+			})
+--[[	
+				
+				--:match('{ return (.*); }')
 				:gsub('\\gamma%^{(..)}', function(ij)
 					return 'gamma_uu.'..ij
 				end)
@@ -842,8 +1020,11 @@ for _,info in ipairs{
 			end)
 		end
 		s = s:gsub('[%+%-]', '\n\t\t%0')
-		o:write(s)
-	end
-	o:write'}\n'
-	o:write'\n'
+--]]	
+		print(s)
+--	end
+--	o:write'}\n'
+--	o:write'\n'
+	print()
 end
+print'</pre>'
