@@ -11,8 +11,8 @@ require 'ext'
 require 'symmath'.setup{MathJax={title='2008 Yano based implementation of Z4'}}
 
 -- enable to verify the left and right eigenvectors work
-local verify = false
-local verifyFlux = false
+local verify = true
+local verifyFlux = true
 
 local f = var'f'
 local m = var'm'
@@ -293,7 +293,7 @@ evl[1+30][1+29] = sqrt(f) * gUxy * (-2 + m) / (2 * (-1 + f) * gUxx * sqrt(gUxx))
 evl[1+30][1+30] = sqrt(f) * gUxz * (-2 + m) / (2 * (-1 + f) * gUxx * sqrt(gUxx))
 evl = clone(evl)
 
---printbr(var'L':eq(evl))	-- print L before g_ij substitution
+printbr(var'L':eq(evl))	-- print L before g_ij substitution
 
 
 local evr = Matrix:zeros{31,31}
@@ -464,7 +464,7 @@ evr[1+30][1+17] = 1
 evr[1+30][1+23] = 1
 evr = clone(evr)
 
---printbr(var'R':eq(evr))	-- print R before g_ij substitution
+printbr(var'R':eq(evr))	-- print R before g_ij substitution
 
 
 local numErrors = 0
@@ -537,7 +537,7 @@ local lambdaDiags = range(0,30):mapi(function(i)
 	if i == 30 then return alpha * sqrt(f * gUxx) end
 end)
 local Lambda = Matrix.diagonal(lambdaDiags:unpack())
--- printbr(var'\\Lambda':eq(Lambda))
+printbr(var'\\Lambda':eq(Lambda))
 
 -- A_ij / alpha
 local A_alpha = Matrix:zeros{31,31}
@@ -640,10 +640,14 @@ A_alpha[1+30][1+25] = -gUxy
 A_alpha[1+30][1+26] = -gUxz
 A_alpha = clone(A_alpha)
 
+local rowsplits = table{0, 3, 21, 27, 28, 31}
+A_alpha.rowsplits = rowsplits
+A_alpha.colsplits = rowsplits
+
 if verify then
 	local A_check = (evr * Lambda * evl)()
-	-- printbr((var'A' / alpha):eq(A_alpha))
-	-- printbr((var'A_{check}' / alpha):eq(A_check))
+	printbr((var'A' / alpha):eq(A_alpha))
+	printbr((var'A_{check}' / alpha):eq(A_check))
 	for i=1,n do
 		for j=1,n do
 			local A_check_ij_alpha = (A_check[i][j] / alpha)()
