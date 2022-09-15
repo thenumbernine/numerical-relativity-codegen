@@ -864,8 +864,7 @@ function ADMBonaMasso:getSourceTerms()
 						return '\\gamma^{'..ij..'}'
 					end)
 					s=s..symmath.tostring.footer
-					local file = require 'ext.file'
-					file['constraints.html'] = s
+					require 'ext.file' 'constraints.html':write(s)
 					symmath.tostring = oldToString
 				end
 				
