@@ -12,7 +12,7 @@ local TensorRef = require 'symmath.tensor.TensorRef'
 -- hmm, why did I push this? I forgot
 symmath.TensorRef:pushRule'Prune/replacePartial'
 
--- [[ one of these is running slow. maybe all?  
+-- [[ one of these is running slow. maybe all?
 -- I was testing this in 'symmath/tests/BSSN - index'
 
 -- I think this is getting stuck
@@ -30,7 +30,7 @@ symmath.simplify.debugLoops = true
 symmath.simplify.maxIter = 20
 --]]
 
---local outputType = 'txt'				-- this will output a txt 
+--local outputType = 'txt'				-- this will output a txt
 local outputType = 'html'				-- this will output a html file
 --local outputType = 'tex'				-- this will output a pdf file
 local outputMathematica = false			-- this will output the flux as mathematica and exit
@@ -46,7 +46,7 @@ local useConnInsteadOfD = false			-- use conn^k_ij instead of d_kij = 1/2 g_ij,k
 
 -- these are all exclusive with one another:
 local useV = false						-- ADM Bona-Masso with V constraint.  Not needed with use1D
-local useGamma = false					-- ADM Bona-Masso with Gamma^i_,t . Exclusive to useV ... 
+local useGamma = false					-- ADM Bona-Masso with Gamma^i_,t . Exclusive to useV ...
 local useZ4 = false						-- Z4
 
 local showEigenfields = false			-- my attempt at using eigenfields to deduce the left eigenvectors
@@ -74,7 +74,7 @@ local ToString
 if outputType == 'html' then -- [[ mathjax output
 	symmath.export.MathJax.useCommaDerivative = true
 	ToString = symmath.export.MathJax
-elseif outputType == 'txt' then --]] 
+elseif outputType == 'txt' then --]]
 	--[[ text output - breaking
 	function var(s)
 		if symmath.tostring.fixImplicitName then
@@ -179,7 +179,7 @@ local closeFile
 do
 	local filename = outputNameBase..'.'..outputType
 	print('writing to '..filename)
-	outputFiles = table{assert(io.open(filename, 'w'))}
+	outputFiles = table{assert(file(filename):open'w')}
 	for _,f in ipairs(outputFiles) do
 		f:setvbuf'no'
 		if ToString then f:write(tostring(ToString.header)) end
@@ -209,20 +209,20 @@ do
 end
 
 
-local betaVars 
+local betaVars
 if not useLowerShift then
 	betaVars = Tensor('^i', function(i)
 		return var('\\beta^'..xs[i].name)
 	end)
 end
 
-local gammaUVars = Tensor('^ij', function(i,j) 
-	if i > j then i,j = j,i end 
+local gammaUVars = Tensor('^ij', function(i,j)
+	if i > j then i,j = j,i end
 	return var('\\gamma^{'..xs[i].name..xs[j].name..'}', depvars)
 end)
 
-local gammaLVars = Tensor('_ij', function(i,j) 
-	if i > j then i,j = j,i end 
+local gammaLVars = Tensor('_ij', function(i,j)
+	if i > j then i,j = j,i end
 	return var('\\gamma_{'..xs[i].name..xs[j].name..'}', depvars)
 end)
 
@@ -243,13 +243,13 @@ local BVars = Tensor('^i', function(i)
 end)
 
 local dVars = Tensor('_kij', function(k,i,j)
-	if i > j then i,j = j,i end 
+	if i > j then i,j = j,i end
 	return var('d_{'..xs[k].name..xs[i].name..xs[j].name..'}', depvars)
 end)
 -- TODO reorder from [k][i][j] to [i][j][k]
 
 local connVars = Tensor('^k_ij', function(k,i,j)
-	if i > j then i,j = j,i end 
+	if i > j then i,j = j,i end
 	return var('{\\Gamma^'
 		..xs[k].name..'}'
 		..'_{'..xs[i].name
@@ -257,8 +257,8 @@ local connVars = Tensor('^k_ij', function(k,i,j)
 		, depvars)
 end)
 local KVars = Tensor('_ij', function(i,j)
-	if i > j then i,j = j,i end 
-	return var('K_{'..xs[i].name..xs[j].name..'}', depvars) 
+	if i > j then i,j = j,i end
+	return var('K_{'..xs[i].name..xs[j].name..'}', depvars)
 end)
 local VVars = Tensor('_k', function(k)
 	return var('V_'..xs[k].name, depvars)
@@ -270,12 +270,12 @@ local ZVars = Tensor('_k', function(k)
 	return var('Z_'..xs[k].name, depvars)
 end)
 
-local SLVars = Tensor('_j', function(i) 
+local SLVars = Tensor('_j', function(i)
 	return var('S_{'..xs[i].name..'}', depvars)
 end)
 
-local SLLVars = Tensor('_ij', function(i,j) 
-	if i > j then i,j = j,i end 
+local SLLVars = Tensor('_ij', function(i,j)
+	if i > j then i,j = j,i end
 	return var('S_{'..xs[i].name..xs[j].name..'}', depvars)
 end)
 
@@ -284,7 +284,7 @@ NOTICE this is only necessary if your flux has gamma_ij and gamma^ij
 
 gamma^ij = inv(gamma_kl)^ij = 1/det(gamma_kl) adj(gamma_kl)^ij
 gamma_ij = inv(gamma^kl)_ij = 1/det(gamma^kl) adj(gamma^kl)_ij = det(gamma_kl) adj(gamma^kl)_ij
-TODO get 3x3 inverse to work automatically.  
+TODO get 3x3 inverse to work automatically.
 i.e. through adjacency matrices
 i.e. through the delta definition of inverses
 --]]
@@ -327,7 +327,7 @@ do
 		for k=1,3 do
 			someMoreRules[k] = table()
 			for l=1,3 do
-				local delta_kl = k == l and 1 or 0			
+				local delta_kl = k == l and 1 or 0
 				someMoreRules[k][l] = table()
 				for a=1,3 do
 					local b = a%3+1
@@ -383,8 +383,8 @@ local function fixJacobianCell(fluxJacobian,i,j)
 		for l=1,3 do
 -- hmm ... the (1-f)'s are messing me up... it can't factor them out ...
 			
--- [[ 
-			local delta_kl = k == l and 1 or 0			
+-- [[
+			local delta_kl = k == l and 1 or 0
 			fluxJacobian[i][j] = fluxJacobian[i][j]()
 			fluxJacobian[i][j] = fluxJacobian[i][j]:replace(gammaLL[k][l], gammaLVars[k][l])()
 			fluxJacobian[i][j] = fluxJacobian[i][j]:replace(gammaUU[k][l], gammaUVars[k][l])()
@@ -400,18 +400,18 @@ local function fixJacobianCell(fluxJacobian,i,j)
 			local neg = expr[2] - expr[1]
 			local neg_eq = -gamma * gammaLVars[k][l]
 			fluxJacobian[i][j] = fluxJacobian[i][j]:replace( neg, neg_eq)()
---]]	
+--]]
 -- [[ this is causing an explosion of terms ...
 			for _,rule in ipairs(someMoreRules[k][l]) do
 				fluxJacobian[i][j] = fluxJacobian[i][j]:replace(rule[1], rule[2])
 			end
---]]		
+--]]
 		end
 	end
 end
 local function fixFluxJacobian(fluxJacobian, i, j, k, reason)
 do return end
--- NOTICE you have to do everything for useV useShift noZeroRows		
+-- NOTICE you have to do everything for useV useShift noZeroRows
 --	if not reason then -- just do everything
 		print('fixing everything in fluxJacobian...')
 		for i=1,#fluxJacobian do
@@ -463,11 +463,11 @@ local headerExpressionFilename = 'flux_matrix_output/header.'..outputSuffix..'.'
 local fluxJacobian
 
 if not forceRemakeHeader
-and (os.fileexists(headerExpressionFilename) 
-	or os.fileexists(symmathJacobianFilename))
+and (file(headerExpressionFilename):exists()
+	or file(symmathJacobianFilename):exists())
 then
-	if not (os.fileexists(headerExpressionFilename) 
-		and os.fileexists(symmathJacobianFilename))
+	if not (file(headerExpressionFilename):exists()
+		and file(symmathJacobianFilename):exists())
 	then
 		error("you need both "..headerExpressionFilename.." and "..symmathJacobianFilename..", but you only have one")
 	end
@@ -476,12 +476,12 @@ then
 	fluxJacobian = Matrix( table.unpack (
 		assert(load([[
 local alpha, f, df, betaVars, gammaLVars, gammaUVars, gamma = ...
-return ]] .. file[symmathJacobianFilename]))(
+return ]] .. file(symmathJacobianFilename):read()))(
 			alpha, f, df, betaVars, gammaLVars, gammaUVars, gamma
 		)
 	))
 else
-	outputFiles:insert(assert(io.open(headerExpressionFilename, 'w')))
+	outputFiles:insert(assert(file(headerExpressionFilename):open'w'))
 
 --[[
 	-- TODO start with EFE, apply Gauss-Codazzi-Ricci, then automatically recast all higher order derivatives as new variables of 1st derivatives
@@ -521,8 +521,8 @@ else
 	Q = -beta^k alpha_,k / alpha^2 + f (K - 2 Theta)
 	alpha_,t = beta^k alpha_,k - alpha^2 f (K - 2 Theta)
 
-	2009 Alic, Bona, Bona-Casas: 
-	alpha_,t = -alpha^2 Q 
+	2009 Alic, Bona, Bona-Casas:
+	alpha_,t = -alpha^2 Q
 	Q = f (K - m Theta)
 	alpha_,t = -alpha^2 f (K - m Theta)
 	
@@ -536,10 +536,10 @@ else
 
 	printbr(Q_def)
 
-	local Qu_def 
+	local Qu_def
 	if useShift then
 		Qu_def = Q'^i':eq( -1/alpha * beta'^k' * b'^i_k' - alpha * gamma'^ki' * (gamma'_jk,l' * gamma'^jl' - Gamma'^j_kj' - a'_k'))
-		printbr(Qu_def) 
+		printbr(Qu_def)
 	end
 
 	printbr[[primitive $\partial_t$ defs]]
@@ -547,7 +547,7 @@ else
 	local dt_alpha_def = alpha'_,t':eq(
 		-alpha * Q
 		-- Lie derivative terms.   Note that the 2005 Bona et al and 2009 Alic et al combine this into the Q function
-		+ alpha'_,i' * beta'^i' 
+		+ alpha'_,i' * beta'^i'
 	)
 	printbr(dt_alpha_def)
 
@@ -571,7 +571,7 @@ else
 		dt_beta_def = beta'^k_,t':eq(
 			B'^k'
 			-- advection term.  (not Lie derivative.)
-			+ beta'^i' * beta'^k_,i' 
+			+ beta'^i' * beta'^k_,i'
 		)
 		printbr(dt_beta_def)
 		local xi = frac(3,4)
@@ -593,7 +593,7 @@ else
 				+ Gamma'^i_lj,k' * gamma'^jk' * beta'^l'
 				+ frac(1,3) * Gamma'^j_lj,k' * gamma'^ik' * beta'^l'
 				- 2 * alpha * (
-					gamma'^ik' * gamma'^lj' 
+					gamma'^ik' * gamma'^lj'
 					- frac(1,3) * gamma'^ij' * gamma'^kl') * K'_kl,j'
 				
 				-- source terms
@@ -624,14 +624,14 @@ else
 		printbr(dt_B_def)
 	end
 
-	local dt_gamma_def = gamma'_ij,t':eq( 
-		-2 * alpha * K'_ij' 
+	local dt_gamma_def = gamma'_ij,t':eq(
+		-2 * alpha * K'_ij'
 		-- Lie derivative terms
-		+ gamma'_ij,k' * beta'^k' 
-		+ gamma'_kj' * beta'^k_,i' 
-		+ gamma'_ik' * beta'^k_,j' 
+		+ gamma'_ij,k' * beta'^k'
+		+ gamma'_kj' * beta'^k_,i'
+		+ gamma'_ik' * beta'^k_,j'
 	)
-	printbr(dt_gamma_def) 
+	printbr(dt_gamma_def)
 
 	local K_R_term = R'_ij'
 	if useZ4 then
@@ -658,19 +658,19 @@ else
 
 		+ alpha * (
 			K_R_term
-			+ K_trK_term * K'_ij' 
+			+ K_trK_term * K'_ij'
 			- 2 * K'_ik' * gamma'^kl' * K'_jl'
 		)
 		-- Lie derivative terms
-		+ K'_ij,k' * beta'^k' 
+		+ K'_ij,k' * beta'^k'
 		+ K'_ki' * beta'^k_,j'
 		+ K'_kj' * beta'^k_,i'
-		-- stress-energy terms	
+		-- stress-energy terms
 		+ 4 * pi * alpha * (gamma'_ij' * (S - rho) - 2 * S'_ij')
 	)
 	printbr(dt_K_def)
 
-	local dt_Theta_def, dt_Z_def 
+	local dt_Theta_def, dt_Z_def
 	if useZ4 then
 		dt_Theta_def = Theta'_,t':eq(
 			-- Lie derivative
@@ -684,10 +684,10 @@ else
 				- K'_kl' * gamma'^km' * gamma'^ln' * K'_mn'
 				+ gamma'^kl' * K'_kl' * K_trK_term:reindex{kl='mn'}
 			)
-			-- stress-energy terms	
+			-- stress-energy terms
 			- 8 * pi * alpha * rho
 		)
-		printbr(dt_Theta_def) 
+		printbr(dt_Theta_def)
 
 		dt_Z_def = Z'_i,t':eq(
 			(beta'^k' * Z'_i')'_,k'
@@ -709,7 +709,7 @@ else
 
 	printbr[[lapse vars]]
 
-	-- TODO functions, dependent variables, and total derivatives 
+	-- TODO functions, dependent variables, and total derivatives
 	local df_def = f'_,k':eq(df * alpha * a'_k')
 	printbr(df_def)
 
@@ -753,7 +753,7 @@ else
 			gamma'_li,j' + gamma'_lj,i' - gamma'_ij,l'
 		)
 	)
-	printbr(conn_def) 
+	printbr(conn_def)
 	
 	local connL_def = Gamma'_ijk':eq(frac(1,2) * (gamma'_ij,k' + gamma'_ik,j' - gamma'_jk,i'))
 	printbr(connL_def)
@@ -766,7 +766,7 @@ else
 		:substIndex(Gamma'_ijk':eq(gamma'_il' * Gamma'^l_jk'))
 	printbr(dgamma_for_conn)
 
-	local connL_for_d, conn_for_d 
+	local connL_for_d, conn_for_d
 	if not useConnInsteadOfD then
 		connL_for_d = connL_def
 			:substIndex(dgamma_for_d)
@@ -805,13 +805,13 @@ else
 	local dgammaU_def = gamma'^ij_,k':eq(-gamma'^il' * gamma'_lm,k' * gamma'^mj')
 	printbr(dgammaU_def)
 
-	local dgammaU_for_d 
+	local dgammaU_for_d
 	if not useConnInsteadOfD then
 		dgammaU_for_d = dgammaU_def:substIndex(dgamma_for_d)()
 		printbr(dgammaU_for_d)
 	end
 	
-	local dgammaU_for_conn 
+	local dgammaU_for_conn
 	if useConnInsteadOfD then
 		dgammaU_for_conn = dgammaU_def:substIndex(dgamma_for_connL)()
 		printbr(dgammaU_for_conn)
@@ -822,8 +822,8 @@ else
 	local R_def = R'_ij':eq(Gamma'^k_ij,k' - Gamma'^k_ik,j' + Gamma'^k_lk' * Gamma'^l_ij' - Gamma'^k_lj' * Gamma'^l_ik')
 	printbr(R_def)
 
-	local R_for_d 
-	if not useConnInsteadOfD then	
+	local R_for_d
+	if not useConnInsteadOfD then
 		R_for_d = R_def:splitOffDerivIndexes():substIndex(conn_for_d)
 		printbr(R_for_d)
 
@@ -922,11 +922,11 @@ else
 		:subst(dt_alpha_def)
 	printbr(dt_a_def)
 
-	dt_a_def = dt_a_def() 
+	dt_a_def = dt_a_def()
 	printbr(dt_a_def)
 
 	dt_a_def = dt_a_def
-		:replace(alpha'_,ik', frac(1,2) * ( alpha'_,i''_,k' + alpha',k'',i' )) 
+		:replace(alpha'_,ik', frac(1,2) * ( alpha'_,i''_,k' + alpha',k'',i' ))
 		--:replace(K'^i_i,k', (gamma'^ij' * K'_ij')'_,k')
 	printbr(dt_a_def)
 
@@ -948,7 +948,7 @@ else
 				-- TODO replace sub-portions of commutative operators like mul() add() etc
 				-- TODO don't require that simplify() on the find() portion of replace() -- instead simplify automatically?  i experimented with this once ...
 				-- TODO simplify gammas automatically ... define a tensor expression metric variable?
-				(2 * alpha * f * gamma'^im' * d'_kml' * gamma'^lj' * K'_ij')(), 
+				(2 * alpha * f * gamma'^im' * d'_kml' * gamma'^lj' * K'_ij')(),
 				2 * alpha * f * d'_k^ij' * K'_ij'
 			)
 		printbr(dt_a_def)
@@ -990,7 +990,7 @@ else
 		printbr[[aux var $A^{ij}$]]
 		
 		local A_for_K_uu = A'^ij':eq( K'^ij' - frac(1,3) * gamma'^ij' * gamma'^kl' * K'_kl')
-		printbr(A_for_K_uu) 
+		printbr(A_for_K_uu)
 
 		-- TODO substIndex handle this -- but skip any upper/lower changes inside of comma derivatives
 		local A_for_K_ll = A'_ij':eq( K'_ij' - frac(1,3) * gamma'_ij' * gamma'^kl' * K'_kl')
@@ -1016,7 +1016,7 @@ else
 		
 		if not useConnInsteadOfD then
 			dt_B_def = dt_B_def:substIndex(R_for_d)
-		else		
+		else
 			dt_B_def = dt_B_def:substIndex(R_def)
 		end
 
@@ -1038,7 +1038,7 @@ else
 		printbr(dt_B_def)
 	end
 
-	local dt_d_def 
+	local dt_d_def
 	if not useConnInsteadOfD then
 		printbr[[time derivative of $d_{kij,t}$]]
 
@@ -1063,12 +1063,12 @@ else
 			:subst(dalpha_for_a)
 		if useShift then
 			dt_d_def = dt_d_def:substIndex(dbeta_for_b)
-		end	
+		end
 		dt_d_def = dt_d_def:simplify()
 		printbr(dt_d_def)
 	end
 
-	local dt_conn_def 
+	local dt_conn_def
 	if useConnInsteadOfD then
 		printbr[[time derivative of $\Gamma_{ijk,t}$]]
 	
@@ -1078,7 +1078,7 @@ else
 		dt_connL_def = dt_connL_def
 			:replace(gamma'_ij,k,t', gamma'_ij,t''_,k')
 			:replace(gamma'_ik,j,t', gamma'_ik,t''_,j')
-			:replace(gamma'_jk,i,t', gamma'_jk,t''_,i')	
+			:replace(gamma'_jk,i,t', gamma'_jk,t''_,i')
 			:substIndex(
 				dt_gamma_def
 					:reindex{k='a'}
@@ -1208,7 +1208,7 @@ else
 
 		dt_K_def = dt_K_def:subst(R_for_d)
 		printbr(dt_K_def)
-	else	
+	else
 		dt_K_def = dt_K_def:subst(R_def)
 		dt_K_def = dt_K_def:replace(
 			Gamma'^k_ik,j',
@@ -1264,7 +1264,7 @@ else
 		if useShift then
 		
 			local Qu_def = Q'^i':eq( -1/alpha * beta'^k' * b'^i_k' - alpha * gamma'^ki' * (gamma'_jk,l' * gamma'^jl' - Gamma'^j_kj' - a'_k'))
-			printbr(Qu_def) 
+			printbr(Qu_def)
 
 			Qu_def = Qu_def:substIndex(dgamma_for_d, conn_for_d)
 			printbr(Qu_def)
@@ -1342,7 +1342,7 @@ else
 		printbr(dt_Theta_def)
 
 
-		printbr(dt_Z_def) 
+		printbr(dt_Z_def)
 		
 		dt_Z_def = dt_Z_def
 			--:replaceIndex(K'^i_j', gamma'^ik' * K'_kj')
@@ -1422,7 +1422,7 @@ else
 				- alpha * V'_i,j'
 				
 				+ alpha * (
-					-a'_i' * a'_j' 
+					-a'_i' * a'_j'
 					+ (d'_ji^k' + d'_ij^k' - d'^k_ij') * (a'_k' + V'_k' - d'^l_lk')
 					
 					+ 2 * (d'^kl_j' - d'^lk_j') * d'_kli'
@@ -1467,7 +1467,7 @@ else
 				+ 2 * alpha * Gamma'_j,i'
 				
 				+ alpha * (
-					-a'_i' * a'_j' 
+					-a'_i' * a'_j'
 					+ (d'_ji^k' + d'_ij^k' - d'^k_ij') * (a'_k' - Gamma'_k')
 					
 					+ 2 * (d'^kl_j' - d'^lk_j') * d'_kli'
@@ -1516,7 +1516,7 @@ else
 			local lhs, rhs = table.unpack(defs[i])
 			
 			rhs = rhs:map(function(expr)
-				if TensorRef:isa(expr) 
+				if TensorRef:isa(expr)
 				and (expr[1] == beta or expr[1] == b or expr[1] == B)
 				then return 0 end
 			end)()
@@ -1532,7 +1532,7 @@ else
 
 	local sourceTerms
 	if not keepSourceTerms then
-		-- for all summed terms, for all coefficients, 
+		-- for all summed terms, for all coefficients,
 		--	if none have derivatives then remove them
 		-- remove from defs any equations that no longer have any terms
 		sourceTerms = table()
@@ -1589,7 +1589,7 @@ else
 					local from = ''
 					local to = ''
 					for i=1,#is do
-						if is[i] == 1 then 
+						if is[i] == 1 then
 							from = from .. indexes[i]	-- TODO don't use the original index ... instead use a yz spanning index (which means I need to make these up)
 							to = to .. 'x'
 						end
@@ -1669,7 +1669,7 @@ else
 			if TensorRef:isa(x)
 			and x[1] == S
 			then
-				assert(not x:hasDerivIndex()) 
+				assert(not x:hasDerivIndex())
 				x = x:clone()
 				if #x == 3 then			-- S'_ij'
 					x[1] = SLLVars
@@ -1689,7 +1689,7 @@ else
 				:replace(b, bVars)
 				:replace(B, BVars)
 		end
-		if useV then 
+		if useV then
 			def = def:replace(V, VVars)
 		end
 		if useGamma then
@@ -1701,9 +1701,9 @@ else
 				and expr[1] == Theta
 				then
 					assert(#expr == 2)	-- only Theta_,i
-					return Tensor(table.sub(expr, 2), function(...) 
-						local is = table{...} 
-						return Theta:diff(is:mapi(function(i) return xs[i] end):unpack()) 
+					return Tensor(table.sub(expr, 2), function(...)
+						local is = table{...}
+						return Theta:diff(is:mapi(function(i) return xs[i] end):unpack())
 					end)
 			--def = def:replace(Theta'_,k', Tensor('_k', function(k) return Theta:diff(xs[k]) end))
 			--def = def:replace(Theta'_,i', Tensor('_i', function(k) return Theta:diff(xs[k]) end))
@@ -1769,7 +1769,7 @@ else
 		end
 
 		local fluxdefs = lhs:eq(rhs):unravel()
-		local srcdefs 
+		local srcdefs
 		if not keepSourceTerms and outputCodeForSourceTerms then
 			srcdefs = lhs:eq(sourceTerm):unravel()
 			assert(#fluxdefs == #srcdefs)
@@ -1861,7 +1861,7 @@ It's an easy problem to verify for the Euler fluid equations, but idk if I have 
 		local codegenOutputs = table()
 		for _,eqn in ipairs(eqns) do
 			local lhs, rhs = table.unpack(eqn)
-			if not Derivative:isa(lhs) 
+			if not Derivative:isa(lhs)
 			or #lhs ~= 2
 			or lhs[2] ~= t
 			or not Variable:isa(lhs[1]) -- or TensorRef:isa(lhs))
@@ -1880,7 +1880,7 @@ It's an easy problem to verify for the Euler fluid equations, but idk if I have 
 			rhs = rhs:map(function(expr)
 				if Derivative:isa(expr) then
 					-- use the Dx prefix if you want to keep the deriv variables separate ... this would be used in my hydro-cl 'eigen_fluxTransform'
-					-- omit it if you want to use the same state ... this would be in 'fluxFromCons' 
+					-- omit it if you want to use the same state ... this would be in 'fluxFromCons'
 					-- NOTICE if you omit it here then later in the simplification and codegen it can optimize out more common structures
 					-- but in that case, you'd need to run this a separate time to get the eigen_fluxTransform code
 					assert(#expr == 2)
@@ -1890,7 +1890,7 @@ It's an easy problem to verify for the Euler fluid equations, but idk if I have 
 				end
 			end)
 			rhs = rhs:map(function(expr)
-				if Variable:isa(expr) 
+				if Variable:isa(expr)
 				and not expr.name:match'^Dx%.'
 				and expr.name ~= 'f'
 				then
@@ -1969,7 +1969,7 @@ It's an easy problem to verify for the Euler fluid equations, but idk if I have 
 
 	-- simplify the flux jacobian matrix
 	-- [[
-	if useZ4 
+	if useZ4
 	or (useV and useShift)
 	then-- simplify inverses
 		fixFluxJacobian(fluxJacobian)
@@ -1993,7 +1993,7 @@ It's an easy problem to verify for the Euler fluid equations, but idk if I have 
 
 
 	-- save cached 'fluxJacobian'
-	do 
+	do
 		-- *Vars are only as big as the metric # of indexes
 		-- so using 1D means only '.x' exists
 		-- soo ... do I want it fake-1D and really 3D underneath?  do I want an 'r' coord equivalent (with spherical metric ds^2 = dr^2 + r^2 dOmega^2 ?
@@ -2055,7 +2055,7 @@ It's an easy problem to verify for the Euler fluid equations, but idk if I have 
 		end
 		vars:insert(gamma)
 
-		file[symmathJacobianFilename] = symmath.export.Mathematica(fluxJacobian, vars):gsub('}, {', '},\n\t{')
+		file(symmathJacobianFilename):write(symmath.export.Mathematica(fluxJacobian, vars):gsub('}, {', '},\n\t{'))
 	end
 
 
@@ -2099,7 +2099,7 @@ It's an easy problem to verify for the Euler fluid equations, but idk if I have 
 		end
 		vars:insert(gamma)
 
-		file['flux_matrix_output/mathematica.'..outputSuffix..'.txt'] = symmath.export.Mathematica(fluxJacobian, vars):gsub('}, {', '},\n\t{')
+		file('flux_matrix_output/mathematica.'..outputSuffix..'.txt'):write(symmath.export.Mathematica(fluxJacobian, vars):gsub('}, {', '},\n\t{'))
 	end
 	--]]
 
@@ -2108,7 +2108,7 @@ It's an easy problem to verify for the Euler fluid equations, but idk if I have 
 end	-- done generating the header
 -- now we can copy the header into the main file
 --for _,f in ipairs(outputFiles) do
---	f:write(file[headerExpressionFilename])
+--	f:write(file(headerExpressionFilename):read())
 --end
 -- nope -already copied
 
@@ -2170,7 +2170,7 @@ same deal, for Z4, no shift, remove zero rows:
 
 	lambda = +- alpha sqrt(f gamma^xx) has multiplicity 1
 	lambda = +- alpha sqrt(gamma^xx) has multiplicity 6
-	lambda = 0 has multiplicity 3 
+	lambda = 0 has multiplicity 3
  
 	however the eigenvectors of alpha sqrt(gamma^xx) only have dimension 5, not 6 ...
 	so ... that means this is not hyperbolic, right?
@@ -2180,7 +2180,7 @@ same deal, for Z4, no shift, remove zero rows:
 -- try solving it for one particular eigenvector/value
 local gammaUjj = gammaUVars[fluxdir][fluxdir]
 -- the eigenvalues are the same for useV on or off
--- but the multiplicities are different: 
+-- but the multiplicities are different:
 -- with useV off we get 19, 3, 3, 1, 1
 -- with useV on we get 18, 5, 5, 1, 1
 local lambdas
@@ -2189,7 +2189,7 @@ if use1D then
 		-alpha * sqrt(f * gammaUjj),
 		0,
 		alpha * sqrt(f * gammaUjj),
-	} 
+	}
 elseif useZ4 or (useV and useShift) then
 	lambdas = table{
 		0,
@@ -2197,12 +2197,12 @@ elseif useZ4 or (useV and useShift) then
 		alpha * sqrt(gammaUjj),
 		-alpha * sqrt(f * gammaUjj),
 		alpha * sqrt(f * gammaUjj),
-	} 
+	}
 elseif useGamma and not useShift then	-- same for both removeZeroRows and not removeZeroRows
 	--[[
 	x = lambda^2
 	g = alpha^2 gamma^xx
-	asking wolfram alpha:	
+	asking wolfram alpha:
 	x^6 + (3-f) x^5 g - (3+f) x^4 g^2 + (5f - 11) x^3 g^3 + (f + 6) x^2 g^4 + 4 (3 - 2 f) x g^5 + 4 (f - 2) g^6
 	roots:
 	lambda^2 = -2 alpha^2 gamma^xx
