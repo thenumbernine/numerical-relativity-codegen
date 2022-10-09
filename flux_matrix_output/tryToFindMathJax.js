@@ -1,3 +1,14 @@
+// mathjax config
+// https://docs.mathjax.org/en/latest/web/configuration.html
+MathJax = {
+	tex: {
+		inlineMath: [['$', '$'], ['\\(', '\\)']]
+	},
+	svg: {
+		fontCache: 'global'
+	}
+};
+
 function loadScript(args) {
 	console.log("loading "+args.src);
 	var el = document.createElement('script');
@@ -18,14 +29,14 @@ function tryToFindMathJax() {
 	var urls = [
 		'file:///home/chris/Projects/christopheremoore.net/MathJax/MathJax.js?config=TeX-MML-AM_CHTML',
 		'/MathJax/MathJax.js?config=TeX-MML-AM_CHTML',
-		'https://cdn.rawgit.com/mathjax/MathJax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML'	];
+		'https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js'
+	];
 	var i = 0;
 	var loadNext = function() {
 		loadScript({
 			src : urls[i],
 			done : function() {
 				console.log("success!");
-				MathJax.Hub.Config({tex2jax: {inlineMath: [['$','$'], ['\\(','\\)']]}});
 			},
 			fail : function() {
 				++i;
