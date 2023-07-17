@@ -179,7 +179,7 @@ local closeFile
 do
 	local filename = outputNameBase..'.'..outputType
 	print('writing to '..filename)
-	outputFiles = table{assert(file(filename):open'w')}
+	outputFiles = table{assert(path(filename):open'w')}
 	for _,f in ipairs(outputFiles) do
 		f:setvbuf'no'
 		if ToString then f:write(tostring(ToString.header)) end
@@ -463,11 +463,11 @@ local headerExpressionFilename = 'flux_matrix_output/header.'..outputSuffix..'.'
 local fluxJacobian
 
 if not forceRemakeHeader
-and (file(headerExpressionFilename):exists()
-	or file(symmathJacobianFilename):exists())
+and (path(headerExpressionFilename):exists()
+	or path(symmathJacobianFilename):exists())
 then
-	if not (file(headerExpressionFilename):exists()
-		and file(symmathJacobianFilename):exists())
+	if not (path(headerExpressionFilename):exists()
+		and path(symmathJacobianFilename):exists())
 	then
 		error("you need both "..headerExpressionFilename.." and "..symmathJacobianFilename..", but you only have one")
 	end
@@ -476,12 +476,12 @@ then
 	fluxJacobian = Matrix( table.unpack (
 		assert(load([[
 local alpha, f, df, betaVars, gammaLVars, gammaUVars, gamma = ...
-return ]] .. file(symmathJacobianFilename):read()))(
+return ]] .. path(symmathJacobianFilename):read()))(
 			alpha, f, df, betaVars, gammaLVars, gammaUVars, gamma
 		)
 	))
 else
-	outputFiles:insert(assert(file(headerExpressionFilename):open'w'))
+	outputFiles:insert(assert(path(headerExpressionFilename):open'w'))
 
 --[[
 	-- TODO start with EFE, apply Gauss-Codazzi-Ricci, then automatically recast all higher order derivatives as new variables of 1st derivatives
@@ -2055,7 +2055,7 @@ It's an easy problem to verify for the Euler fluid equations, but idk if I have 
 		end
 		vars:insert(gamma)
 
-		file(symmathJacobianFilename):write(symmath.export.Mathematica(fluxJacobian, vars):gsub('}, {', '},\n\t{'))
+		path(symmathJacobianFilename):write(symmath.export.Mathematica(fluxJacobian, vars):gsub('}, {', '},\n\t{'))
 	end
 
 
@@ -2099,7 +2099,7 @@ It's an easy problem to verify for the Euler fluid equations, but idk if I have 
 		end
 		vars:insert(gamma)
 
-		file('flux_matrix_output/mathematica.'..outputSuffix..'.txt'):write(symmath.export.Mathematica(fluxJacobian, vars):gsub('}, {', '},\n\t{'))
+		path('flux_matrix_output/mathematica.'..outputSuffix..'.txt'):write(symmath.export.Mathematica(fluxJacobian, vars):gsub('}, {', '},\n\t{'))
 	end
 	--]]
 
@@ -2108,7 +2108,7 @@ It's an easy problem to verify for the Euler fluid equations, but idk if I have 
 end	-- done generating the header
 -- now we can copy the header into the main file
 --for _,f in ipairs(outputFiles) do
---	f:write(file(headerExpressionFilename):read())
+--	f:write(path(headerExpressionFilename):read())
 --end
 -- nope -already copied
 
